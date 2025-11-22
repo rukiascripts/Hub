@@ -41,7 +41,7 @@ local ToastNotif = sharedRequire('classes/ToastNotif.lua');
 		tabs = {},
 		draggable = true,
 		flags = {},
-		title = string.format('Flower Hub | V1'),
+		title = string.format('Rukia Hub | V1'),
 		open = false,
 		popup = nil,
 		instances = {},
@@ -3694,5 +3694,6 @@ local ToastNotif = sharedRequire('classes/ToastNotif.lua');
 			visualizer:RemoveText(data.text);
 		end
 	end);
+
 
 	return library;
