@@ -276,19 +276,40 @@ do -- // Functions
     end
 
     function functions.GetRandomDungeon(selectedDungeons)
-        if (#selectedDungeons == 0) then return nil, nil; end;
+        if not selectedDungeons or next(selectedDungeons) == nil then
+            return nil, nil;
+        end;
 
-        local dungeon = selectedDungeons[math.random(1, #selectedDungeons)];
-        local rank = dungeon:match('%[(.-)%]'); -- e.g., "D Rank" or "C Rank"
-        if (rank) then
-            rank = rank:gsub(' ', '-'); -- convert to "D-Rank" / "C-Rank"
-            if (DungeonHelper[rank]) then
+        -- Flatten the table in case keys are tables or boolean values
+        local dungeonList = {};
+        for key, isSelected in pairs(selectedDungeons) do
+            local dungeonName;
+            if type(key) == 'table' then
+                dungeonName = key[1];
+            else
+                dungeonName = key;
+            end;
+            if isSelected and dungeonName then
+                table.insert(dungeonList, dungeonName);
+            end;
+        end
+
+        if #dungeonList == 0 then
+            return nil, nil;
+        end;
+
+        local dungeon = dungeonList[math.random(1, #dungeonList)];
+        local rank = dungeon:match('%[(.-)%]');
+        if rank then
+            rank = rank:gsub(' ', '-'); -- "C Rank" -> "C-Rank"
+            if DungeonHelper[rank] then
                 return dungeon, rank;
             end;
         end;
 
         return nil, nil;
     end;
+
 
 
     function functions.GetSelectedPlaceIDs(selectedDungeons)
