@@ -98,10 +98,11 @@ local DropEvent = getKey('DropEvent')
 
 local DungeonHelper = {
     ["D-Rank"] = { ["PlaceID"] = {125357995526125,127569336430170}, ["MobsName"] = {'KARDING','HORIDONG','MAGICARABAO'} },
-    ["C-Rank"] = { ["PlaceID"] = {83492604633635}, ["MobsName"] = {'WOLFANG','METALIC FANG','DAREWOLF','MONKEYKONG','UNDERWORLD SERPENT', 'FANGORA', 'RAGNOK', 'TWINKLE', 'DARKFIRE', 'GOBLINS TYRANT'} },
+    ["C-Rank"] = { ["PlaceID"] = {83492604633635,71377998784000}, ["MobsName"] = {'WOLFANG','METALIC FANG','DAREWOLF','MONKEYKONG','UNDERWORLD SERPENT', 'FANGORA', 'RAGNOK', 'TWINKLE', 'DARKFIRE', 'GOBLINS TYRANT'} },
 }
 
 -- 71377998784000 other c-rank placeid (removed due to not being nearly as abusable)
+-- subway - 83492604633635
 
 ------------
 
