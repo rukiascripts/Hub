@@ -93,7 +93,7 @@ end;
 
 print('after hello')
 
-local supportedGamesList = HttpService:JSONDecode(require('gameList.json'));
+local supportedGamesList = HttpService:JSONDecode(customRequire('gameList.json'));
 local gameName = supportedGamesList[tostring(game.GameId)];
 
 print('game list')
@@ -336,4 +336,3 @@ task.spawn(function()
 end);
 
 getgenv().ah_loaded = true;
-
