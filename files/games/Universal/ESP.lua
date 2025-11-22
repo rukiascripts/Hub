@@ -4,7 +4,7 @@ local EntityESP = sharedRequire('classes/EntityESP.lua');
 local library = sharedRequire('UILibrary.lua');
 local Utility = sharedRequire('utils/Utility.lua');
 
-local Players, RunService = Services:Get(getServerConstant('Players'), getServerConstant('RunService'));
+local Players, RunService = Services:Get('Players', 'RunService');
 local LocalPlayer = Players.LocalPlayer;
 
 local maid = Maid.new();
