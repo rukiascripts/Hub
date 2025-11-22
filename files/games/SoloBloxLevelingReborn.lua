@@ -102,7 +102,7 @@ local DungeonHelper = {
     ["C-Rank"] = { ["PlaceID"] = {83492604633635,71377998784000}, ["MobsName"] = {'WOLFANG','METALIC FANG','DAREWOLF','MONKEYKONG','UNDERWORLD SERPENT', 'FANGORA', 'RAGNOK', 'TWINKLE', 'DARKFIRE', 'GOBLINS TYRANT'} },
 }
 
--- 71377998784000 other c-rank placeid (removed due to not being nearly as abusable)
+-- Goblin - 71377998784000
 -- subway - 83492604633635
 
 ------------
@@ -177,27 +177,34 @@ do -- // Functions
     end;
     
     function functions.DungeonStats(Rank)
-        if Rank and DungeonHelper[Rank].PlaceID then 
-            return DungeonHelper[Rank].PlaceID
-        end
-        local MobFolder = workspace:WaitForChild("WalkingNPC")
-        local foundMob = false
+        -- If rank is provided, return PlaceID table
+        if (Rank and DungeonHelper[Rank] and DungeonHelper[Rank].PlaceID) then
+            return DungeonHelper[Rank].PlaceID;
+        end;
 
+        -- Otherwise, try to detect rank from mobs in workspace
+        local MobFolder = workspace:WaitForChild('WalkingNPC');
         for _, mob in ipairs(MobFolder:GetChildren()) do
             if (mob:IsA('Highlight')) then continue; end;
-            if mob then
-                local tag = mob.HumanoidRootPart.Health.ImageLabel:FindFirstChild("TextLabel")
-                local mobName = tostring(tag.Text)
-                if table.find(DungeonHelper["D-Rank"].MobsName, mobName) then
-                    getgenv().DungeonRank = 'D-Rank';
-                    return "D-Rank"
-                elseif table.find(DungeonHelper["C-Rank"].MobsName, mobName) then
-                    getgenv().DungeonRank = 'C-Rank';
-                    return "C-Rank" 
-                end
-            end
-        end
-    end
+            if (mob:FindFirstChild('HumanoidRootPart') and mob.HumanoidRootPart:FindFirstChild('Health') and mob.HumanoidRootPart.Health:FindFirstChild('ImageLabel')) then
+                local tag = mob.HumanoidRootPart.Health.ImageLabel:FindFirstChild('TextLabel');
+                if (tag) then
+                    local mobName = tostring(tag.Text);
+                    if (table.find(DungeonHelper['D-Rank'].MobsName, mobName)) then
+                        getgenv().DungeonRank = 'D-Rank';
+                        return DungeonHelper['D-Rank'].PlaceID;
+                    elseif (table.find(DungeonHelper['C-Rank'].MobsName, mobName)) then
+                        getgenv().DungeonRank = 'C-Rank';
+                        return DungeonHelper['C-Rank'].PlaceID;
+                    end;
+                end;
+            end;
+        end;
+
+        -- fallback
+        return {};
+    end;
+
 
     function functions.createDungeon(UserID, Difficulty, Level, PlaceIdTable, DungeonRank)
         local TeleportArguments = {
@@ -241,6 +248,21 @@ do -- // Functions
             myRootPart.CFrame = CFrame.new(myRootPart.Position.X, 5, myRootPart.Position.Z)
         end
     end
+
+    function functions.GetSelectedPlaceIDs(selectedDungeons)
+        local placeIDs = {};
+        for _, dungeon in ipairs(selectedDungeons) do
+            local rank = dungeon:match('%[(.-)%]');
+            rank = rank:gsub(' ', '-'); 
+            if (DungeonHelper[rank]) then
+                for _, id in ipairs(DungeonHelper[rank]["PlaceID"]) do
+                    table.insert(placeIDs, id);
+                end;
+            end;
+        end;
+        return placeIDs;
+    end;
+
 
     function functions.HitMob(MobRoot)
         if not (MobRoot and MobRoot.Parent) then return end
@@ -575,7 +597,7 @@ do -- // Auto Farm Section
         end;
     })
 
-     autofarmsection:AddList({
+        autofarmsection:AddList({
         text = 'Select Dungeon',
         values = {
             'Prison [D Rank]',
@@ -583,12 +605,13 @@ do -- // Auto Farm Section
             'Subway [C Rank]',
             'Goblin [C Rank]',
         },
-		multiselect = true,
-
+        multiselect = true,
         callback = function(value)
+            getgenv().SelectedDungeons = value;
             print(HttpService:JSONEncode(value));
         end;
-    })
+    });
+
 
 
     autofarmsection:AddList({
@@ -625,8 +648,16 @@ do -- // Auto Farm Section
         text = 'Create & Start Dungeon',
         tip = 'Teleports to a custom made dungeon.',
         callback = function()
-            functions.createDungeon(LocalPlayer.UserId, getgenv().SelectedDifficulty, nil, functions.DungeonStats(getgenv().SelectedRank), getgenv().SelectedRank)
+            local placeIDs = functions.GetSelectedPlaceIDs(getgenv().SelectedDungeons);
+            functions.createDungeon(
+                LocalPlayer.UserId,
+                getgenv().SelectedDifficulty,
+                nil,
+                placeIDs,
+                getgenv().SelectedRank
+            );
         end;
-	}); 
+    });
+
 
 end;
