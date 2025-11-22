@@ -599,19 +599,6 @@ end;
 do -- // Auto Farm Section
     autofarmsection:AddDivider('Teleport to Dungeon');
 
-    autofarmsection:AddList({
-        text = "Dungeon Rank",
-        values = {
-            'E-Rank',
-            'D-Rank',
-            'C-Rank'
-        },
-		multiselect = false,
-
-        callback = function(value)
-            getgenv().SelectedRank = value;
-        end;
-    })
 
         autofarmsection:AddList({
         text = 'Select Dungeon',
@@ -664,19 +651,28 @@ do -- // Auto Farm Section
         text = 'Create & Start Dungeon',
         tip = 'Teleports to a random selected dungeon.',
         callback = function()
-            local dungeon, rank = functions.GetRandomDungeon(getgenv().SelectedDungeons or {});
-            if (not rank) then return; end;
+            local dungeon, rank = functions.GetRandomDungeon(getgenv().SelectedDungeons);
+            if (not rank) then
+                warn('No dungeon selected or invalid selection.');
+                return;
+            end;
 
-            local placeIDs = functions.DungeonStats(rank);
+            local placeIDs = functions.DungeonStats(rank); -- should return a table of PlaceIDs
+            if (not placeIDs or #placeIDs == 0) then
+                warn('No PlaceIDs found for rank:', rank);
+                return;
+            end;
+
             functions.createDungeon(
                 LocalPlayer.UserId,
-                getgenv().SelectedDifficulty,
+                getgenv().SelectedDifficulty or 'Hard',
                 nil,
                 placeIDs,
                 rank
             );
         end;
     });
+
 
 
 
