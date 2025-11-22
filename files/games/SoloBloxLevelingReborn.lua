@@ -501,7 +501,7 @@ do -- // Functions
                 myRootPart.CFrame = oldCFrame;
             end
 
-            if (not foundMob and not cutsczene andgetgenv().StartedDungeon) then
+            if (not foundMob and not cutsczene and getgenv().StartedDungeon) then
                 task.wait(3);
                 if (foundMob) then return; end;
                 local FinalGate = workspace.Gates:FindFirstChild('Gate5') or workspace.Gates:FindFirstChild('Gate4');
