@@ -432,87 +432,102 @@ do -- // Functions
         )
     end
 
-    local cutsczene = false
-    getgenv().StartedDungeon = false;
+    local cutscene = false
+    getgenv().StartedDungeon = false
 
     function functions.AutoFarmMob(toggle)
-         if (not toggle) then 
-            getgenv().autoFarmMob = false;
-            return; 
-        end;
+        if not toggle then
+            getgenv().autoFarmMob = false
+            return
+        end
 
-        getgenv().autoFarmMob = true;
+        getgenv().autoFarmMob = true
 
-        while (getgenv().autoFarmMob) do
-            task.wait(0.05);
+        local gatesFolder = workspace:WaitForChild("Gates")
+        local passedGates = {} -- track which gates were touched
 
-            local gates = workspace:FindFirstChild("Gates")
-            if not gates then return end
+        -- Define gate sequence in order
+        local gateSequence = {"Gate1", "Gate2", "Gate3", "Gate4", "Gate5"}
 
-            if (not getgenv().StartedDungeon) then
-                for _, gate in ipairs(gates:GetDescendants()) do
-                    if gate:IsA("BasePart") and gate.Name == "Gate1" then
-                        firetouchinterest(myRootPart, gate, 0)
-                        task.wait(0.1)
-                        firetouchinterest(myRootPart, gate, 1)
+        while getgenv().autoFarmMob do
+            task.wait(0.05)
 
-                        getgenv().StartedDungeon = true;
-                    end
+            -- Start dungeon if not started
+            if not getgenv().StartedDungeon then
+                local gate1 = gatesFolder:FindFirstChild("Gate1")
+                if gate1 then
+                    firetouchinterest(myRootPart, gate1, 0)
+                    task.wait(0.1)
+                    firetouchinterest(myRootPart, gate1, 1)
+                    passedGates["Gate1"] = true
+                    getgenv().StartedDungeon = true
                 end
-            end;    
-            
-            repeat task.wait() until getgenv().StartedDungeon;
+            end
 
-            local MobFolder = workspace:WaitForChild("WalkingNPC")
-                
+            -- Wait until dungeon started
+            repeat task.wait() until getgenv().StartedDungeon
+
+            -- Handle mobs
+            local mobFolder = workspace:WaitForChild("WalkingNPC")
             local foundMob = false
-            for _, model in ipairs(MobFolder:GetChildren()) do
-                if (model:IsA('Highlight')) then continue; end;
+            for _, model in ipairs(mobFolder:GetChildren()) do
+                if model:IsA("Highlight") then continue end
                 local mob = model:FindFirstChild("HumanoidRootPart")
-                if mob and model.Name == "Mobs5" and not cutsczene then
+                if mob and model.Name == "Mobs5" and not cutscene then
                     getgenv().HoverMethod = "Up"
                     local newPos = functions.GetHoverPosition(mob.Position)
                     myRootPart.CFrame = CFrame.new(newPos)
-
-                    task.wait(5);
-                    cutsczene = true
+                    task.wait(5)
+                    cutscene = true
                 end
                 if mob then
                     foundMob = true
-
                     local newPos = functions.GetHoverPosition(mob.Position)
                     myRootPart.CFrame = CFrame.new(newPos)
-
                     functions.HitMob(mob)
                 end
             end
+
+            -- Handle CloseRank prompts
             if workspace:FindFirstChild("CloseRank") then
-                local oldCFrame = myRootPart.CFrame;
-                task.wait(2);
-                myRootPart.CFrame = CFrame.new(workspace:FindFirstChild("CloseRank").Position);
-                task.wait(2);
-                local closeRank = workspace:FindFirstChild("CloseRank")
-                for _, obj in closeRank:GetDescendants() do
+                local oldCFrame = myRootPart.CFrame
+                task.wait(2)
+                myRootPart.CFrame = CFrame.new(workspace.CloseRank.Position)
+                task.wait(2)
+                for _, obj in ipairs(workspace.CloseRank:GetDescendants()) do
                     if obj:IsA("ProximityPrompt") then
-                        obj:InputHoldBegin();
+                        obj:InputHoldBegin()
                     end
                 end
-                task.wait(2);
-                myRootPart.CFrame = oldCFrame;
+                task.wait(2)
+                myRootPart.CFrame = oldCFrame
             end
 
-            if (not foundMob and not cutsczene and getgenv().StartedDungeon) then
-                task.wait(3);
-                if (foundMob) then return; end;
-                local FinalGate = workspace.Gates:FindFirstChild('Gate5') or workspace.Gates:FindFirstChild('Gate4');
+            -- Sequential gate handling
+            if getgenv().StartedDungeon then
+                for _, gateName in ipairs(gateSequence) do
+                    if passedGates[gateName] then continue end -- skip already passed
 
-                if (FinalGate and not workspace:FindFirstChild('CloseRank')) then
-                    myRootPart.CFrame = CFrame.new(FinalGate.Position)
-                    task.wait(10)
-                end;
-            end;   
-        end;
-    end;
+                    local gate = gatesFolder:FindFirstChild(gateName)
+                    if gate then
+                        -- Wait until previous gate is passed
+                        local prevIndex = table.find(gateSequence, gateName) - 1
+                        local prevGate = prevIndex >= 1 and gateSequence[prevIndex] or nil
+                        if prevGate and not passedGates[prevGate] then
+                            break -- wait for previous gate to be passed
+                        end
+
+                        -- Touch current gate
+                        firetouchinterest(myRootPart, gate, 0)
+                        task.wait(0.1)
+                        firetouchinterest(myRootPart, gate, 1)
+                        passedGates[gateName] = true
+                        task.wait(1)
+                    end
+                end
+            end
+        end
+    end
 end;       
 
 localcheats:AddDivider('Movement');
