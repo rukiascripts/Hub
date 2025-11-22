@@ -205,7 +205,6 @@ do -- // Functions
         return {};
     end;
 
-
     function functions.createDungeon(UserID, Difficulty, Level, PlaceIdTable, DungeonRank)
         local TeleportArguments = {
             'Teleport',
@@ -224,6 +223,28 @@ do -- // Functions
         if (GateEvent) then
             GateEvent:FireServer(unpack(TeleportArguments))
         end;
+    end;
+
+     function functions.StartSelectedDungeon()
+        local dungeon, rank = functions.GetRandomDungeon(getgenv().SelectedDungeons or {});
+        if not rank then
+            warn('No dungeon selected or invalid selection.');
+            return;
+        end;
+
+        local placeIDs = functions.DungeonStats(rank);
+        if not placeIDs or #placeIDs == 0 then
+            warn('No PlaceIDs found for rank:', rank);
+            return;
+        end;
+
+        functions.createDungeon(
+            LocalPlayer.UserId,
+            getgenv().SelectedDifficulty or 'Hard',
+            nil,
+            placeIDs,
+            rank
+        );
     end;
 
     function functions.GetHoverPosition(mobPos)
@@ -653,45 +674,22 @@ do -- // Auto Farm Section
         text = 'Auto Start Dungeon',
         tip = 'Put script within Auto Execute.',
         callback = function(value)
-            if (value) then
-                if (game.PlaceId == 119482438738938) then -- city
-                    functions.fly(true);
-                    myRootPart.CFrame = CFrame.new(200, -100, 200);
-                    task.wait(5);
-                    if (not value) then return end;
-                    functions.createDungeon(LocalPlayer.UserId, getgenv().SelectedDifficulty, nil, functions.DungeonStats(getgenv().SelectedRank), getgenv().SelectedRank)
+            if value and game.PlaceId == 119482438738938 then -- city
+                functions.fly(true);
+                myRootPart.CFrame = CFrame.new(200, -100, 200);
+                task.wait(5);
+                if value then
+                    functions.StartSelectedDungeon();
                 end;
             end;
         end;
-    })
+    });
 
     autofarmsection:AddButton({
         text = 'Create & Start Dungeon',
         tip = 'Teleports to a random selected dungeon.',
         callback = function()
-            local dungeon, rank = functions.GetRandomDungeon(getgenv().SelectedDungeons);
-            if (not rank) then
-                warn('No dungeon selected or invalid selection.');
-                return;
-            end;
-
-            local placeIDs = functions.DungeonStats(rank); -- should return a table of PlaceIDs
-            if (not placeIDs or #placeIDs == 0) then
-                warn('No PlaceIDs found for rank:', rank);
-                return;
-            end;
-
-            functions.createDungeon(
-                LocalPlayer.UserId,
-                getgenv().SelectedDifficulty or 'Hard',
-                nil,
-                placeIDs,
-                rank
-            );
+            functions.StartSelectedDungeon();
         end;
     });
-
-
-
-
 end;
