@@ -23,18 +23,17 @@ if (not game:IsLoaded()) then
 end;
 
 local library = sharedRequire('UILibrary.lua');
-
 local Services = sharedRequire('utils/Services.lua');
 local toCamelCase = sharedRequire('utils/toCamelCase.lua');
 
 local ToastNotif = sharedRequire('classes/ToastNotif.lua');
 local AnalayticsAPI = sharedRequire('classes/AnalyticsAPI.lua');
-local errorAnalytics = AnalayticsAPI.new(getServerConstant('UA-187309782-1'));
+local errorAnalytics = AnalayticsAPI.new('UA-187309782-1');
 local Utility = sharedRequire('utils/Utility.lua');
 
 local _ = sharedRequire('utils/prettyPrint.lua');
 
-local Players, TeleportService, ScriptContext, MemStorageService, HttpService, ReplicatedStorage = Services:Get(getServerConstant('Players'), 'TeleportService', 'ScriptContext', 'MemStorageService', 'HttpService', 'ReplicatedStorage');
+local Players, TeleportService, ScriptContext, MemStorageService, HttpService, ReplicatedStorage = Services:Get('Players', 'TeleportService', 'ScriptContext', 'MemStorageService', 'HttpService', 'ReplicatedStorage');
 
 local BLOODLINES_MAIN_PLACE = 10266164381;
 local BLOODLINES = 1946714362;
@@ -328,6 +327,4 @@ task.spawn(function()
 	end);
 end);
 
-
 getgenv().ah_loaded = true;
-
