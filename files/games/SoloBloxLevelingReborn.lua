@@ -254,15 +254,22 @@ do -- // Functions
 
      -- Starts a random selected dungeon
     function functions.StartSelectedDungeon()
-        local dungeon, rank = functions.GetRandomDungeon(getgenv().SelectedDungeons or {});
-        if not dungeon or not rank then
+        local dungeonWithRank, rank = functions.GetRandomDungeon(getgenv().SelectedDungeons or {});
+        if not dungeonWithRank or not rank then
             warn('No dungeon selected or invalid selection.');
             return;
         end
 
-        local placeID = functions.DungeonStats(rank, dungeon);
+        -- Extract dungeon name from string like "Goblin [C Rank]"
+        local dungeonName = dungeonWithRank:match('^(.-)%s*%[') -- captures "Goblin" from "Goblin [C Rank]"
+        if not dungeonName then
+            warn('Failed to extract dungeon name from:', dungeonWithRank);
+            return;
+        end
+
+        local placeID = functions.DungeonStats(rank, dungeonName);
         if not placeID then
-            warn('No PlaceID found for dungeon:', dungeon);
+            warn('No PlaceID found for dungeon:', dungeonName);
             return;
         end
 
@@ -270,10 +277,11 @@ do -- // Functions
             LocalPlayer.UserId,
             getgenv().SelectedDifficulty or 'Hard',
             nil,
-            {placeID}, -- wrap in table because createDungeon expects a table
+            {placeID}, -- wrap in table
             rank
         );
-    end;
+    end
+
 
 
     function functions.GetHoverPosition(mobPos)
