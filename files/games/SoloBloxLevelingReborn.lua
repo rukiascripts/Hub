@@ -31,7 +31,7 @@ local ReplicatedStorage, Players, RunService, CollectionService, Lighting, UserI
 	'CollectionService',
 	'Lighting',
 	'UserInputService',
-	getServerConstant('VirtualInputManager'),
+	'VirtualInputManager',
 	'TeleportService',
 	'MemStorageService',
 	'TweenService',
@@ -609,4 +609,5 @@ do -- // Auto Farm Section
             functions.createDungeon(LocalPlayer.UserId, getgenv().SelectedDifficulty, nil, functions.DungeonStats(getgenv().SelectedRank), getgenv().SelectedRank)
         end;
 	}); 
+
 end;
