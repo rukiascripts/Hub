@@ -98,7 +98,7 @@ local DropEvent = getKey('DropEvent')
 
 local DungeonHelper = {
     ["D-Rank"] = { ["PlaceID"] = {125357995526125,127569336430170}, ["MobsName"] = {'KARDING','HORIDONG','MAGICARABAO'} },
-    ["C-Rank"] = { ["PlaceID"] = {83492604633635,71377998784000}, ["MobsName"] = {'WOLFANG','METALIC FANG','DAREWOLF','MONKEYKONG','UNDERWORLD SERPENT', 'FANGORA', 'RAGNOK', 'TWINKLE', 'DARKFIRE', 'GOBLINS TYRANT'} },
+    ["C-Rank"] = { ["PlaceIsD"] = {83492604633635,71377998784000}, ["MobsName"] = {'WOLFANG','METALIC FANG','DAREWOLF','MONKEYKONG','UNDERWORLD SERPENT', 'FANGORA', 'RAGNOK', 'TWINKLE', 'DARKFIRE', 'GOBLINS TYRANT'} },
 }
 
 -- 71377998784000 other c-rank placeid (removed due to not being nearly as abusable)
@@ -593,12 +593,14 @@ do -- // Auto Farm Section
         text = 'Auto Start Dungeon',
         tip = 'Put script within Auto Execute.',
         callback = function(value)
-            if (game.PlaceId == 119482438738938) then -- city
-                functions.fly(true);
-                myRootPart.CFrame = CFrame.new(200, -100, 200);
-                task.wait(5);
-                if (not value) then return end;
-                functions.createDungeon(LocalPlayer.UserId, getgenv().SelectedDifficulty, nil, functions.DungeonStats(getgenv().SelectedRank), getgenv().SelectedRank)
+            if (value) then
+                if (game.PlaceId == 119482438738938) then -- city
+                    functions.fly(true);
+                    myRootPart.CFrame = CFrame.new(200, -100, 200);
+                    task.wait(5);
+                    if (not value) then return end;
+                    functions.createDungeon(LocalPlayer.UserId, getgenv().SelectedDifficulty, nil, functions.DungeonStats(getgenv().SelectedRank), getgenv().SelectedRank)
+                end;
             end;
         end;
     })
