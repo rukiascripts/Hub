@@ -3,7 +3,7 @@
 	-- @classmod Maid
 	-- @see Signal
 
-	local Signal = sharedRequire('Signal.lua');
+	local Signal = sharedRequire('utils/Signal.lua');
 	local tableStr = "table";
 	local classNameStr = "Maid";
 	local funcStr = "function";
@@ -126,5 +126,6 @@
 	--- Alias for DoCleaning()
 	-- @function Destroy
 	Maid.Destroy = Maid.DoCleaning
+
 
 	return Maid;
