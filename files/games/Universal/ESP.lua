@@ -80,9 +80,9 @@ end;
 local esp = library:AddTab('ESP');
 local column1 = esp:AddColumn();
 local column2 = esp:AddColumn();
-local espSettings = column1:AddSection(getServerConstant('Esp Settings'));
-local espCustomisation = column2:AddSection(getServerConstant('Esp Customisation'));
-local proximityArrows = column1:AddSection(getServerConstant('Proximity Arrows'));
+local espSettings = column1:AddSection('Esp Settings');
+local espCustomisation = column2:AddSection('Esp Customisation');
+local proximityArrows = column1:AddSection('Proximity Arrows');
 
 espSettings:AddToggle({
     text = 'Toggle Esp',
