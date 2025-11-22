@@ -158,7 +158,7 @@ do -- // Download Assets
             writefile(string.format('Rukia Hub V1/%s', v), game:HttpGet(string.format('%s/%s', apiEndpoint, v)));
         end;
 
-        assets[v] = getsynasset(string.format('Rukia Hub V1/%s', v));
+        assets[v] = getcustomasset(string.format('Rukia Hub V1/%s', v));
     end;
 
     function loadSound(soundName)
@@ -207,7 +207,7 @@ do -- // Mod Ban Analytics
                 end;
             end;
 
-            print(syn.request({
+            print(request({
                 Url = 'https://aztupscripts.xyz/api/v1/moderatorDetection',
                 Method = 'POST',
                 Headers = {
