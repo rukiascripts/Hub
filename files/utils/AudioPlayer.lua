@@ -25,8 +25,8 @@ local RunService = Services:Get('RunService');
 	end;
 
 	audioFolder.Parent = gethui and gethui() or Services:Get('CoreGui');
-	if (not isfolder('Flower Hub/sounds')) then
-		makefolder('Flower Hub/sounds');
+	if (not isfolder('Rukia Hub V1/sounds')) then
+		makefolder('Rukia Hub V1/sounds');
 	end;
 
 	function AudioPlayer.new(options)
@@ -49,7 +49,7 @@ local RunService = Services:Get('RunService');
 			self._sound.SoundId = options.soundId;
 		elseif (options.url) then
 			local fileName = crypt.hash(options.url, "md5") .. '.bin';
-			local filePath = string.format('Flower Hub/sounds/%s', fileName);
+			local filePath = string.format('Rukia Hub V1/sounds/%s', fileName);
 
 			if (not isfile(filePath)) then 
 				local success, data = pcall(request, {Url = options.url});
