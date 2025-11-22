@@ -105,11 +105,11 @@ local DropFolder = workspace:WaitForChild('DropItem');
 local DungeonHelper = {
     ['D-Rank'] = {
         ['Prison'] = {
-            PlaceID = 125357995526125,
+            PlaceID = 127569336430170,
             Mobs = {'KARDING','HORIDONG','MAGICARABAO'}
         },
         ['Rock'] = {
-            PlaceID = 127569336430170,
+            PlaceID = 125357995526125,
             Mobs = {'KARDING','HORIDONG','MAGICARABAO'}
         }
     },
@@ -440,7 +440,6 @@ do -- // Functions
             getgenv().autoFarmMob = false
             return
         end
-
         getgenv().autoFarmMob = true
 
         while getgenv().autoFarmMob do
