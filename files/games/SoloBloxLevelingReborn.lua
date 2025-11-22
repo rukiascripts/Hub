@@ -586,7 +586,7 @@ do -- // Auto Farm Section
 		multiselect = true,
 
         callback = function(value)
-            prettyPrint(value);
+            print(HttpService:JSONEncode(value));
         end;
     })
 
