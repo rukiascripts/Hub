@@ -1098,7 +1098,7 @@ do -- // Functions
 
                 createComponent('TextLabel', { -- // title
                     Font = Enum.Font.Garamond,
-                    Text = 'Aztup Hub V3 Collector Auto Farm Order List',
+                    Text = 'Rukia Hub V1 Collector Auto Farm Order List',
                     TextSize = 25,
                     TextWrapped = true,
                     BackgroundTransparency = 1,
@@ -1250,7 +1250,7 @@ do -- // Functions
 
                 artefactOrderList = newOrderList;
 
-                writefile('Aztup Hub V3/RogueLineageCollectorBotList.json', HttpService:JSONEncode(newOrderList));
+                writefile('Rukia Hub V1/RogueLineageCollectorBotList.json', HttpService:JSONEncode(newOrderList));
                 task.wait(1);
             end;
         end);
