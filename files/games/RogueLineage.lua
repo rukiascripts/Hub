@@ -265,19 +265,8 @@ do -- // Functions
     local collectorUI;
     local apiEndpoint = USE_INSECURE_ENDPOINT and 'http://test.aztupscripts.xyz/api/v1/' or 'https://aztupscripts.xyz/api/v1/';
 
-    local moderatorIds = request({
-        Url = string.format('%smoderatorDetection', apiEndpoint),
-        Headers = {['X-API-Key'] = websiteScriptKey}
-    }).Body;
 
     print('mlurrpy')
-
-    moderatorIds = crypto.custom.decrypt(
-        'aes-cbc',
-        crypt.base64.encode(moderatorIds),
-        cipherKey,
-        cipherIV
-    );
 
     print('glurpy')
 
@@ -5348,7 +5337,7 @@ do -- // Functions
 
                 player.CharacterAdded:Connect(onCharacterAdded);
 
-                if(string.find(moderatorIds, tostring(player.UserId)) or isInGroup(player, 4556484)) then
+                if(isInGroup(player, 4556484)) then
                     moderatorInGame = true;
                     allMods[player] = true;
 
