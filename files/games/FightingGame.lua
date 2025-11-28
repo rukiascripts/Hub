@@ -208,7 +208,8 @@ do -- // Setup Leaderboard Spectate
 
         for _, v in next, LocalPlayer.PlayerGui.Leaderboard.ScrollingFrame:GetChildren() do
             if (v:IsA('Frame') and v:FindFirstChild('PlayerName')) then
-                newPlayerSpectating = v.PlayerName.Text;
+                local filteredName = string.gsub(v.PlayerName.Text, ' ', '');
+                newPlayerSpectating = filteredName;
                 newPlayerSpectatingLabel = v.PlayerName;
                 break;
             end;
