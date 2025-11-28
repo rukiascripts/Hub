@@ -439,6 +439,59 @@ makeESP({
     end
 });
 
+local function onNewAwardAdded(award, espConstructor)
+    local validMobNames = {
+        "Award",
+    }
+    local CollectionService = game:GetService("CollectionService")
+
+    local foundMobs = {}
+    for i, model in pairs(game:GetService("Workspace"):GetChildren()) do
+
+        for i, string in ipairs(validMobNames) do
+            if string.find(model.Name,string) then
+                table.insert(foundMobs,model)
+                CollectionService:AddTag(model, "award")
+            end
+        end
+    end
+    if (not CollectionService:HasTag(mob, 'award')) then return end;
+
+    local code = [[
+                local award = ...;
+                return setmetatable({}, {
+                    __index = function(_, p)
+                        if (p == 'Position') then
+                            return award.PrimaryPart and award.PrimaryPart.Position or award.WorldPivot.Position
+                        end;
+                    end,
+                });
+            ]]
+
+    local formattedName = formatMobName(award.BillboardGui.TextLabel);
+    local awardEsp = espConstructor.new({code = code, vars = {award}}, formattedName);
+
+    if (formattedName == 'Blessing') then
+        ToastNotif.new({text = 'A blessing has spawned!'});
+    end;
+
+    local connection;
+    connection = award:GetPropertyChangedSignal('Parent'):Connect(function()
+        if (not award.Parent) then
+            connection:Disconnect();
+            awardEsp:Destroy();
+        end;
+    end);
+end;
+
+makeESP({
+    sectionName = 'Award',
+    type = 'childAdded',
+    args = workspace,
+    callback = onNewAwardAdded,
+
+});
+
 makeESP({
     sectionName = 'NPCs',
     type = 'childAdded',
@@ -778,6 +831,16 @@ print("before do")
 do -- One Shot NPCs
     local mobs = {};
 
+    local function getAnyPart(model)
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA('BasePart') then
+                return obj;
+            end;
+        end;
+        return nil;
+    end;
+
+
     local NetworkOneShot = {};
     NetworkOneShot.__index = NetworkOneShot;
 
@@ -791,11 +854,7 @@ do -- One Shot NPCs
             self:Destroy();
         end));
 
-        self._maid:GiveTask(Utility.listenToChildAdded(mob, function(obj)
-            if (obj.Name == 'HumanoidRootPart') then
-                self.hrp = obj;
-            end;
-        end));
+        self.hrp = getAnyPart(mob);
 
         mobs[mob] = self;
         return self;
