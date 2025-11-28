@@ -803,9 +803,28 @@ do -- One Shot NPCs
     end;
 
     function NetworkOneShot:Update()
-        if (not self.hrp or not isnetworkowner(self.hrp) or not self.hrp.Parent or self.hrp.Parent.Parent ~= workspace.Live) then return end;
-        self.char:PivotTo(CFrame.new(self.hrp.Position.X, workspace.FallenPartsDestroyHeight - 100000, self.hrp.Position.Z));
+        if (not self.hrp or not self.hrp.Parent or self.hrp.Parent.Parent ~= workspace.Live) then return end;
+
+        local hasOwnership = isnetworkowner(self.hrp);
+
+        -- store previous state
+        if self._hadOwnership == nil then
+            self._hadOwnership = false;
+        end;
+
+        if (hasOwnership and not self._hadOwnership) then
+            print('[NetworkOneShot] Gained network ownership for', self.char.Name);
+        elseif (not hasOwnership and self._hadOwnership) then
+            print('[NetworkOneShot] Lost network ownership for', self.char.Name);
+        end;
+
+        self._hadOwnership = hasOwnership;
+
+        if hasOwnership then
+            self.char:PivotTo(CFrame.new(self.hrp.Position.X, workspace.FallenPartsDestroyHeight - 100000, self.hrp.Position.Z));
+        end;
     end;
+
 
     function NetworkOneShot:Destroy()
         self._maid:DoCleaning();
