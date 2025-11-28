@@ -161,7 +161,7 @@ local library = sharedRequire('UILibrary.lua');
 				isCustomInstance = true;
 			end;
 
-			color = container.color or color or whiteColor;
+			color = color or whiteColor;
 
 			local self = setmetatable({}, BaseEsp);
 			self._tag = tag;
@@ -246,3 +246,4 @@ local library = sharedRequire('UILibrary.lua');
 	end);
 
 	return createBaseEsp;
+
