@@ -198,6 +198,7 @@ local library = sharedRequire('UILibrary.lua');
 				self._isCustomInstance = true;
 				self._code = instance.code;
 				self._vars = instance.vars;
+				self._color = instance.color;
 			end;
 
 			local smallData = table.clone(self);
