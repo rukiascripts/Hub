@@ -347,6 +347,7 @@ local function onNewMobAdded(mob, espConstructor)
         "#HITBOX_SIMULATION",
         "_Dungeon",
         "HITBOX_SIMULATION",
+        "HITBOX_SIMULATION#",
     }
     local CollectionService = game:GetService("CollectionService")
 
@@ -446,7 +447,6 @@ makeESP({
     callback = onNewNpcAdded
 });
 
-print("test")
 getrenv().Tmea =
     makeESP({
         sectionName = 'Terra Mea',
@@ -827,6 +827,7 @@ do -- One Shot NPCs
     local valid = {
         ['#HITBOX_SIMULATION'] = true;
         ['HITBOX_SIMULATION'] = true;
+        ['HITBOX_SIMULATION#'] = true;
         ['_Dungeon'] = true;
     };
 
