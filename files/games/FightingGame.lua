@@ -347,7 +347,6 @@ local function onNewMobAdded(mob, espConstructor)
         "#HITBOX_SIMULATION",
         "_Dungeon",
         "HITBOX_SIMULATION",
-        "HITBOX_SIMULATION#",
     }
     local CollectionService = game:GetService("CollectionService")
 
@@ -844,13 +843,25 @@ do -- One Shot NPCs
     end;
 
     local valid = {
-        ['#HITBOX_SIMULATION'] = true;
+        ['Angel Eye'] = true;
         ['HITBOX_SIMULATION'] = true;
         ['HITBOX_SIMULATION#'] = true;
-        ['_Dungeon'] = true;
+        ['_DungeonClone'] = true;
+        ['Terra Mob']     = true;
+        ['Swarm']         = true;
+        ['Poison Orb']    = true;
+        ['Dark Eye']      = true;
+        ['Flame Beast']   = true;
     };
 
-    Utility.listenToChildAdded(workspace.Live, function(obj)
+    Utility.listenToChildAdded(workspace, function(obj)
+        task.wait(0.2);
+        if (obj == LocalPlayer.Character) then return; end;
+        if (not valid[obj.Name]) then return; end;
+        NetworkOneShot.new(obj);
+    end);
+
+     Utility.listenToChildAdded(workspace.Live, function(obj)
         task.wait(0.2);
         if (obj == LocalPlayer.Character) then return; end;
         if (not valid[obj.Name]) then return; end;
