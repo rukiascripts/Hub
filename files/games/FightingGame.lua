@@ -467,9 +467,10 @@ local function onNewAwardAdded(award, espConstructor)
                     end,
                 });
             ]]
+		--function BaseEsp.new(instance, tag, color, isLazy)
 
     local formattedName = formatMobName(award:WaitForChild('BillboardGui').TextLabel.Text);
-    local awardEsp = espConstructor.new({code = code, vars = {award}}, formattedName);
+    local awardEsp = espConstructor.new({code = code, vars = {award}, color = award:WaitForChild('BillboardGui'.TextLabel.TextColor3)}, formattedName);
 
     if (formattedName == 'Blessing') then
         ToastNotif.new({text = 'A blessing has spawned!'});
