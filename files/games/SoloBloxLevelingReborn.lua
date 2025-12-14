@@ -124,16 +124,6 @@ local DungeonHelper = {
         }
     }
 };
-
-
--- local DungeonHelper = {
---     ["D-Rank"] = { ["PlaceID"] = {125357995526125,127569336430170}, ["MobsName"] = {'KARDING','HORIDONG','MAGICARABAO'} },
---     ["C-Rank"] = { ["PlaceID"] = {83492604633635,71377998784000}, ["MobsName"] = {'WOLFANG','METALIC FANG','DAREWOLF','MONKEYKONG','UNDERWORLD SERPENT', 'FANGORA', 'RAGNOK', 'TWINKLE', 'DARKFIRE', 'GOBLINS TYRANT'} },
--- }
-
--- Goblin - 71377998784000
--- subway - 83492604633635
-
 ------------
 
 do -- // Functions
@@ -205,24 +195,22 @@ do -- // Functions
         until not library.flags.infiniteJump;
     end;
     
-    -- Returns the PlaceID for a given dungeon name and rank
     function functions.DungeonStats(rank, dungeonName)
         if rank and dungeonName and DungeonHelper[rank] and DungeonHelper[rank][dungeonName] then
             return DungeonHelper[rank][dungeonName].PlaceID;
         end
 
-        -- If no dungeonName provided, try to detect rank from mobs in workspace
         local MobFolder = workspace:WaitForChild('WalkingNPC');
         for _, mob in ipairs(MobFolder:GetChildren()) do
-            if mob:IsA('Highlight') then continue; end;
+            if (mob:IsA('Highlight')) then continue; end;
             local root = mob:FindFirstChild('HumanoidRootPart');
-            if root and root:FindFirstChild('Health') and root.Health:FindFirstChild('ImageLabel') then
+            if (root) and root:FindFirstChild('Health') and root.Health:FindFirstChild('ImageLabel') then
                 local tag = root.Health.ImageLabel:FindFirstChild('TextLabel');
-                if tag then
+                if (tag) then
                     local mobName = tostring(tag.Text);
                     for r, dungeons in pairs(DungeonHelper) do
                         for dName, info in pairs(dungeons) do
-                            if table.find(info.Mobs, mobName) then
+                            if (table.find(info.Mobs, mobName)) then
                                 getgenv().DungeonRank = r;
                                 return info.PlaceID;
                             end
@@ -232,7 +220,6 @@ do -- // Functions
             end
         end
 
-        -- fallback
         return nil;
     end;
 
@@ -273,7 +260,6 @@ do -- // Functions
         end;
     end;
 
-     -- Starts a random selected dungeon
     function functions.StartSelectedDungeon()
         local dungeonWithRank, rank = functions.GetRandomDungeon(getgenv().SelectedDungeons or {});
         if not dungeonWithRank or not rank then
@@ -281,15 +267,14 @@ do -- // Functions
             return;
         end
 
-        -- Extract dungeon name from string like "Goblin [C Rank]"
         local dungeonName = dungeonWithRank:match('^(.-)%s*%[') -- captures "Goblin" from "Goblin [C Rank]"
-        if not dungeonName then
+        if (not dungeonName) then
             warn('Failed to extract dungeon name from:', dungeonWithRank);
             return;
         end
 
         local placeID = functions.DungeonStats(rank, dungeonName);
-        if not placeID then
+        if (not placeID )then
             warn('No PlaceID found for dungeon:', dungeonName);
             return;
         end
@@ -298,7 +283,7 @@ do -- // Functions
             LocalPlayer.UserId,
             getgenv().SelectedDifficulty or 'Hard',
             nil,
-            {placeID}, -- wrap in table
+            {placeID},
             rank
         );
     end
@@ -363,14 +348,13 @@ do -- // Functions
         for key, isSelected in pairs(selectedTable) do
             local dungeonName;
             
-            -- Handle nested table keys
             if type(key) == "table" then
-                dungeonName = key[1]; -- get the string inside the table
+                dungeonName = key[1];
             else
                 dungeonName = key;
             end;
 
-            if isSelected and dungeonName then
+            if (isSelected and dungeonName) then
                 table.insert(selectedList, dungeonName);
             end;
         end
@@ -448,7 +432,6 @@ do -- // Functions
             local gates = workspace:FindFirstChild("Gates")
             if not gates then return end
 
-            -- Start dungeon if not already started
             if not getgenv().StartedDungeon then
                 for _, gate in ipairs(gates:GetDescendants()) do
                     if gate:IsA("BasePart") and gate.Name == "Gate1" then
@@ -462,7 +445,6 @@ do -- // Functions
 
             repeat task.wait() until getgenv().StartedDungeon
 
-            -- Handle mobs
             local MobFolder = workspace:WaitForChild("WalkingNPC")
             local foundMob = false
             for _, model in ipairs(MobFolder:GetChildren()) do
@@ -483,7 +465,6 @@ do -- // Functions
                 end
             end
 
-            -- Handle CloseRank prompts
             if workspace:FindFirstChild("CloseRank") then
                 local oldCFrame = myRootPart.CFrame
                 task.wait(2)
@@ -498,13 +479,11 @@ do -- // Functions
                 myRootPart.CFrame = oldCFrame
             end
 
-            -- If no mobs found, wait a few times before going to boss
             if not foundMob and not cutscene and getgenv().StartedDungeon then
                 local noMobCounter = 0
                 while noMobCounter < 15 and not foundMob do
-                    task.wait(0.35) -- roughly 5 seconds total (0.35*15 ≈ 5.25s)
+                    task.wait(0.35) -- roughly 5 seconds total (0.35*15 around 5.25s)
                     
-                    -- Check again for mobs
                     foundMob = false
                     for _, model in ipairs(MobFolder:GetChildren()) do
                         if model:IsA("Highlight") then continue end
@@ -518,7 +497,6 @@ do -- // Functions
                     noMobCounter = noMobCounter + 1
                 end
 
-                -- If still no mobs, go to boss/final gate
                 if not foundMob then
                     local finalGate = gates:FindFirstChild("Gate5") or gates:FindFirstChild("Gate4")
                     if finalGate and not workspace:FindFirstChild("CloseRank") then
@@ -758,8 +736,6 @@ do -- // Auto Farm Section
         tip = 'Put script within Auto Execute.',
         callback = function(value)
             if (value and game.PlaceId == 119482438738938) then -- city
-                functions.fly(true);
-                myRootPart.CFrame = CFrame.new(200, -100, 200);
                 task.wait(5);
                 if (value) then
                     functions.StartSelectedDungeon();
