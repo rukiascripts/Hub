@@ -30,58 +30,47 @@
 	-- Roblox signal conventions.
 	-- @param ... Variable arguments to pass to handler
 	-- @treturn nil
-function Signal:Fire(...)
-	if not self._bindableEvent then return end
-	
-	local argData = {...}
-	local argCount = select("#", ...)
-	
-	-- Store current fire's arguments
-	self._argData = argData
-	self._argCount = argCount
-	
-	-- Fire the event
-	self._bindableEvent:Fire()
-	
-	-- Clear after handlers have run
-	self._argData = nil
-	self._argCount = nil
-end
-
-function Signal:Connect(handler)
-	if not self._bindableEvent then 
-		return error("Signal has been destroyed")
+	function Signal:Fire(...)
+		self._argData = {...}
+		self._argCount = select("#", ...)
+		self._bindableEvent:Fire()
+		self._argData = nil
+		self._argCount = nil
 	end
 
-	if type(handler) ~= "function" then
-		error(("connect(%s)"):format(typeof(handler)), 2)
+	--- Connect a new handler to the event. Returns a connection object that can be disconnected.
+	-- @tparam function handler Function handler called with arguments passed when `:Fire(...)` is called
+	-- @treturn Connection Connection object that can be disconnected
+	function Signal:Connect(handler)
+		if not self._bindableEvent then return error("Signal has been destroyed"); end --Fixes an error while respawning with the UI injected
+
+		if not (type(handler) == "function") then
+			error(("connect(%s)"):format(typeof(handler)), 2)
+		end
+
+		return self._bindableEvent.Event:Connect(function()
+			handler(unpack(self._argData, 1, self._argCount))
+		end)
 	end
 
-	return self._bindableEvent.Event:Connect(function()
-		-- Capture args immediately when the BindableEvent fires
-		local argData = self._argData
-		local argCount = self._argCount
-		
-		handler(unpack(argData, 1, argCount))
-	end)
-end
+	--- Wait for fire to be called, and return the arguments it was given.
+	-- @treturn ... Variable arguments from connection
+	function Signal:Wait()
+		self._bindableEvent.Event:Wait()
+		assert(self._argData, "Missing arg data, likely due to :TweenSize/Position corrupting threadrefs.")
+		return unpack(self._argData, 1, self._argCount)
+	end
 
-function Signal:Wait()
-	-- Capture the args immediately when the event fires, before Fire() clears them
-	local argData, argCount
-	
-	local connection
-	connection = self._bindableEvent.Event:Connect(function()
-		argData = self._argData
-		argCount = self._argCount
-		connection:Disconnect()
-	end)
-	
-	self._bindableEvent.Event:Wait()
-	
-	assert(argData, "Missing arg data, likely due to :TweenSize/Position corrupting threadrefs.")
-	return unpack(argData, 1, argCount)
-end
+	--- Disconnects all connected events to the signal. Voids the signal as unusable.
+	-- @treturn nil
+	function Signal:Destroy()
+		if self._bindableEvent then
+			self._bindableEvent:Destroy()
+			self._bindableEvent = nil
+		end
 
+		self._argData = nil
+		self._argCount = nil
+	end
 
 return Signal
