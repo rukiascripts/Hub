@@ -137,6 +137,7 @@ local function onScriptError(message)
 	if (message:find(myScriptId)) then
 		table.insert(seenErrors, message);
 		local reportMessage = 'rukiasHubRan_v_' .. hubVersion .. message;
+		print(reportMessage);
 		errorAnalytics:Report(gameName, reportMessage, 1);
 	end;
 end
