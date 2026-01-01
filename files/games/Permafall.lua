@@ -23,7 +23,7 @@ local Webhook = sharedRequire('utils/Webhook.lua');
 local Signal = sharedRequire('utils/Signal.lua');
 local basicHelper = sharedRequire('utils/helpers/basics.lua');
 
-if (game.PlaceId == 10277607801) then
+if (game.PlaceId == 126222071643660) then
     ToastNotif.new({
         text = 'Script will not run in menu!',
         duration = 5
