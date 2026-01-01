@@ -624,7 +624,10 @@ local ToastNotif = sharedRequire('classes/ToastNotif.lua');
 					task.spawn(self.callback, state);
 				end
 
-				option.onStateChanged:Fire(state);
+				task.delay(1, function()
+					option.onStateChanged:Fire(state)
+				end)
+				
 				library.OnFlagChanged:Fire(self);
 			end
 
@@ -3694,6 +3697,5 @@ local ToastNotif = sharedRequire('classes/ToastNotif.lua');
 			visualizer:RemoveText(data.text);
 		end
 	end);
-
 
 	return library;
