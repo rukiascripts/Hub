@@ -624,10 +624,7 @@ local ToastNotif = sharedRequire('classes/ToastNotif.lua');
 					task.spawn(self.callback, state);
 				end
 
-				task.delay(1, function()
-					option.onStateChanged:Fire(state)
-				end)
-				
+				option.onStateChanged:Fire(state);
 				library.OnFlagChanged:Fire(self);
 			end
 
