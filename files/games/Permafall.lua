@@ -182,8 +182,82 @@ localcheats:AddSlider({
 
 
 
---- MISC AREA!!
-----------------
+
+do -- // Setup Leaderboard Spectate
+    local lastUpdateAt = 0;
+
+    function setCameraSubject(subject)
+        if (subject == LocalPlayer.Character) then
+            playerSpectating = nil;
+            CollectionService:RemoveTag(LocalPlayer, 'ForcedSubject');
+
+            if (playerSpectatingLabel) then
+                playerSpectatingLabel.TextColor3 = Color3.fromRGB(255, 255, 255);
+                playerSpectatingLabel = nil;
+            end;
+
+            maid.spectateUpdate = nil;
+            return;
+        end;
+
+        CollectionService:AddTag(LocalPlayer, 'ForcedSubject');
+        workspace.CurrentCamera.CameraSubject = subject;
+
+        maid.spectateUpdate = task.spawn(function()
+            while task.wait() do
+                if (tick() - lastUpdateAt < 5) then continue end;
+                lastUpdateAt = tick();
+                task.spawn(function()
+                    LocalPlayer:RequestStreamAroundAsync(workspace.CurrentCamera.CFrame.Position);
+                end);
+            end;
+        end);
+    end;
+
+    UserInputService.InputBegan:Connect(function(inputObject)
+        if (inputObject.UserInputType ~= Enum.UserInputType.MouseButton1 or not LocalPlayer:FindFirstChild('PlayerGui') or not LocalPlayer.PlayerGui:FindFirstChild('LeaderboardGui')) then return end;
+
+        local newPlayerSpectating;
+        local newPlayerSpectatingLabel;
+
+        for _, v in next, LocalPlayer.PlayerGui.Leaderboard.ScrollingFrame:GetChildren() do
+            if (v:IsA('Frame') and v:FindFirstChild('PlayerName')) then
+                local filteredName = string.gsub(v.PlayerName.Text, ' ', '');
+                newPlayerSpectating = filteredName;
+                newPlayerSpectatingLabel = v.PlayerName;
+                break;
+            end;
+        end;
+
+        if (not newPlayerSpectating) then return end;
+
+        if (playerSpectatingLabel) then
+            playerSpectatingLabel.TextColor3 = Color3.fromRGB(255, 255, 255);
+        end;
+
+        playerSpectatingLabel = newPlayerSpectatingLabel;
+        playerSpectatingLabel.TextColor3 = Color3.fromRGB(255, 0, 0);
+
+        if (newPlayerSpectating == playerSpectating or newPlayerSpectating == LocalPlayer.Name) then
+            setCameraSubject(LocalPlayer.Character);
+        else
+            print('spectating new player');
+            playerSpectating = newPlayerSpectating;
+
+            local player = Players:FindFirstChild(playerSpectating);
+
+            if (not player or not player.Character or not player.Character.PrimaryPart) then
+                print('player not found', player);
+                setCameraSubject(LocalPlayer.Character);
+                return;
+            end;
+
+            setCameraSubject(player.Character);
+        end;
+    end);
+
+    TextLogger.setCameraSubject = setCameraSubject;
+end;
 
 
 function functions.Respawn(resp)
