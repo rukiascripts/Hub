@@ -49,9 +49,7 @@
 		end
 
 		return self._bindableEvent.Event:Connect(function()
-			if (self._argData) then
-				handler(unpack(self._argData, 1, self._argCount))
-			end;
+			handler(unpack(self._argData, 1, self._argCount))
 		end)
 	end
 
