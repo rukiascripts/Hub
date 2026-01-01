@@ -30,7 +30,7 @@
 	-- Roblox signal conventions.
 	-- @param ... Variable arguments to pass to handler
 	-- @treturn nil
-	function Signal:Fire(...)
+function Signal:Fire(...)
 	if not self._bindableEvent then return end
 	
 	local argData = {...}
@@ -40,10 +40,10 @@
 	self._argData = argData
 	self._argCount = argCount
 	
-	-- Fire the event (handlers execute synchronously during this call)
+	-- Fire the event
 	self._bindableEvent:Fire()
 	
-	-- Only clear after handlers have run
+	-- Clear after handlers have run
 	self._argData = nil
 	self._argCount = nil
 end
@@ -62,26 +62,26 @@ function Signal:Connect(handler)
 		local argData = self._argData
 		local argCount = self._argCount
 		
-		-- Call handler with captured args (safe even if handler yields)
 		handler(unpack(argData, 1, argCount))
 	end)
 end
 
-	function Signal:Wait()
-		local argData, argCount = self._bindableEvent.Event:Wait()
-		return unpack(argData, 1, argCount)
-	end
+function Signal:Wait()
+	-- Capture the args immediately when the event fires, before Fire() clears them
+	local argData, argCount
+	
+	local connection
+	connection = self._bindableEvent.Event:Connect(function()
+		argData = self._argData
+		argCount = self._argCount
+		connection:Disconnect()
+	end)
+	
+	self._bindableEvent.Event:Wait()
+	
+	assert(argData, "Missing arg data, likely due to :TweenSize/Position corrupting threadrefs.")
+	return unpack(argData, 1, argCount)
+end
 
-	--- Disconnects all connected events to the signal. Voids the signal as unusable.
-	-- @treturn nil
-	function Signal:Destroy()
-		if self._bindableEvent then
-			self._bindableEvent:Destroy()
-			self._bindableEvent = nil
-		end
-
-		self._argData = nil
-		self._argCount = nil
-	end
 
 return Signal
