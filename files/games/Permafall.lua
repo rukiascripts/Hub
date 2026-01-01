@@ -21,7 +21,6 @@ local fromHex = sharedRequire('utils/fromHex.lua');
 local toCamelCase = sharedRequire('utils/toCamelCase.lua');
 local Webhook = sharedRequire('utils/Webhook.lua');
 local Signal = sharedRequire('utils/Signal.lua');
-local basicHelper = sharedRequire('utils/helpers/basics.lua');
 
 if (game.PlaceId == 126222071643660) then
     ToastNotif.new({
@@ -110,17 +109,38 @@ do -- // Functions
         end);
     end;
 
-end;
-function functions.infiniteJump(toggle)
-    if(not toggle) then return end;
 
-    repeat
-        local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
-        if(rootPart and UserInputService:IsKeyDown(Enum.KeyCode.Space)) then
-            rootPart.Velocity = Vector3.new(rootPart.Velocity.X, library.flags.infiniteJumpHeight, rootPart.Velocity.Z);
+    function functions.infiniteJump(toggle)
+        if(not toggle) then return end;
+
+        repeat
+            local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+            if(rootPart and UserInputService:IsKeyDown(Enum.KeyCode.Space)) then
+                rootPart.Velocity = Vector3.new(rootPart.Velocity.X, library.flags.infiniteJumpHeight, rootPart.Velocity.Z);
+            end;
+            task.wait(0.1);
+        until not library.flags.infiniteJump;
+    end;
+
+    function functions.antiFire(toggle)
+        if(not toggle) then
+            maid.antiFire = nil;
+            return;
         end;
-        task.wait(0.1);
-    until not library.flags.infiniteJump;
+        
+        maid.antiFire = LocalPlayer.Character.Values.OnFire.Changed:Connect(function(boolean)
+            if(boolean) then
+                local args = {
+                    {
+                        Enabled = true,
+                        Character = game:GetService("Players").LocalPlayer.Character,
+                        InputType = "Dash"
+                    }
+                }
+                game:GetService("Players").LocalPlayer.Character:WaitForChild("Communicate"):FireServer(unpack(args))
+            end;
+        end);
+    end;
 end;
 
 localcheats:AddDivider("Movement");
@@ -184,6 +204,12 @@ end;
 
 
 playercheats:AddDivider("Player Settings");
+
+playercheats:AddToggle({
+    text = 'Anti Fire',
+    callback = functions.antiFire
+});
+
 
 local VisualsMisc = column2:AddSection('Visuals');
 VisualsMisc:AddDivider("Game Visuals");
