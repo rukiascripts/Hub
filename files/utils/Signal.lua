@@ -31,33 +31,41 @@
 	-- @param ... Variable arguments to pass to handler
 	-- @treturn nil
 	function Signal:Fire(...)
-		local argData = {...}
-		local argCount = select("#", ...)
-		
-		-- Store args temporarily for Wait()
-		self._argData = argData
-		self._argCount = argCount
-		
-		self._bindableEvent:Fire(argData, argCount)
-		
-		-- Clear after a brief delay to handle Wait() calls
-		self._argData = nil
-		self._argCount = nil
+	if not self._bindableEvent then return end
+	
+	local argData = {...}
+	local argCount = select("#", ...)
+	
+	-- Store current fire's arguments
+	self._argData = argData
+	self._argCount = argCount
+	
+	-- Fire the event (handlers execute synchronously during this call)
+	self._bindableEvent:Fire()
+	
+	-- Only clear after handlers have run
+	self._argData = nil
+	self._argCount = nil
+end
+
+function Signal:Connect(handler)
+	if not self._bindableEvent then 
+		return error("Signal has been destroyed")
 	end
 
-	function Signal:Connect(handler)
-		if not self._bindableEvent then 
-			return error("Signal has been destroyed")
-		end
-
-		if type(handler) ~= "function" then
-			error(("connect(%s)"):format(typeof(handler)), 2)
-		end
-
-		return self._bindableEvent.Event:Connect(function(argData, argCount)
-			handler(unpack(argData, 1, argCount))
-		end)
+	if type(handler) ~= "function" then
+		error(("connect(%s)"):format(typeof(handler)), 2)
 	end
+
+	return self._bindableEvent.Event:Connect(function()
+		-- Capture args immediately when the BindableEvent fires
+		local argData = self._argData
+		local argCount = self._argCount
+		
+		-- Call handler with captured args (safe even if handler yields)
+		handler(unpack(argData, 1, argCount))
+	end)
+end
 
 	function Signal:Wait()
 		local argData, argCount = self._bindableEvent.Event:Wait()
