@@ -16,28 +16,32 @@ function Signal.new()
 	local self = setmetatable({}, Signal)
 
 	self._bindableEvent = Instance.new("BindableEvent")
-	self._argData = nil
-	self._argCount = nil -- Prevent edge case of :Fire("A", nil) --> "A" instead of "A", nil
+	self._argMap = {} -- Store args by unique ID
+	self._nextId = 0
 
 	return self
 end
 
-function Signal.isSignal(object)
-	return typeof(object) == 'table' and getmetatable(object) == Signal;
-end;
-
---- Fire the event with the given arguments. All handlers will be invoked. Handlers follow
--- Roblox signal conventions.
--- @param ... Variable arguments to pass to handler
--- @treturn nil
 function Signal:Fire(...)
 	if not self._bindableEvent then return end
 	
-	local args = {...}
-	local argCount = select("#", ...)
+	-- Generate unique ID for this fire
+	local id = self._nextId
+	self._nextId = id + 1
 	
-	-- Pass a unique reference for this specific fire
-	self._bindableEvent:Fire(args, argCount)
+	-- Store args with their count
+	self._argMap[id] = {
+		args = {...},
+		count = select("#", ...)
+	}
+	
+	-- Fire with just the ID
+	self._bindableEvent:Fire(id)
+	
+	-- Clean up after a short delay
+	task.defer(function()
+		self._argMap[id] = nil
+	end)
 end
 
 function Signal:Connect(handler)
@@ -49,29 +53,33 @@ function Signal:Connect(handler)
 		error(("connect(%s)"):format(typeof(handler)), 2)
 	end
 
-	return self._bindableEvent.Event:Connect(function(args, argCount)
-		handler(unpack(args, 1, argCount))
+	return self._bindableEvent.Event:Connect(function(id)
+		local data = self._argMap[id]
+		if data then
+			handler(unpack(data.args, 1, data.count))
+		end
 	end)
 end
 
---- Wait for fire to be called, and return the arguments it was given.
--- @treturn ... Variable arguments from connection
 function Signal:Wait()
-	self._bindableEvent.Event:Wait()
-	assert(self._argData, "Missing arg data, likely due to :TweenSize/Position corrupting threadrefs.")
-	return unpack(self._argData, 1, self._argCount)
+	if not self._bindableEvent then return end
+	
+	local id = self._bindableEvent.Event:Wait()
+	local data = self._argMap[id]
+	
+	if data then
+		return unpack(data.args, 1, data.count)
+	end
 end
 
---- Disconnects all connected events to the signal. Voids the signal as unusable.
--- @treturn nil
 function Signal:Destroy()
 	if self._bindableEvent then
 		self._bindableEvent:Destroy()
 		self._bindableEvent = nil
 	end
 
-	self._argData = nil
-	self._argCount = nil
+	self._argMap = nil
+	self._nextId = nil
 end
 
 return Signal
