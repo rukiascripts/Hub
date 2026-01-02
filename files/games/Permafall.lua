@@ -2,16 +2,10 @@ local library = sharedRequire('UILibrary.lua');
 
 
 local Maid = sharedRequire('utils/Maid.lua');
-local Services = sharedRequire('utils/Services.lua');
 
 local column1, column2 = unpack(library.columns);
 
 local functions = {};
-
-local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting = Services:Get('Players', 'RunService', 'UserInputService', 'HttpService', 'CollectionService', 'MemStorageService', 'Lighting');
-
-local LocalPlayer = Players.LocalPlayer;
-local playerMouse = LocalPlayer:GetMouse();
 
 local maid = Maid.new();
 
