@@ -201,7 +201,7 @@ do -- // Functions
 
     library.OnKeyRelease:Connect(function(input)
         local key = library.options.attachToBack.key;
-        
+
         if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
             maid.attachToBack = nil;
             maid.attachToBackTween = nil;
@@ -528,12 +528,6 @@ do -- // Removals
 		text = 'No Stun',
 		tip = 'Makes it so you will not get stunned in combat',
         callback = functions.noStun
-	});
-
-	playerMods:AddToggle({
-		text = 'No Kill Bricks',
-		tip = 'Removes all the kill bricks',
-		callback = functions.noKillBricks
 	});
 
 	playerMods:AddToggle({
