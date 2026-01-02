@@ -605,14 +605,14 @@ local function tweenTeleport(rootPart, position, noWait)
 end;
 
 do -- // Removal Functions
-  local fallStartY = nil;
-    local didCrouch = false;
+    local fallStartY = nil;
+    local crouchTicks = 0;
 
     function functions.noFall(toggle)
         if (not toggle) then
             maid.noFall = nil;
             fallStartY = nil;
-            didCrouch = false;
+            crouchTicks = 0;
             return;
         end;
 
@@ -620,40 +620,50 @@ do -- // Removal Functions
             local Character = LocalPlayer.Character;
             if (not Character) then return; end;
 
-            local Humanoid = Character:FindFirstChildOfClass('Humanoid');
             local Root = Character:FindFirstChild('HumanoidRootPart');
             local Communicate = Character:FindFirstChild('Communicate');
 
-            if (not Humanoid or not Root or not Communicate) then return; end;
-
-            if (Humanoid.FloorMaterial ~= Enum.Material.Air) then
-                fallStartY = nil;
-                didCrouch = false;
-                return;
-            end;
-
-            if (not fallStartY) then
-                fallStartY = Root.Position.Y;
-            end;
-
-            if (Root.Velocity.Y >= 0) then return; end;
-
-            local fallDistance = fallStartY - Root.Position.Y;
-            if (fallDistance < 20) then return; end;
-            if (didCrouch) then return; end;
+            if (not Root or not Communicate) then return; end;
 
             local Params = RaycastParams.new();
             Params.FilterType = Enum.RaycastFilterType.Blacklist;
             Params.FilterDescendantsInstances = {Character};
 
-            local Result = workspace:Raycast(
+            local GroundResult = workspace:Raycast(
                 Root.Position,
-                Vector3.new(0, -10, 0),
+                Vector3.new(0, -30, 0),
                 Params
             );
 
-            if (Result and Result.Distance <= 5) then
-                didCrouch = true;
+            -- Off ground
+            if (not GroundResult) then
+                if (not fallStartY) then
+                    fallStartY = Root.Position.Y;
+                end;
+                return;
+            end;
+
+            -- On ground, reset
+            if (GroundResult.Distance <= 2) then
+                fallStartY = nil;
+                crouchTicks = 0;
+                return;
+            end;
+
+            -- Still falling
+            if (not fallStartY) then return; end;
+            if (Root.Velocity.Y >= 0) then return; end;
+
+            local fallDistance = fallStartY - Root.Position.Y;
+            if (fallDistance < 20) then return; end;
+
+            -- Trigger crouch at 5 studs
+            if (GroundResult.Distance <= 5) then
+                crouchTicks = 4;
+            end;
+
+            if (crouchTicks > 0) then
+                crouchTicks -= 1;
 
                 Communicate:FireServer(unpack({
                     {
