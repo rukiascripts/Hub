@@ -63,21 +63,25 @@ do -- // Inventory Viewer (SMH)
     itemColors[11] = Color3.new(0.90000000000000002, 0, 1);
     itemColors[3] = Color3.new(0, 0.80000000000000004, 1);
     itemColors[8] = Color3.new(0.17254900000000001, 0.80000000000000004, 0.64313699999999996);
-    itemColors[7] = Color3.new(1, 0.61568599999999996, 0);
+    itemColors[7] = Color3.new(0.2588, 0.6588, 0.3490); -- Regular Spell
     itemColors[6] = Color3.new(1, 0, 0);
     itemColors[4] = Color3.new(0.82745100000000005, 0.466667, 0.207843);
     itemColors[0] = Color3.new(1, 1, 1);
     itemColors[5] = Color3.new(0.33333299999999999, 0, 1);
     itemColors[999] = Color3.new(0.792156, 0.792156, 0.792156);
+    itemColors[87] = Color3.new(0.235, 0.714, 0.961); -- God Spell
 
     local function getToolType(tool)
         if (tool:FindFirstChild("PrimaryWeapon"))then
             return 0;
-        elseif (tool:FindFirstChild("Skill")) then
+        elseif (tool:FindFirstChild("Skill") or tool:FindFirstChild('Activator')) then
             return 3;
-        elseif (tool:FindFirstChild("Tool") or tool.Parent.Name == "Intagibility" or tool.Parent.Name == "Abyssal Grasp") then
+        elseif (tool:FindFirstChild("Droppable")) then
             return 6;
         elseif (tool:FindFirstChild("Spell")) then
+            if (tool:FindFirstChild('Godspell')) then
+                return 87;
+            end;
             return 7;
         elseif (tool:FindFirstChild("Trinket")) then
             return 4;
@@ -767,41 +771,31 @@ do -- // Misc
 end;
 
 do -- // Visual Functions
-    local oldAmbient, oldBrightness = Lighting.Ambient, Lighting.Brightness;
+      local oldAmbient, oldBritghtness = Lighting.Ambient, Lighting.Brightness;
 
-    function functions.fullBright(toggle, brightness)
-        if (not toggle) then
+    function functions.fullBright(toggle)
+        if(not toggle) then
             maid.fullBright = nil;
-            Lighting.Ambient, Lighting.Brightness = oldAmbient, oldBrightness;
-            return;
+            Lighting.Ambient, Lighting.Brightness = oldAmbient, oldBritghtness;
+            return
         end;
 
-        oldAmbient, oldBrightness = Lighting.Ambient, Lighting.Brightness;
-
+        oldAmbient, oldBritghtness = Lighting.Ambient, Lighting.Brightness;
         maid.fullBright = Lighting:GetPropertyChangedSignal('Ambient'):Connect(function()
             Lighting.Ambient = Color3.fromRGB(255, 255, 255);
-            Lighting.Brightness = brightness or 0.2;
+            Lighting.Brightness = 1;
         end);
-
         Lighting.Ambient = Color3.fromRGB(255, 255, 255);
-        Lighting.Brightness = brightness or 0.2;
     end;
 end;
 
 do -- // Visuals
     visuals:AddToggle({
-        text = 'Full Bright',
-        callback = function(toggle)
-            local brightness = visuals:GetValue('Full Bright Value');
-            functions.fullBright(toggle, brightness);
-        end;
-    })
-    visuals:AddSlider({
+        text = 'Full Bright'
+    }):AddSlider({
         flag = 'Full Bright Value',
-        min = 0.1,
-        max = 1,
-        value = 0.2,
-        step = 0.1; 
+        min = 1,
+        max = 10,
+        value = 1,
     });
 end;
-
