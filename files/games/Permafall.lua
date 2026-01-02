@@ -867,7 +867,7 @@ end;
 
 do -- // Opens dialogue stuff
     function functions.buyItem(name)
-        for _, child in NPCs:GetChildren() do
+        for _, child in NPCFolder:GetChildren() do
             if (child.Name == 'Purchasable') then
                 local PurchaseInfo = child.PurchaseInfo;
                 local ItemName = PurchaseInfo.ItemName;
@@ -880,7 +880,7 @@ do -- // Opens dialogue stuff
     end;
 
     function functions.interactWithNPC(name)
-        for _, child in NPCs:GetChildren() do
+        for _, child in NPCFolder:GetChildren() do
             if (child.Name == name) then
                 fireclickdetector(child.ClickDetector);
             end;
