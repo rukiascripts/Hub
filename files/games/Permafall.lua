@@ -769,33 +769,53 @@ end;
 do -- // Visual Functions
     function functions.fullBright(toggle)
         if (not toggle) then
-            maid.fullBright = nil;
+            if maid.fullBright then
+                maid.fullBright:Disconnect();
+                maid.fullBright = nil;
+            end;
             Lighting.Ambient, Lighting.Brightness = oldAmbient, oldBrightness;
             return;
         end;
 
         oldAmbient, oldBrightness = Lighting.Ambient, Lighting.Brightness;
 
-        maid.fullBright = Lighting:GetPropertyChangedSignal('Ambient'):Connect(function()
+        local function updateLighting()
             Lighting.Ambient = Color3.fromRGB(255, 255, 255);
             Lighting.Brightness = 0.1 * (library.flags['Full Bright Value'] or 1);
-        end);
+        end;
 
-        Lighting.Ambient = Color3.fromRGB(255, 255, 255);
-        Lighting.Brightness = 0.1 * (library.flags['Full Bright Value'] or 1);
+        updateLighting();
+
+        maid.fullBright = Lighting:GetPropertyChangedSignal('Ambient'):Connect(updateLighting);
+
+        -- Optional: also update when slider changes
+        library.OnFlagChanged:Connect(function(data)
+            if data.flag == 'Full Bright Value' and library.flags['Full Bright'] then
+                Lighting.Brightness = 0.1 * library.flags['Full Bright Value'];
+            end
+        end)
     end;
 end;
 
 do -- // Visuals
     visuals:AddToggle({
         text = 'Full Bright',
-        callback = functions.fullBright
-    })
+        flag = 'Full Bright', 
+        callback = function(state)
+            functions.fullBright(state)
+        end
+    });
+
     visuals:AddSlider({
         flag = 'Full Bright Value',
         min = 1,
         max = 10,
         value = 1,
-        textpos = 2
+        textpos = 2,
+        callback = function(val)
+            if library.flags['Full Bright'] then
+                Lighting.Brightness = 0.1 * val
+            end
+        end
     });
 end;
