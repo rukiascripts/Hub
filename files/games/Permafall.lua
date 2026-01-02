@@ -857,7 +857,7 @@ do -- // Opens the dialogue for the selected Armor.
                 local PurchaseInfo = child.PurchaseInfo;
                 local ArmorName = PurchaseInfo.ItemName;
 
-                if (ArmorName == name) then
+                if (ArmorName.Value == name) then
                     fireclickdetector(child.ClickDetector);
                 end;
             end;
