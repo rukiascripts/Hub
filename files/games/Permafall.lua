@@ -401,7 +401,7 @@ do -- // Mod Logs and chat logger
 
         return rank >= MINIMUM_RANK;
     end;
-=
+
 	local function onPlayerChatted(player, message)
 		local timeText = DateTime.now():FormatLocalTime('H:mm:ss', 'en-us');
 		local playerName = player.Name;
