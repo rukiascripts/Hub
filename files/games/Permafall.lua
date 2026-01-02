@@ -373,7 +373,7 @@ end;
 	end;
 
     function functions.knockedOwnership(toggle)
-        if(not toggle)
+        if(not toggle) then
             maid.knockedOwnership = nil;
             return;
         end;
