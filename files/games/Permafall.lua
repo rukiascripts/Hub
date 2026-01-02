@@ -38,7 +38,7 @@ local column1, column2 = unpack(library.columns);
 
 local functions = {};
 
-local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService = Services:Get('Players', 'RunService', 'UserInputService', 'HttpService', 'CollectionService', 'MemStorageService');
+local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting = Services:Get('Players', 'RunService', 'UserInputService', 'HttpService', 'CollectionService', 'MemStorageService', 'Lighting');
 
 local LocalPlayer = Players.LocalPlayer;
 local playerMouse = LocalPlayer:GetMouse();
