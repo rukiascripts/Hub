@@ -342,6 +342,7 @@ local chatLogger = TextLogger.new({
 	buttons = {'Spectate', 'Copy Username', 'Copy User Id', 'Copy Text', 'Report User'}
 });
 
+print('logger')
 
 local assetsList = {'ModeratorJoin.mp3', 'ModeratorLeft.mp3'};
 local audios = {};
@@ -355,6 +356,8 @@ for i, v in next, assetsList do
 		forcedAudio = true
 	});
 end;
+
+print('audios')
 
 local function loadSound(soundName)
 	if ((soundName == 'ModeratorJoin.mp3' or soundName == 'ModeratorLeft.mp3') and not library.flags.modNotifier) then
