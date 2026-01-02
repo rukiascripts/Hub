@@ -53,6 +53,8 @@ local Players, RunService, UserInputService, HttpService, CollectionService, Mem
 local LocalPlayer = Players.LocalPlayer;
 local playerMouse = LocalPlayer:GetMouse();
 
+local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+
 local maid = Maid.new();
 
 local localCheats = column1:AddSection('Local Cheats');
@@ -408,6 +410,8 @@ end;
         local notifSend = setmetatable({}, {
             __mode = 'k';
         });
+
+        myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
 
         maid.proximityCheck = RunService.Heartbeat:Connect(function()
             if (not myRootPart) then return end;
