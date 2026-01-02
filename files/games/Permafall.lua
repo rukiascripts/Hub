@@ -43,7 +43,7 @@ local LocalPlayer = Players.LocalPlayer;
 
 local maid = Maid.new();
 
-local localcheats = column1:AddSection('Local Cheats');
+local localCheats = column1:AddSection('Local Cheats');
 local misccheats = column1:AddSection('Misc');
 local playercheats = column2:AddSection('Player Cheats');
 
@@ -219,36 +219,36 @@ end;
 	end;
 
 
-localcheats:AddDivider("Movement");
+localCheats:AddDivider("Movement");
 
 
-localcheats:AddToggle({
+localCheats:AddToggle({
     text = 'Fly',
     callback = functions.fly
 
 });
 
-localcheats:AddSlider({
+localCheats:AddSlider({
     flag = 'Fly Hack Value', 
     min = 16, 
     max = 200, 
     value = 0, 
     textpos = 2});
-localcheats:AddToggle({
+localCheats:AddToggle({
     text = 'Speedhack',
     callback = functions.speedHack
 });
-localcheats:AddSlider({
+localCheats:AddSlider({
     flag = 'Speed Hack Value', 
     min = 16, 
     max = 200, 
     value = 0, 
     textpos = 2});
-localcheats:AddToggle({
+localCheats:AddToggle({
     text = 'Infinite Jump',
     callback = functions.infiniteJump
 });
-localcheats:AddSlider({
+localCheats:AddSlider({
     flag = 'Infinite Jump Height', 
     min = 50, 
     max = 250, 
