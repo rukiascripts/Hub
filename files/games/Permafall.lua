@@ -801,11 +801,11 @@ function functions.fullBright(toggle)
 
     maid.fullBright = Lighting:GetPropertyChangedSignal('Ambient'):Connect(function()
         Lighting.Ambient = Color3.fromRGB(255, 255, 255);
-        Lighting.Brightness = (library.flags.fullBrightValue or 1) * 0.1;
+        Lighting.Brightness = 1;
     end);
 
     Lighting.Ambient = Color3.fromRGB(255, 255, 255);
-    Lighting.Brightness = (library.flags.fullBrightValue or 1) * 0.1;
+    Lighting.Brightness = 1;
 end;
 
 
@@ -814,14 +814,4 @@ do -- // Visuals
         text = 'Full Bright',
         callback = functions.fullBright
     })
-    visuals:AddSlider({
-        flag = 'Full Bright Value',
-        textpos = 2,
-        min = 0,
-        max = 10,
-        value = 1,
-        callback = function(value)
-			Lighting.Brightness = (value or 1) * 0.1;
-		end,
-    });
 end;
