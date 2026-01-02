@@ -448,6 +448,9 @@ do -- // Auto Sprint
             if (table.find(moveKeys, input.KeyCode)) then
                 lastRan = tick();
                 print('auto sprint');
+
+                LocalPlayer.Character:WaitForChild("Communicate"):FireServer(unpack({{ InputType = "Sprinting",  Enabled = true }}))
+
                 --VirtualInputManager:SendKeyEvent(true, input.KeyCode, false, game);
             end;
         end);
