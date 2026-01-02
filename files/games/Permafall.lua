@@ -1,13 +1,8 @@
 local library = sharedRequire('UILibrary.lua');
 
-
-local Maid = sharedRequire('utils/Maid.lua');
-
 local column1, column2 = unpack(library.columns);
 
 local functions = {};
-
-local maid = Maid.new();
 
 local localCheats = column1:AddSection('Local Cheats');
 local notifier = column1:AddSection('Notifier');
