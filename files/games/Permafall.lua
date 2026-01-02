@@ -155,8 +155,6 @@ do -- // Functions
 	end;
 
     library.OnKeyPress:Connect(function(input, gpe)
-        SX_VM_CNONE();
-
         if (gpe) then return end;
 
         local key = library.options.attachToBack.key;
@@ -202,9 +200,8 @@ do -- // Functions
 	end);
 
     library.OnKeyRelease:Connect(function(input)
-        SX_VM_CNONE();
-
         local key = library.options.attachToBack.key;
+        
         if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
             maid.attachToBack = nil;
             maid.attachToBackTween = nil;
