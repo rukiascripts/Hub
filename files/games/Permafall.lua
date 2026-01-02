@@ -795,7 +795,8 @@ do -- // Visuals
             local brightness = visuals:GetValue('Full Bright Value');
             functions.fullBright(toggle, brightness);
         end;
-    }):AddSlider({
+    })
+    visuals:AddSlider({
         flag = 'Full Bright Value',
         min = 0.1,
         max = 1,
