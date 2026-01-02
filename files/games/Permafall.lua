@@ -38,7 +38,17 @@ local column1, column2 = unpack(library.columns);
 
 local functions = {};
 
-local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService = Services:Get('Players', 'RunService', 'UserInputService', 'HttpService', 'CollectionService', 'MemStorageService', 'Lighting', 'TweenService');
+local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService, VirtualInputManager = Services:Get(
+    'Players', 
+    'RunService',
+    'UserInputService', 
+    'HttpService', 
+    'CollectionService', 
+    'MemStorageService', 
+    'Lighting', 
+    'TweenService', 
+    'VirtualInputManager'
+);
 
 local LocalPlayer = Players.LocalPlayer;
 local playerMouse = LocalPlayer:GetMouse();
@@ -437,15 +447,13 @@ do -- // Auto Sprint
         local lastRan = 0;
 
         maid.autoSprint = UserInputService.InputBegan:Connect(function(input, gpe)
-            if (gpe or tick() - lastRan < 0.25) then return end;
+            if (gpe or tick() - lastRan < 0.35) then return end;
 
             if (table.find(moveKeys, input.KeyCode)) then
                 lastRan = tick();
-                print('auto sprint');
 
-                LocalPlayer.Character:WaitForChild("Communicate"):FireServer(unpack({{ InputType = "Sprinting",  Enabled = true }}))
-
-                --VirtualInputManager:SendKeyEvent(true, input.KeyCode, false, game);
+                --LocalPlayer.Character:WaitForChild("Communicate"):FireServer(unpack({{ InputType = "Sprinting",  Enabled = true }}))
+                VirtualInputManager:SendKeyEvent(true, input.KeyCode, false, game);
             end;
         end);
     end;
@@ -750,7 +758,7 @@ do --// Notifier
 	});
 
 	notifier:AddToggle({
-		text = 'Player Proximity Check',
+		text = 'Player Proximity Check',    
 		tip = 'Gives you a warning when a player is close to you',
 		callback = functions.playerProximityCheck
 	});
