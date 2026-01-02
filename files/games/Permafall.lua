@@ -36,14 +36,12 @@ end;
 
 local column1, column2 = unpack(library.columns);
 
-
 local functions = {};
 
-local Players, RunService, UserInputService, HttpService, CollectionService = Services:Get('Players', 'RunService', 'UserInputService', 'HttpService', 'CollectionService');
+local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService = Services:Get('Players', 'RunService', 'UserInputService', 'HttpService', 'CollectionService', 'MemStorageService');
 local LocalPlayer = Players.LocalPlayer;
 
 local maid = Maid.new();
-
 
 local localcheats = column1:AddSection('Local Cheats');
 local misccheats = column1:AddSection('Misc');
@@ -125,7 +123,7 @@ do -- // Functions
             maid.antiFire = nil;
             return;
         end;
-        print('hello')
+        print('hell2o')
         maid.antiFire = LocalPlayer.Character.Values.OnFire.Changed:Connect(function(boolean)
             print('bro')
             if(boolean) then
@@ -142,6 +140,84 @@ do -- // Functions
         end);
     end;
 end;
+
+-- NoClip
+	do
+		function functions.noClip(toggle)
+			if (not toggle) then
+				maid.noClip = nil;
+
+				local humanoid = Utility:getPlayerData().humanoid;
+				if (not humanoid) then return end;
+
+				humanoid:ChangeState('Physics');
+				task.wait();
+				humanoid:ChangeState('RunningNoPhysics');
+
+				return;
+			end;
+
+			maid.noClip = RunService.Stepped:Connect(function()
+				debug.profilebegin('noclip');
+
+				local myCharacterParts = Utility:getPlayerData().parts;
+				local isKnocked = effectReplicator:FindEffect('Knocked');
+				local disableNoClipWhenKnocked = library.flags.disableNoClipWhenKnocked;
+
+				for _, v in next, myCharacterParts do
+					if (disableNoClipWhenKnocked) then
+						v.CanCollide = not not isKnocked;
+					else
+						v.CanCollide = false;
+					end;
+				end;
+				debug.profileend();
+			end);
+		end;
+	end;
+
+	function functions.clickDestroy(toggle)
+		if (not toggle) then
+			maid.clickDestroy = nil;
+			return;
+		end;
+
+		maid.clickDestroy = UserInputService.InputBegan:Connect(function(input, gpe)
+			if (input.UserInputType ~= Enum.UserInputType.MouseButton1 or gpe) then return end;
+
+			local target = playerMouse.Target;
+			if (not target or target:IsA('Terrain')) then return end;
+
+			target:Destroy();
+		end)
+	end;
+
+	function functions.serverHop(bypass)
+		if(bypass or library:ShowConfirm('Are you sure you want to switch server?')) then
+			library:UpdateConfig();
+			local dataSlot = LocalPlayer:GetAttribute('DataSlot');
+			MemStorageService:SetItem('DataSlot', dataSlot);
+
+			BlockUtils:BlockRandomUser();
+			TeleportService:Teleport(4111023553);
+		end;
+	end;
+
+	local function tweenTeleport(rootPart, position, noWait)
+		local distance = (rootPart.Position - position).Magnitude;
+		local tween = TweenService:Create(rootPart, TweenInfo.new(distance / 120, Enum.EasingStyle.Linear), {
+			CFrame = CFrame.new(position)
+		});
+
+		tween:Play();
+
+		if (not noWait) then
+			tween.Completed:Wait();
+		end;
+
+		return tween;
+	end;
+
 
 localcheats:AddDivider("Movement");
 
@@ -177,7 +253,18 @@ localcheats:AddSlider({
     min = 50, 
     max = 250, 
     value = 0, 
-    textpos = 2});
+    textpos = 2
+});
+
+localcheats:AddToggle({
+    text = 'No Clip',
+    callback = functions.noClip
+});
+
+localcheats:AddToggle({
+    text = 'Click Destroy',
+    callback = functions.clickDestroy
+});
 
 function functions.Respawn(resp)
     if(resp or library:ShowConfirm('Are you sure you want to respawn?')) then
@@ -185,11 +272,16 @@ function functions.Respawn(resp)
     end
 end
 
-do
+do -- // MISC CHEATS
     misccheats:AddButton({
         text = 'Respawn',
         tip = 'Respawns the player (Kills them)',
         callback = functions.Respawn
+    });
+
+    misccheats:AddButton({
+        text = 'Server Hop',
+        callback = functions.serverHop
     });
 
 end;
