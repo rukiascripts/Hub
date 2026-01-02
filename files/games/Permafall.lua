@@ -75,7 +75,7 @@ do -- // Inventory Viewer (SMH)
         if (tool:FindFirstChild("PrimaryWeapon"))then
             return 0;
         elseif (tool:FindFirstChild("Skill") or tool:FindFirstChild('Activator')) then
-            return 3;
+            return 8;
         elseif (tool:FindFirstChild("Droppable")) then
             return 6;
         elseif (tool:FindFirstChild("Spell")) then
@@ -770,31 +770,33 @@ do -- // Misc
 	});
 end;
 
-do -- // Visual Functions
-      local oldAmbient, oldBritghtness = Lighting.Ambient, Lighting.Brightness;
+local oldAmbient, oldBritghtness = Lighting.Ambient, Lighting.Brightness;
 
-    function functions.fullBright(toggle)
-        if(not toggle) then
-            maid.fullBright = nil;
-            Lighting.Ambient, Lighting.Brightness = oldAmbient, oldBritghtness;
-            return
-        end;
-
-        oldAmbient, oldBritghtness = Lighting.Ambient, Lighting.Brightness;
-        maid.fullBright = Lighting:GetPropertyChangedSignal('Ambient'):Connect(function()
-            Lighting.Ambient = Color3.fromRGB(255, 255, 255);
-            Lighting.Brightness = 1;
-        end);
-        Lighting.Ambient = Color3.fromRGB(255, 255, 255);
+function functions.fullBright(toggle)
+    if(not toggle) then
+        maid.fullBright = nil;
+        Lighting.Ambient, Lighting.Brightness = oldAmbient, oldBritghtness;
+        return
     end;
+
+    oldAmbient, oldBritghtness = Lighting.Ambient, Lighting.Brightness;
+    maid.fullBright = Lighting:GetPropertyChangedSignal('Ambient'):Connect(function()
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255);
+        Lighting.Brightness = 1;
+    end);
+    Lighting.Ambient = Color3.fromRGB(255, 255, 255);
 end;
 
+
 do -- // Visuals
-    visuals:AddToggle({
-        text = 'Full Bright'
-    }):AddSlider({
+    VisualsMisc:AddToggle({
+        text = 'Full Bright',
+        callback = functions.fullBright
+    })
+    VisualsMisc:AddSlider({
         flag = 'Full Bright Value',
-        min = 1,
+        textpos = 2,
+        min = 0,
         max = 10,
         value = 1,
     });
