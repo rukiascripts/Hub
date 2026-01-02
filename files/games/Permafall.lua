@@ -272,7 +272,7 @@ do -- // Functions
 		myRootPart.CFrame *= CFrame.new(0, -(myRootPart.Position.Y - floor.Position.Y) + 3, 0);
 		myRootPart.Velocity *= Vector3.new(1, 0, 1);
 	end;
-print('attach to back')
+
     library.OnKeyPress:Connect(function(input, gpe)
         if (gpe) then return end;
 
@@ -327,7 +327,7 @@ print('attach to back')
         end;
     end);
 end;
-print('noclip')
+
 -- NoClip
 	do
 		function functions.noClip(toggle)
@@ -430,7 +430,6 @@ print('noclip')
         end);
     end;
 
-print('autp sorint')
 
 do -- // Auto Sprint
     function functions.autoSprint(toggle)
@@ -457,7 +456,6 @@ do -- // Auto Sprint
     end;
 end;
 
-print('b12341241ro')
 local myChatLogs = {};
 
 local assetsList = {'ModeratorJoin.mp3', 'ModeratorLeft.mp3'};
@@ -473,8 +471,6 @@ for i, v in next, assetsList do
 	});
 end;
 
-print('494949')
-
 local function loadSound(soundName)
 	if ((soundName == 'ModeratorJoin.mp3' or soundName == 'ModeratorLeft.mp3') and not library.flags.modNotifier) then
 		return;
@@ -489,7 +485,7 @@ local setCameraSubject;
 local isInDanger;
 
 local moderators = {};
-print('23493249')
+
 do -- // Mod Logs and chat logger
 	-- Y am I hardcoding this?
 
@@ -553,7 +549,6 @@ do -- // Mod Logs and chat logger
 		Utility.listenToChildRemoving(Players, onPlayerRemoving);
 	end);
 end;
-print('higuys19')
 
 local function tweenTeleport(rootPart, position, noWait)
     local distance = (rootPart.Position - position).Magnitude;
@@ -569,7 +564,7 @@ local function tweenTeleport(rootPart, position, noWait)
 
     return tween;
 end;
-print('before removal functions');
+
 do -- // Removal Functions
     function functions.noFall(toggle)
 
@@ -598,8 +593,6 @@ do -- // Removal Functions
 
     end;
 end;
-print('before playerMods')
-
 
 do -- // Removals
 
@@ -629,7 +622,7 @@ do -- // Removals
         callback = functions.noStunLessBlatant
 	});
 end;
-print('before localCheats')
+
 do -- // Local Cheats
 	localCheats:AddDivider("Movement");
 
@@ -665,17 +658,11 @@ do -- // Local Cheats
 		callback = functions.noClip
 	});
 
-    print('before 1')
-
-
 	localCheats:AddToggle({
 		text = 'Disable When Knocked',
 		tip = 'Disables noclip when you get ragdolled',
 		flag = 'Disable No Clip When Knocked'
 	});
-
-    print('before hi')
-
 
 	localCheats:AddToggle({
 		text = 'Click Destroy',
@@ -685,7 +672,6 @@ do -- // Local Cheats
 
 	localCheats:AddBind({text = 'Go To Ground', callback = functions.goToGround, mode = 'hold', nomouse = true});
 
-print('before 123')
 
 	localCheats:AddDivider("Gameplay-Assist");
 
@@ -746,8 +732,6 @@ print('before 123')
 	});
 end;
 
-
-print('before notifier')
 do --// Notifier
 	notifier:AddToggle({
 		text = 'Mod Notifier',
@@ -770,7 +754,7 @@ do --// Notifier
 		callback = functions.playerProximityCheck
 	});
 end
-print('aftewre')
+
 do -- // Performance Functions
     function functions.disableShadows(t)
         Lighting.GlobalShadows = not t;
