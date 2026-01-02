@@ -38,7 +38,7 @@ local column1, column2 = unpack(library.columns);
 
 local functions = {};
 
-local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting = Services:Get('Players', 'RunService', 'UserInputService', 'HttpService', 'CollectionService', 'MemStorageService', 'Lighting');
+local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService = Services:Get('Players', 'RunService', 'UserInputService', 'HttpService', 'CollectionService', 'MemStorageService', 'Lighting', 'TweenService');
 
 local LocalPlayer = Players.LocalPlayer;
 local playerMouse = LocalPlayer:GetMouse();
@@ -618,7 +618,8 @@ do -- // Local Cheats
 	localCheats:AddToggle({
 		text = 'Fly',
 		callback = functions.fly
-	}):AddSlider({
+	})
+    localCheats:AddSlider({
 		min = 16,
 		max = 200,
 		flag = 'Fly Hack Value'
@@ -627,7 +628,8 @@ do -- // Local Cheats
 	localCheats:AddToggle({
 		text = 'Speedhack',
 		callback = functions.speedHack
-	}):AddSlider({
+	})
+    localCheats:AddSlider({
 		min = 16,
 		max = 200,
 		flag = 'Speed Hack Value'
@@ -636,7 +638,8 @@ do -- // Local Cheats
 	localCheats:AddToggle({
 		text = 'Infinite Jump',
 		callback = functions.infiniteJump
-	}):AddSlider({
+	})
+    localCheats:AddSlider({
 		min = 50,
 		max = 250,
 		flag = 'Infinite Jump Height'
