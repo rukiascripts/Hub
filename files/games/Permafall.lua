@@ -405,7 +405,7 @@ do -- // Mod Logs and chat logger
 	local function onPlayerChatted(player, message)
 		local timeText = DateTime.now():FormatLocalTime('H:mm:ss', 'en-us');
 		local playerName = player.Name;
-		local playerIngName = player:GetAttribute('CharacterName') or 'N/A';
+		local playerIngName = player:FindFirstChild('leaderstats'):FindFirstChild('FirstName').Value or 'N/A';
 
 		message = ('[%s] [%s] [%s] %s'):format(timeText, playerName, playerIngName, message);
 
