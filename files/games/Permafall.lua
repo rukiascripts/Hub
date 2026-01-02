@@ -334,16 +334,6 @@ end;
 
 local myChatLogs = {};
 
-print('oh its this')
-
-local chatLogger = TextLogger.new({
-	title = 'Chat Logger',
-	preset = 'chatLogger',
-	buttons = {'Spectate', 'Copy Username', 'Copy User Id', 'Copy Text', 'Report User'}
-});
-
-print('logger')
-
 local assetsList = {'ModeratorJoin.mp3', 'ModeratorLeft.mp3'};
 local audios = {};
 
@@ -357,7 +347,6 @@ for i, v in next, assetsList do
 	});
 end;
 
-print('audios')
 
 local function loadSound(soundName)
 	if ((soundName == 'ModeratorJoin.mp3' or soundName == 'ModeratorLeft.mp3') and not library.flags.modNotifier) then
@@ -373,7 +362,6 @@ local setCameraSubject;
 local isInDanger;
 
 local moderators = {};
-print('before mod setup')
 
 do -- // Mod Logs and chat logger
 	-- Y am I hardcoding this?
@@ -405,22 +393,6 @@ do -- // Mod Logs and chat logger
         return rank >= MINIMUM_RANK;
     end;
 
-	local function onPlayerChatted(player, message)
-		local timeText = DateTime.now():FormatLocalTime('H:mm:ss', 'en-us');
-		local playerName = player.Name;
-		local playerIngName = player:FindFirstChild('leaderstats'):FindFirstChild('FirstName').Value or 'N/A';
-
-		message = ('[%s] [%s] [%s] %s'):format(timeText, playerName, playerIngName, message);
-
-		local textData = chatLogger:AddText({
-			text = message,
-			player = player
-		});
-
-		if (player == LocalPlayer) then
-			table.insert(myChatLogs, textData);
-			functions.streamerMode(library.flags.streamerMode);
-		end;
 	end;
 
 	local function onPlayerAdded(player)
@@ -452,29 +424,9 @@ do -- // Mod Logs and chat logger
 	end;
 
 	library.OnLoad:Connect(function()
-		local chatLoggerSize = library.configVars.chatLoggerSize;
-		chatLoggerSize = chatLoggerSize and Vector2.new(unpack(chatLoggerSize:split(',')));
-
-		local chatLoggerPosition = library.configVars.chatLoggerPosition;
-		chatLoggerPosition = chatLoggerPosition and Vector2.new(unpack(chatLoggerPosition:split(',')));
-
-		if (chatLoggerSize) then
-			chatLogger:SetSize(UDim2.fromOffset(chatLoggerSize.X, chatLoggerSize.Y));
-		end;
-
-		if (chatLoggerPosition) then
-			chatLogger:SetPosition(UDim2.fromOffset(chatLoggerPosition.X, chatLoggerPosition.Y));
-		end;
-
-		chatLogger:UpdateCanvas();
-	end);
-
-	library.OnLoad:Connect(function()
 		Utility.listenToChildAdded(Players, onPlayerAdded);
 		Utility.listenToChildRemoving(Players, onPlayerRemoving);
 	end);
-
-	chatLogger.OnPlayerChatted:Connect(onPlayerChatted);
 end;
 
 local function tweenTeleport(rootPart, position, noWait)
@@ -693,10 +645,6 @@ do -- // Performance Functions
     function functions.disableShadows(t)
         Lighting.GlobalShadows = not t;
     end;
-
-    function functions.chatLogger(toggle)
-		chatLogger:SetVisible(toggle);
-	end;
 end;
 
 do -- // Misc
@@ -706,24 +654,6 @@ do -- // Misc
 		text = 'Disable Shadows',
 		tip = 'Disabling all shadows adds a large bump to your FPS',
 		callback = functions.disableShadows
-	});
-
-	misc:AddDivider('Chat Logger');
-
-	misc:AddDivider('Chat Logger', 'You can right click the chatlogger to report infractions.');
-
-	misc:AddToggle({
-		text = 'Chat Logger',
-		tip = 'You can right click users on the chat logger to report them for infractions to the TOS',
-		callback = functions.chatLogger
-	});
-
-	misc:AddToggle({
-		text = 'Chat Logger Auto Scroll'
-	});
-
-	misc:AddToggle({
-		text = 'Use Alt Manager To Block'
 	});
 end;
 
