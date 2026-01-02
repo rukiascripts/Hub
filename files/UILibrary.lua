@@ -2132,7 +2132,11 @@ do -- // Load
 			end
 
 			if (not noFire) then
-				library.OnFlagChanged:Fire(self);
+				library.OnFlagChanged:Fire({
+					flag = self.flag,
+					text = self.text,
+					color = self.color
+				});
 			end;
 		end
 
