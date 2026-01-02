@@ -161,7 +161,7 @@ end;
 				debug.profilebegin('noclip');
 
 				local myCharacterParts = Utility:getPlayerData().parts;
-				local isKnocked = effectReplicator:FindEffect('Knocked');
+				local isKnocked = ActuallyRagdolled;
 				local disableNoClipWhenKnocked = library.flags.disableNoClipWhenKnocked;
 
 				for _, v in next, myCharacterParts do
@@ -255,16 +255,29 @@ localcheats:AddSlider({
     value = 0, 
     textpos = 2
 });
+	localCheats:AddToggle({
+		text = 'No Clip',
+		callback = functions.noClip
+	});
 
-localcheats:AddToggle({
-    text = 'No Clip',
-    callback = functions.noClip
-});
+	localCheats:AddToggle({
+		text = 'Disable When Knocked',
+		tip = 'Disables noclip when you get ragdolled',
+		flag = 'Disable No Clip When Knocked'
+	});
 
-localcheats:AddToggle({
-    text = 'Click Destroy',
-    callback = functions.clickDestroy
-});
+
+	localCheats:AddToggle({
+		text = 'Knocked Ownership',
+		tip = 'Allow you to fly/move while being knocked.'
+	})
+
+
+	localCheats:AddToggle({
+		text = 'Click Destroy',
+		tip = 'Everything you click on will be destroyed (client sided)',
+		callback = functions.clickDestroy
+	});
 
 function functions.Respawn(resp)
     if(resp or library:ShowConfirm('Are you sure you want to respawn?')) then
