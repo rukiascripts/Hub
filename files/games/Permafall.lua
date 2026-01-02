@@ -382,11 +382,15 @@ print('noclip')
 	function functions.serverHop(bypass)
 		if(bypass or library:ShowConfirm('Are you sure you want to switch server?')) then
 			library:UpdateConfig();
-			local dataSlot = LocalPlayer:GetAttribute('DataSlot');
-			MemStorageService:SetItem('DataSlot', dataSlot);
 
 			BlockUtils:BlockRandomUser();
 			TeleportService:Teleport(4111023553);
+		end;
+	end;
+
+    function functions.respawn(bypass)
+		if(bypass or library:ShowConfirm('Are you sure you want to respawn?')) then
+			LocalPlayer.Character.Humanoid.Health = 0;
 		end;
 	end;
 
@@ -450,7 +454,7 @@ do -- // Auto Sprint
     end;
 end;
 
-
+print('b12341241ro')
 local myChatLogs = {};
 
 local assetsList = {'ModeratorJoin.mp3', 'ModeratorLeft.mp3'};
@@ -466,6 +470,7 @@ for i, v in next, assetsList do
 	});
 end;
 
+print('494949')
 
 local function loadSound(soundName)
 	if ((soundName == 'ModeratorJoin.mp3' or soundName == 'ModeratorLeft.mp3') and not library.flags.modNotifier) then
@@ -481,7 +486,7 @@ local setCameraSubject;
 local isInDanger;
 
 local moderators = {};
-
+print('23493249')
 do -- // Mod Logs and chat logger
 	-- Y am I hardcoding this?
 
@@ -545,6 +550,7 @@ do -- // Mod Logs and chat logger
 		Utility.listenToChildRemoving(Players, onPlayerRemoving);
 	end);
 end;
+print('higuys19')
 
 local function tweenTeleport(rootPart, position, noWait)
     local distance = (rootPart.Position - position).Magnitude;
@@ -702,12 +708,16 @@ print('before 123')
 		end
 	});
 
-    print('bro')
-
 	localCheats:AddButton({
 		text = 'Server Hop',
 		tip = 'Jumps to any other server, non region dependant',
 		callback = functions.serverHop
+	});
+
+    localCheats:AddButton({
+		text = 'Respawn',
+		tip = 'Kills the character prompting it to respawn',
+		callback = functions.respawn
 	});
 
 	localCheats:AddBind({
