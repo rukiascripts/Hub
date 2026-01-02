@@ -1175,7 +1175,11 @@ do -- // Load
 				task.spawn(self.callback, value)
 			end
 
-			library.OnFlagChanged:Fire(self)
+			library.OnFlagChanged:Fire({
+				flag = self.flag,
+				text = self.text,
+				value = self.value
+    		})
 		end
 
 		task.defer(function()
