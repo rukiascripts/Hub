@@ -56,6 +56,10 @@ local playerMouse = LocalPlayer:GetMouse();
 
 local oldAmbient, oldBrightness;
 
+local BodyMoverTag = 'good';
+
+local isLoadedFully = false;
+
 local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
 
 local maid = Maid.new();
@@ -68,8 +72,6 @@ local visuals = column2:AddSection('Visuals');
 local farms = column2:AddSection('Farms');
 local inventoryViewer = column2:AddSection('Inventory Viewer');
 
-local BodyMoverTag = 'good';
-
 do -- // Anti Cheat Update Check
     maid.antiCheatChecker = LocalPlayer.Character.HumanoidRootPart.ChildAdded:Connect(function(child)
         if(child:IsA('BodyMover')) then
@@ -79,6 +81,9 @@ do -- // Anti Cheat Update Check
                 Error Code #54:
                 The Anti-Cheat has been modified! The script will be disabled until I update it.
                 ]])
+            else
+                maid.antiCheatChecker = nil;
+                print('Passed anti cheat check!');
             end;
         end;
     end);
@@ -348,6 +353,7 @@ do -- // Functions
 	end);
 
     library.OnKeyRelease:Connect(function(input)
+        repeat task.wait() until isLoadedFully;
         local key = library.options.attachToBack.key;
 
         if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
@@ -977,3 +983,5 @@ do -- // Visuals
         callback = functions.fullBright
     })
 end;
+
+isLoadedFully = true;
