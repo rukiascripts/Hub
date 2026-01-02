@@ -368,6 +368,7 @@ local setCameraSubject;
 local isInDanger;
 
 local moderators = {};
+print('before mod setup')
 
 do -- // Mod Logs and chat logger
 	-- Y am I hardcoding this?
@@ -485,7 +486,7 @@ local function tweenTeleport(rootPart, position, noWait)
 
     return tween;
 end;
-
+print('before removal functions');
 do -- // Removal Functions
     function functions.noFall(toggle)
 
@@ -514,6 +515,7 @@ do -- // Removal Functions
 
     end;
 end;
+print('before playerMods')
 
 
 do -- // Removals
@@ -544,7 +546,7 @@ do -- // Removals
         callback = functions.noStunLessBlatant
 	});
 end;
-
+print('before localCheats')
 do -- // Local Cheats
 	localCheats:AddDivider("Movement");
 
@@ -580,11 +582,17 @@ do -- // Local Cheats
 		callback = functions.noClip
 	});
 
+    print('before 1')
+
+
 	localCheats:AddToggle({
 		text = 'Disable When Knocked',
 		tip = 'Disables noclip when you get ragdolled',
 		flag = 'Disable No Clip When Knocked'
 	});
+
+    print('before hi')
+
 
 	localCheats:AddToggle({
 		text = 'Click Destroy',
@@ -594,6 +602,7 @@ do -- // Local Cheats
 
 	localCheats:AddBind({text = 'Go To Ground', callback = functions.goToGround, mode = 'hold', nomouse = true});
 
+print('before 123')
 
 	localCheats:AddDivider("Gameplay-Assist");
 
@@ -618,6 +627,8 @@ do -- // Local Cheats
 			print('NEED TO FIX THIS PLEASE')
 		end
 	});
+
+    print('bro')
 
 	localCheats:AddButton({
 		text = 'Server Hop',
@@ -647,6 +658,8 @@ do -- // Local Cheats
 		textpos = 2
 	});
 end;
+
+
 print('before notifier')
 do --// Notifier
 	notifier:AddToggle({
