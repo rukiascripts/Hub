@@ -53,6 +53,8 @@ local Players, RunService, UserInputService, HttpService, CollectionService, Mem
 local LocalPlayer = Players.LocalPlayer;
 local playerMouse = LocalPlayer:GetMouse();
 
+local oldAmbient, oldBrightness;
+
 local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
 
 local maid = Maid.new();
@@ -355,7 +357,7 @@ end;
 				debug.profilebegin('noclip');
 
 				local myCharacterParts = Utility:getPlayerData().parts;
-				local isKnocked = ActuallyRagdolled;
+				local isKnocked = LocalPlayer.Character:FindFirstChild('Knocked') or LocalPlayer.Character:FindFirstChild('Ragdolled') or LocalPlayer.Character:FindFirstChild('ActuallyRagdolled');
 				local disableNoClipWhenKnocked = library.flags.disableNoClipWhenKnocked;
 
 				for _, v in next, myCharacterParts do
@@ -369,6 +371,24 @@ end;
 			end);
 		end;
 	end;
+
+    function functions.knockedOwnership(toggle)
+        if(not toggle)
+            maid.knockedOwnership = nil;
+            return;
+        end;
+
+        maid.knockedOwnership = LocalPlayer.Character.ChildAdded:Connect(function(child)
+            if(child.Name == 'Knocked') then
+                for _, newChild in LocalPlayer.Character:GetChildren() do
+                    if(newChild.Name == 'Ragdolled' or newChild.Name == 'ActuallyRagdolled') then
+                        newChild:Destroy();
+                    end;
+                end;
+                child:Destroy();
+            end;
+        end);
+    end;
 
 	function functions.clickDestroy(toggle)
 		if (not toggle) then
@@ -422,13 +442,13 @@ end;
 
                 local distance = (myRootPart.Position - rootPart.Position).Magnitude;
 
-                if (distance < 300 and not table.find(notifSend, rootPart)) then
+                if (distance < 400 and not table.find(notifSend, rootPart)) then
                     table.insert(notifSend, rootPart);
                     ToastNotif.new({
                         text = string.format('%s is nearby [%d]', v.Name, distance),
                         duration = 30
                     });
-                elseif (distance > 500 and table.find(notifSend, rootPart)) then
+                elseif (distance > 600 and table.find(notifSend, rootPart)) then
                     table.remove(notifSend, table.find(notifSend, rootPart))
                     ToastNotif.new({
                         text = string.format('%s is no longer nearby [%d]', v.Name, distance),
@@ -451,7 +471,7 @@ do -- // Auto Sprint
         local lastRan = 0;
 
         maid.autoSprint = UserInputService.InputBegan:Connect(function(input, gpe)
-            if (gpe or tick() - lastRan < 0.1) then return end;
+            if (gpe or tick() - lastRan < 0.6) then return end;
 
             if (table.find(moveKeys, input.KeyCode)) then
                 lastRan = tick();
@@ -459,7 +479,10 @@ do -- // Auto Sprint
                 print('auto sprint bro')
 
                 VirtualInputManager:SendKeyEvent(true, input.KeyCode, false, game);
-                LocalPlayer.Character:WaitForChild("Communicate"):FireServer(unpack({{ InputType = "Sprinting",  Enabled = true }}))
+                VirtualInputManager:SendKeyEvent(true, input.KeyCode, false, game);
+                VirtualInputManager:SendKeyEvent(true, input.KeyCode, false, game);
+
+                --LocalPlayer.Character:WaitForChild("Communicate"):FireServer(unpack({{ InputType = "Sprinting",  Enabled = true }}))
             end;
         end);
     end;
@@ -589,11 +612,9 @@ do -- // Removal Functions
             return;
         end;
 
-        local character = LocalPlayer.Character;
-
-        maid.antiFire = character.Values.OnFire.Changed:Connect(function(boolean)
-            if(boolean) then
-                character:WaitForChild("Communicate"):FireServer(unpack({{ Enabled = true,  Character = character,  InputType = "Dash"  }}))
+        maid.antiFire = LocalPlayer.Character.ChildAdded:Connect(function(child)
+            if(child and child.Name == 'Burning') then
+                LocalPlayer.Character:WaitForChild("Communicate"):FireServer(unpack({{ Enabled = true,  Character = LocalPlayer.Character,  InputType = "Dash"  }}))
             end;
         end);
     end;
@@ -678,6 +699,12 @@ do -- // Local Cheats
 		tip = 'Disables noclip when you get ragdolled',
 		flag = 'Disable No Clip When Knocked'
 	});
+
+    localCheats:AddToggle({
+		text = 'Knocked Ownership',
+		tip = 'Allow you to fly/move while being knocked.',
+        callback = functions.knockedOwnership
+	})
 
 	localCheats:AddToggle({
 		text = 'Click Destroy',
@@ -785,8 +812,6 @@ do -- // Misc
 		callback = functions.disableShadows
 	});
 end;
-
-local oldAmbient, oldBrightness;
 
 function functions.fullBright(toggle)
     if (not toggle) then
