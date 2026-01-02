@@ -312,14 +312,12 @@ do -- // Functions
 	end);
 
     library.OnKeyRelease:Connect(function(input)
-        task.delay(1.5, function() 
-            local key = library.options.attachToBack.key;
+        local key = library.options.attachToBack.key;
 
-            if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
-                maid.attachToBack = nil;
-                maid.attachToBackTween = nil;
-            end;
-        end)
+        if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
+            maid.attachToBack = nil;
+            maid.attachToBackTween = nil;
+        end;
     end);
 end;
 
