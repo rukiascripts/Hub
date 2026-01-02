@@ -843,8 +843,8 @@ end;
 
 local NPCs = workspace.NPCs;
 
-local Armors, Weapons, Items = {}, {}, {};
-local ArmorSelected, WeaponSelected, ItemSelected;
+local Armors, Weapons, Items, NPCs = {}, {}, {}, {};
+local ArmorSelected, WeaponSelected, ItemSelected, NPCSelected;
 
 do -- // Load All Buyables
     for _, child in NPCs:GetChildren() do
@@ -860,11 +860,15 @@ do -- // Load All Buyables
             elseif (ItemType.Value == 'Item' or ItemType.Value == 'Trinket') then
                 Items[ItemName.Value] = true;
             end;
+        else
+            if (not NPCs[child.Name]) then
+                NPCs[child.Name] = true;
+            end;
         end;
     end;
 end;
 
-do -- // Opens the dialogue for the selected Armor.
+do -- // Opens dialogue stuff
     function functions.buyItem(name)
         for _, child in NPCs:GetChildren() do
             if (child.Name == 'Purchasable') then
@@ -874,6 +878,14 @@ do -- // Opens the dialogue for the selected Armor.
                 if (ItemName.Value == name) then
                     fireclickdetector(child.ClickDetector);
                 end;
+            end;
+        end;
+    end;
+
+    function functions.interactWithNPC(name)
+        for _, child in NPCs:GetChildren() do
+            if (child.Name == name) then
+                fireclickdetector(child.ClickDetector);
             end;
         end;
     end;
@@ -933,6 +945,26 @@ do -- // Misc
 		tip = 'Buys the Item you selected.',
         callback = function()
             functions.buyItem(ItemSelected);
+        end,
+	});
+
+    misc:AddDivider('NPCs');
+
+     misc:AddList({
+        text = 'Select NPC',
+        tip = 'Select the NPC you wish to interact with.',
+        values = NPCs;
+        multiselect = false,
+        callback = function(name)
+            NPCSelected = name;
+        end,
+    });
+
+    misc:AddButton({
+		text = 'Interact with NPC',
+		tip = 'Interacts with the NPC you selected.',
+        callback = function()
+            functions.interactWithNPC(ItemSelected);
         end,
 	});
 
