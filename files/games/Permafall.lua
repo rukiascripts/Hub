@@ -454,8 +454,8 @@ do -- // Auto Sprint
 
                 print('auto sprint bro')
 
-                LocalPlayer.Character:WaitForChild("Communicate"):FireServer(unpack({{ InputType = "Sprinting",  Enabled = true }}))
                 VirtualInputManager:SendKeyEvent(true, input.KeyCode, false, game);
+                LocalPlayer.Character:WaitForChild("Communicate"):FireServer(unpack({{ InputType = "Sprinting",  Enabled = true }}))
             end;
         end);
     end;
@@ -782,21 +782,28 @@ do -- // Misc
 	});
 end;
 
-local oldAmbient, oldBritghtness = Lighting.Ambient, Lighting.Brightness;
+local oldAmbient, oldBrightness;
+
 function functions.fullBright(toggle)
-    if(not toggle) then
+    if (not toggle) then
         maid.fullBright = nil;
-        Lighting.Ambient, Lighting.Brightness = oldAmbient, oldBritghtness;
-        return
+        Lighting.Ambient = oldAmbient;
+        Lighting.Brightness = oldBrightness;
+        return;
     end;
 
-    oldAmbient, oldBritghtness = Lighting.Ambient, Lighting.Brightness;
+    oldAmbient = Lighting.Ambient;
+    oldBrightness = Lighting.Brightness;
+
     maid.fullBright = Lighting:GetPropertyChangedSignal('Ambient'):Connect(function()
         Lighting.Ambient = Color3.fromRGB(255, 255, 255);
-        Lighting.Brightness = 1;
+        Lighting.Brightness = (library.flags.fullBrightValue or 1) * 0.1;
     end);
+
     Lighting.Ambient = Color3.fromRGB(255, 255, 255);
+    Lighting.Brightness = (library.flags.fullBrightValue or 1) * 0.1;
 end;
+
 
 do -- // Visuals
     visuals:AddToggle({
