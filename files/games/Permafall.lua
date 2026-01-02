@@ -605,72 +605,24 @@ local function tweenTeleport(rootPart, position, noWait)
 end;
 
 do -- // Removal Functions
-    local fallStartY = nil;
-    local crouchTicks = 0;
-
     function functions.noFall(toggle)
         if (not toggle) then
             maid.noFall = nil;
-            fallStartY = nil;
-            crouchTicks = 0;
             return;
         end;
 
-        maid.noFall = RunService.Heartbeat:Connect(function()
-            local Character = LocalPlayer.Character;
-            if (not Character) then return; end;
+        local Humanoid = LocalPlayer.Character.Humanoid
 
-            local Root = Character:FindFirstChild('HumanoidRootPart');
-            local Communicate = Character:FindFirstChild('Communicate');
+        local FloorMaterial = Humanoid.FloorMaterial
 
-            if (not Root or not Communicate) then return; end;
+        maid.noFall = Humanoid:GetPropertyChangedSignal('FloorMaterial'):Connect(function()
+            local oldFloorMaterial = FloorMaterial;
+            FloorMaterial = Humanoid.FloorMaterial;
 
-            local Params = RaycastParams.new();
-            Params.FilterType = Enum.RaycastFilterType.Blacklist;
-            Params.FilterDescendantsInstances = {Character};
+            if (oldFloorMaterial == FloorMaterial) then return; end;
 
-            local GroundResult = workspace:Raycast(
-                Root.Position,
-                Vector3.new(0, -30, 0),
-                Params
-            );
-
-            -- Off ground
-            if (not GroundResult) then
-                if (not fallStartY) then
-                    fallStartY = Root.Position.Y;
-                end;
-                return;
-            end;
-
-            -- On ground, reset
-            if (GroundResult.Distance <= 2) then
-                fallStartY = nil;
-                crouchTicks = 0;
-                return;
-            end;
-
-            -- Still falling
-            if (not fallStartY) then return; end;
-            if (Root.Velocity.Y >= 0) then return; end;
-
-            local fallDistance = fallStartY - Root.Position.Y;
-            if (fallDistance < 20) then return; end;
-
-            -- Trigger crouch at 5 studs
-            if (GroundResult.Distance <= 5) then
-                crouchTicks = 4;
-            end;
-
-            if (crouchTicks > 0) then
-                crouchTicks -= 1;
-
-                Communicate:FireServer(unpack({
-                    {
-                        InputType = 'Crouching',
-                        Enabled = true
-                    }
-                }));
+            if (oldFloorMaterial == Enum.Material.Air) then
+                print('noFall?');
             end;
         end);
     end;
