@@ -80,7 +80,7 @@ do -- // Anti Cheat Update Check
                 Error Code #54:
                 The Anti-Cheat has been modified! The script will be disabled until I update it.
                 ]])
-            else
+            elseif (child:HasTag('good')) then
                 IsAntiCheatAlright = true;
             end;
         end;
@@ -90,6 +90,7 @@ do -- // Anti Cheat Update Check
 end;
 
 repeat task.wait() until IsAntiCheatAlright;
+
 
 do -- // Inventory Viewer (SMH)
     local inventoryLabels = {};
