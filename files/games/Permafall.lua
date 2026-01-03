@@ -1083,37 +1083,44 @@ local function normalizeId(id)
     return tostring(id):gsub('%D', '');
 end;
 
-local function resolveTrinketFromHandle(handle)
-    if (not handle) then
+local function getHandleMeshInfo(handle)
+    if (IsA(handle, 'MeshPart')) then
+        return {
+            MeshId = handle.MeshId;
+            MeshType = 'MeshPart';
+        };
+    end;
+
+    local mesh = FindFirstChild(handle, 'Mesh');
+    if (not mesh) then
         return nil;
     end;
 
-    local meshId;
-    local vertexColor;
-    local meshType;
+    return {
+        MeshId = mesh.MeshId;
+        MeshType = mesh.MeshType.Name;
+    };
+end;
 
-    if (IsA(handle, 'MeshPart')) then
-        meshId = handle.MeshId;
-        vertexColor = handle.VertexColor;
-        meshType = 'MeshPart';
-    else
-        local mesh = FindFirstChildWhichIsA(handle, 'SpecialMesh');
-        if (not mesh) then
-            return nil;
-        end;
-
-        meshId = mesh.MeshId;
-        vertexColor = mesh.VertexColor;
-        meshType = mesh.MeshType.Name;
+local function resolveTrinketFromHandle(handle)
+    if (not handle or not IsA(handle, 'BasePart')) then
+        return nil;
     end;
 
-    local color = handle.Color;
+    local meshInfo = getHandleMeshInfo(handle);
+    if (not meshInfo) then
+        return nil;
+    end;
+
+    local handleColor = handle.Color;
+
+    print('meshType:', meshInfo.MeshType, 'meshId:', meshInfo.MeshId, 'color:', handleColor);
 
     for _, trinket in ipairs(Trinkets) do
-        if (trinket.MeshId) then
-            if (normalizeId(trinket.MeshId) == normalizeId(meshId)) then
+        if (trinket.MeshType) then
+            if (trinket.MeshType == meshInfo.MeshType) then
                 if (trinket.Color) then
-                    if (color == trinket.Color) then
+                    if (handleColor == trinket.Color) then
                         return trinket;
                     end;
                 else
@@ -1121,17 +1128,24 @@ local function resolveTrinketFromHandle(handle)
                 end;
             end;
         end;
+    end;
 
-        if (trinket.MeshType) then
-            if (trinket.MeshType == meshType and trinket.VertexColor == vertexColor) then
-                return trinket;
+    for _, trinket in ipairs(Trinkets) do
+        if (trinket.MeshId) then
+            if (normalizeId(trinket.MeshId) == normalizeId(meshInfo.MeshId)) then
+                if (trinket.Color) then
+                    if (handleColor == trinket.Color) then
+                        return trinket;
+                    end;
+                else
+                    return trinket;
+                end;
             end;
         end;
     end;
 
     return nil;
 end;
-
 
 
 do -- // ESP Functions
@@ -1175,13 +1189,14 @@ do -- // ESP Functions
         end);
     end;
 
-
     function functions.onNewBagAdded()
 
     end;
 
     function functions.onNewNpcAdded(npc, espConstructor)
         local npcObj;
+
+        print(npc);
 
         if (IsA(npc, 'BasePart') and not FindFirstChild(npc, 'MeshPart')) then
             npcObj = espConstructor.new(npc, npc.Name);
