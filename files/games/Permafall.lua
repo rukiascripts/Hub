@@ -1093,7 +1093,7 @@ do -- // ESP Functions
 
     function functions.onNewNpcAdded(npc, espConstructor)
         if (IsA(npc, 'Model')) then
-            local esp = espConstructor.new(npc.Head, npc.Name);
+            local esp = espConstructor.new(FindFirstChild(npc, 'Head') or npc.PrimaryPart, npc.Name);
 
             npc.Destroying:Once(function()
                 esp:Destroy();
