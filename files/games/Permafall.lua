@@ -1214,6 +1214,12 @@ do -- // ESP Functions
             print('ESP object _showFlag:', espObj._showFlag)
             print('ESP object _colorFlag:', espObj._colorFlag)
 
+            -- Check if the flags are enabled
+            print('Checking flags:')
+            print('  Main toggle (Trinkets):', library.flags.Trinkets or library.flags.trinkets)
+            print('  Show flag (' .. espObj._showFlag .. '):', library.flags[espObj._showFlag])
+            print('  Color flag (' .. espObj._colorFlag .. '):', library.flags[espObj._colorFlag])
+
             local spawnPart = descendant.Parent;
             local connection;
             connection = spawnPart:GetPropertyChangedSignal('Parent'):Connect(function()
