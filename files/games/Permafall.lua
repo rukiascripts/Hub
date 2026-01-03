@@ -1079,33 +1079,51 @@ do -- // Player Classes
     }
 end;
 
-local function resolveTrinket(handle)
+local function normalizeId(id)
+    return tostring(id):gsub('%D', '');
+end;
+
+local function resolveTrinketFromHandle(handle)
     if (not handle) then
         return nil;
     end;
 
-    local mesh = FindFirstChildWhichIsA(handle, 'SpecialMesh');
-    if (not mesh) then
-        return nil;
+    local meshId;
+    local vertexColor;
+    local meshType;
+
+    if (IsA(handle, 'MeshPart')) then
+        meshId = handle.MeshId;
+        vertexColor = handle.VertexColor;
+        meshType = 'MeshPart';
+    else
+        local mesh = FindFirstChildWhichIsA(handle, 'SpecialMesh');
+        if (not mesh) then
+            return nil;
+        end;
+
+        meshId = mesh.MeshId;
+        vertexColor = mesh.VertexColor;
+        meshType = mesh.MeshType.Name;
     end;
 
-    local meshId = mesh.MeshId;
     local color = handle.Color;
-    local vertexColor = mesh.VertexColor;
 
     for _, trinket in ipairs(Trinkets) do
-        if (trinket.MeshId and trinket.MeshId == meshId) then
-            if (trinket.Color) then
-                if (color == trinket.Color) then
+        if (trinket.MeshId) then
+            if (normalizeId(trinket.MeshId) == normalizeId(meshId)) then
+                if (trinket.Color) then
+                    if (color == trinket.Color) then
+                        return trinket;
+                    end;
+                else
                     return trinket;
                 end;
-            else
-                return trinket;
             end;
         end;
 
-        if (trinket.MeshType == 'Sphere') then
-            if (mesh.MeshType == Enum.MeshType.Sphere and vertexColor == trinket.VertexColor) then
+        if (trinket.MeshType) then
+            if (trinket.MeshType == meshType and trinket.VertexColor == vertexColor) then
                 return trinket;
             end;
         end;
@@ -1115,32 +1133,48 @@ local function resolveTrinket(handle)
 end;
 
 
+
 do -- // ESP Functions
-    function functions.onNewTrinketAdded(trinketModel, espConstructor)
-        if (not IsA(trinketModel, 'Model')) then
+    function functions.onNewTrinketAdded(spawnPart, espConstructor)
+        if (not IsA(spawnPart, 'BasePart')) then
             return;
         end;
 
-        local handle = FindFirstChild(trinketModel, 'Handle');
-        if (not handle) then
+        local handle = FindFirstChild(spawnPart, 'Handle');
+        if (not handle or not IsA(handle, 'BasePart')) then
             return;
         end;
 
-        local trinketData = resolveTrinket(handle);
+        local trinketData = resolveTrinketFromHandle(handle);
         if (not trinketData) then
             return;
         end;
 
-        local espObj = espConstructor.new(trinketModel, trinketData.Name);
+        local code = [[
+            local handle = ...;
+            return setmetatable({}, {
+                __index = function(_, p)
+                    if (p == 'Position') then
+                        return handle.Position;
+                    end;
+                end,
+            });
+        ]];
+
+        local espObj = espConstructor.new(
+            { code = code, vars = { handle } },
+            trinketData.Name
+        );
 
         local connection;
-        connection = trinketModel:GetPropertyChangedSignal('Parent'):Connect(function()
-            if (not trinketModel.Parent) then
+        connection = spawnPart:GetPropertyChangedSignal('Parent'):Connect(function()
+            if (not spawnPart.Parent) then
                 espObj:Destroy();
                 connection:Disconnect();
             end;
         end);
     end;
+
 
     function functions.onNewBagAdded()
 
@@ -1149,7 +1183,7 @@ do -- // ESP Functions
     function functions.onNewNpcAdded(npc, espConstructor)
         local npcObj;
 
-        if (IsA(npc, 'Model') and not FindFirstChild(npc, 'PurchaseInfo')) then
+        if (IsA(npc, 'BasePart') and not FindFirstChild(npc, 'MeshPart')) then
             npcObj = espConstructor.new(npc, npc.Name);
         else
             local code = [[
