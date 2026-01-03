@@ -1094,54 +1094,57 @@ local function getHandleMeshInfo(handle)
 end;
 
 local function resolveTrinketFromHandle(handle)
+    print('=== resolveTrinketFromHandle Debug ===')
+    print('handle:', handle)
+    
     if (not handle or not IsA(handle, 'BasePart')) then
+        print('Failed: not a BasePart')
         return nil;
     end;
 
     local meshInfo = getHandleMeshInfo(handle);
+    print('meshInfo:', meshInfo)
+    
     if (not meshInfo) then
+        print('Failed: no mesh info')
         return nil;
     end;
+    
+    print('MeshId from handle:', meshInfo.MeshId)
+    print('MeshType from handle:', meshInfo.MeshType)
 
     local handleColor = handle.Color;
+    print('Handle Color:', handleColor)
 
-    for _, trinket in ipairs(Trinkets) do
+    -- First loop: MeshType matching
+    print('--- Checking MeshType matches ---')
+    for i, trinket in ipairs(Trinkets) do
         if (trinket.MeshType) then
+            print(string.format('Trinket %d (%s): MeshType=%s', i, trinket.Name, trinket.MeshType))
             if (trinket.MeshType == meshInfo.MeshType) then
+                print('  -> MeshType MATCH!')
                 if (trinket.Color) then
-                    if (handleColor == trinket.Color) then
-                        return trinket;
-                    end;
+                    print('  -> Has Color:', trinket.Color, 'Match?', handleColor == trinket.Color)
                 elseif (trinket.VertexColor) then
                     local trinketColor = Color3.new(trinket.VertexColor.X, trinket.VertexColor.Y, trinket.VertexColor.Z);
-                    if (handleColor == trinketColor) then
-                        return trinket;
-                    end;
-                else
-                    return trinket;
-                end;
-            end;
-        end;
-    end;
+                    print('  -> Has VertexColor:', trinketColor, 'Match?', handleColor == trinketColor)
+                end
+            end
+        end
+    end
 
-    for _, trinket in ipairs(Trinkets) do
+    -- Second loop: MeshId matching
+    print('--- Checking MeshId matches ---')
+    for i, trinket in ipairs(Trinkets) do
         if (trinket.MeshId) then
-            if (normalizeId(trinket.MeshId) == normalizeId(meshInfo.MeshId)) then
-                if (trinket.Color) then
-                    if (handleColor == trinket.Color) then
-                        return trinket;
-                    end;
-                elseif (trinket.VertexColor) then
-                    local trinketColor = Color3.new(trinket.VertexColor.X, trinket.VertexColor.Y, trinket.VertexColor.Z);
-                    if (handleColor == trinketColor) then
-                        return trinket;
-                    end;
-                else
-                    return trinket;
-                end;
-            end;
-        end;
-    end;
+            local normalizedTrinket = normalizeId(trinket.MeshId)
+            local normalizedHandle = normalizeId(meshInfo.MeshId)
+            print(string.format('Trinket %d (%s): %s vs %s', i, trinket.Name, normalizedTrinket, normalizedHandle))
+            if (normalizedTrinket == normalizedHandle) then
+                print('  -> MeshId MATCH!')
+            end
+        end
+    end
 
     return nil;
 end;
@@ -1153,7 +1156,6 @@ do -- // ESP Functions
 
         local Handle = FindFirstChild(spawnPart, 'Handle');
         if (not Handle) then return end;
-        print(Handle);
 
         local trinketData = resolveTrinketFromHandle(Handle);
         if (not trinketData) then print('wow') return end;
@@ -1203,7 +1205,11 @@ do -- // ESP Functions
                 });
             ]]
 
+            print('npc check 2')
+
             npcObj = espConstructor.new({code = code, vars = {npc}}, npc.Name);
+
+            print('npc espConstructor check')
         end;
 
         local connection;
