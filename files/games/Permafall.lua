@@ -1,25 +1,32 @@
 local library = sharedRequire('UILibrary.lua');
 
 local AudioPlayer = sharedRequire('utils/AudioPlayer.lua');
+print(',')
 local makeESP = sharedRequire('utils/makeESP.lua');
+print('hi')
 
+print('2')
 local Utility = sharedRequire('utils/Utility.lua');
 local Maid = sharedRequire('utils/Maid.lua');
 local AnalyticsAPI = sharedRequire('classes/AnalyticsAPI.lua');
 
+print('3')
 local Services = sharedRequire('utils/Services.lua');
 local createBaseESP = sharedRequire('utils/createBaseESP.lua');
 
+print('4')
 local EntityESP = sharedRequire('classes/EntityESP.lua');
 local ControlModule = sharedRequire('classes/ControlModule.lua');
 local ToastNotif = sharedRequire('classes/ToastNotif.lua');
 
+print('5')
 local prettyPrint = sharedRequire('utils/prettyPrint.lua');
 local BlockUtils = sharedRequire('utils/BlockUtils.lua');
 local TextLogger = sharedRequire('classes/TextLogger.lua');
 local fromHex = sharedRequire('utils/fromHex.lua');
 local toCamelCase = sharedRequire('utils/toCamelCase.lua');
 local Webhook = sharedRequire('utils/Webhook.lua');
+print('6')
 
 if (game.PlaceId == 126222071643660) then
     ToastNotif.new({
