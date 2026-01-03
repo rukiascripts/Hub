@@ -1162,15 +1162,37 @@ end;
 
 do -- // ESP Functions
     function functions.onNewTrinketAdded(descendant, espConstructor)
-        -- The descendant could be SPAWN, Handle, Mesh, or anything else
+        print('=== onNewTrinketAdded called ===')
+        print('descendant:', descendant)
+        print('descendant.Name:', descendant.Name)
+        print('descendant.Parent:', descendant.Parent)
         
         -- If it's a Handle, use it directly
-        if descendant.Name == 'Handle' and descendant.Parent and descendant.Parent.Name == 'SPAWN' then
+        if descendant.Name == 'Handle' then
+            print('Is a Handle!')
+            
+            if not descendant.Parent then
+                print('No parent, returning')
+                return
+            end
+            
+            print('Parent name:', descendant.Parent.Name)
+            
+            if descendant.Parent.Name ~= 'SPAWN' then
+                print('Parent is not SPAWN, returning')
+                return
+            end
+            
+            print('Calling resolveTrinketFromHandle...')
             local trinketData = resolveTrinketFromHandle(descendant);
+            print('trinketData result:', trinketData)
+            
             if (not trinketData) then 
-                print('Could not resolve trinket from handle')
+                print('wow - no trinket data')
                 return 
             end;
+
+            print('Creating ESP for:', trinketData.Name)
 
             local code = [[
                 local handle = ...;
@@ -1183,7 +1205,9 @@ do -- // ESP Functions
                 });
             ]];
 
+            print('About to call espConstructor.new')
             local espObj = espConstructor.new({ code = code, vars = { descendant } }, trinketData.Name);
+            print('ESP object created:', espObj)
 
             local spawnPart = descendant.Parent;
             local connection;
@@ -1193,6 +1217,8 @@ do -- // ESP Functions
                     connection:Disconnect();
                 end;
             end);
+            
+            print('ESP setup complete!')
         end
     end;
 
