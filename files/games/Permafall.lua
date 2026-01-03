@@ -1112,6 +1112,11 @@ local function resolveTrinketFromHandle(handle)
                     if (handleColor == trinket.Color) then
                         return trinket;
                     end;
+                elseif (trinket.VertexColor) then
+                    local trinketColor = Color3.new(trinket.VertexColor.X, trinket.VertexColor.Y, trinket.VertexColor.Z);
+                    if (handleColor == trinketColor) then
+                        return trinket;
+                    end;
                 else
                     return trinket;
                 end;
@@ -1124,6 +1129,11 @@ local function resolveTrinketFromHandle(handle)
             if (normalizeId(trinket.MeshId) == normalizeId(meshInfo.MeshId)) then
                 if (trinket.Color) then
                     if (handleColor == trinket.Color) then
+                        return trinket;
+                    end;
+                elseif (trinket.VertexColor) then
+                    local trinketColor = Color3.new(trinket.VertexColor.X, trinket.VertexColor.Y, trinket.VertexColor.Z);
+                    if (handleColor == trinketColor) then
                         return trinket;
                     end;
                 else
@@ -1142,7 +1152,7 @@ do -- // ESP Functions
         if (spawnPart.Name ~= 'SPAWN') then return end;
 
         local Handle = FindFirstChild(spawnPart, 'Handle');
-
+        if (not Handle) then return end;
         print(Handle);
 
         local trinketData = resolveTrinketFromHandle(Handle);
@@ -1180,6 +1190,8 @@ do -- // ESP Functions
         if (IsA(npc, 'BasePart') or IsA(npc, 'MeshPart')) then
             npcObj = espConstructor.new(npc, npc.Name);
         else
+            print('npc vaslid bro');
+
             local code = [[
                 local npc = ...;
                 return setmetatable({}, {
@@ -1197,6 +1209,8 @@ do -- // ESP Functions
         local connection;
         connection = npc:GetPropertyChangedSignal('Parent'):Connect(function()
             if (not npc.Parent) then
+                print('and there goes my npc sob');
+
                 npcObj:Destroy();
                 connection:Disconnect();
             end;
