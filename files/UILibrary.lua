@@ -625,13 +625,7 @@ do -- // Load
 			end
 
 			option.onStateChanged:Fire(state);
-			
-			library.OnFlagChanged:Fire({
-				flag = self.flag,
-				text = self.text,
-				value = self.value,
-				state = self.state
-			});
+			library.OnFlagChanged:Fire(self);
 		end
 
 		task.defer(function()
@@ -1181,11 +1175,7 @@ do -- // Load
 				task.spawn(self.callback, value)
 			end
 
-			library.OnFlagChanged:Fire({
-				flag = self.flag,
-				text = self.text,
-				value = self.value
-    		})
+			library.OnFlagChanged:Fire(self)
 		end
 
 		task.defer(function()
@@ -1248,13 +1238,13 @@ do -- // Load
 
 			if (option.playerOnly and option.multiselect) then
 				for i, v in next, option.values do
-					if (option and i and option.value[i]) then
+					if (option.value[i]) then
 						table.insert(t, tostring(i));
 					end;
 				end;
 			else
 				for i, v in next, option.values do
-					if (option and v and option.value and option.value[v]) then
+					if (option.value[v]) then
 						table.insert(t, tostring(v));
 					end;
 				end;
@@ -1435,7 +1425,7 @@ do -- // Load
 				option.listvalue:CaptureFocus();
 				option.listvalue.CursorPosition = string.len(typeof(option.value) == 'string' and option.value or getMultiText() or option.value) + 2;
 
-				if (option and option.multiselect) then
+				if (option.multiselect) then
 					option.listvalue.Text = ' ';
 				end;
 			end
@@ -1722,11 +1712,7 @@ do -- // Load
 			inputvalue.Text = self.value;
 			self.callback(value, enter);
 
-			library.OnFlagChanged:Fire({
-				flag = self.flag,
-				text = self.text,
-				value = self.value
-			});
+			library.OnFlagChanged:Fire(self);
 		end
 		task.defer(function()
 			if library then
@@ -2146,11 +2132,7 @@ do -- // Load
 			end
 
 			if (not noFire) then
-				library.OnFlagChanged:Fire({
-					flag = self.flag,
-					text = self.text,
-					color = self.color
-				});
+				library.OnFlagChanged:Fire(self);
 			end;
 		end
 
