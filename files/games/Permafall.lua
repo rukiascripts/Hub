@@ -1148,20 +1148,14 @@ end;
 
 do -- // ESP Functions
     function functions.onNewTrinketAdded(spawnPart, espConstructor)
-        print(spawnPart);
-        if (not IsA(spawnPart, 'BasePart')) then
-            return;
-        end;
+        if (spawnPart.Name ~= 'SPAWN') then return end;
 
-        local handle = FindFirstChild(spawnPart, 'Handle');
-        if (not handle or not IsA(handle, 'BasePart')) then
-            return;
-        end;
+        local Handle = FindFirstChild(spawnPart, 'Handle');
+
+        print(Handle);
 
         local trinketData = resolveTrinketFromHandle(handle);
-        if (not trinketData) then
-            return;
-        end;
+        if (not trinketData) then print('wow') return end;
 
         local code = [[
             local handle = ...;
@@ -1174,10 +1168,7 @@ do -- // ESP Functions
             });
         ]];
 
-        local espObj = espConstructor.new(
-            { code = code, vars = { handle } },
-            trinketData.Name
-        );
+        local espObj = espConstructor.new({ code = code, vars = { handle } }, trinketData.Name);
 
         local connection;
         connection = spawnPart:GetPropertyChangedSignal('Parent'):Connect(function()
