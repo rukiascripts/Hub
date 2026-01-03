@@ -1278,14 +1278,12 @@ do -- // ESP Section
         onLoaded = function(section)
             local trinketToggles = {};
             
-            -- Create a toggle for each trinket type
             for _, trinket in ipairs(Trinkets) do
-                local trinketNameNoSpaces = trinket.Name:gsub('%s', '');
                 local toggle = section:AddToggle({
                     text = trinket.Name,
-                    flag = toCamelCase('show' .. trinket.Name),
+                    flag = toCamelCase('show ' .. trinket.Name),  -- Add space here!
                 }):AddColor({
-                    flag = toCamelCase(trinket.Name .. 'Color'),
+                    flag = toCamelCase(trinket.Name .. ' Color'),  -- Add space here!
                     color = trinket.Color or Color3.fromRGB(255, 255, 255)
                 });
                 
