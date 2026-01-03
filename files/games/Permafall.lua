@@ -1129,22 +1129,33 @@ local function resolveTrinketFromHandle(handle)
     for _, trinket in ipairs(Trinkets) do
         if (trinket.MeshId) then
             if (normalizeId(trinket.MeshId) == normalizeId(meshInfo.MeshId)) then
+                print('  -> MeshId MATCH for:', trinket.Name)
                 if (trinket.Color) then
+                    print('  -> Has Color, checking match')
                     if (handleColor == trinket.Color) then
+                        print('  -> COLOR MATCH! Returning:', trinket.Name)
                         return trinket;
+                    else
+                        print('  -> Color mismatch, continuing')
                     end;
                 elseif (trinket.VertexColor) then
+                    print('  -> Has VertexColor, checking match')
                     local trinketColor = Color3.new(trinket.VertexColor.X, trinket.VertexColor.Y, trinket.VertexColor.Z);
                     if (handleColor == trinketColor) then
+                        print('  -> VERTEXCOLOR MATCH! Returning:', trinket.Name)
                         return trinket;
+                    else
+                        print('  -> VertexColor mismatch, continuing')
                     end;
                 else
-                    return trinket;  -- No color requirement, return immediately
+                    print('  -> No color requirement! Returning:', trinket.Name)
+                    return trinket;
                 end;
             end;
         end;
     end;
 
+    print('Reached end of function, returning nil')
     return nil;
 end;
 
