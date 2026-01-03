@@ -1084,17 +1084,8 @@ local function normalizeId(id)
 end;
 
 local function getHandleMeshInfo(handle)
-    if (IsA(handle, 'MeshPart')) then
-        return {
-            MeshId = handle.MeshId;
-            MeshType = 'MeshPart';
-        };
-    end;
-
     local mesh = FindFirstChild(handle, 'Mesh');
-    if (not mesh) then
-        return nil;
-    end;
+    if (not mesh) then return nil; end;
 
     return {
         MeshId = mesh.MeshId;
@@ -1154,21 +1145,21 @@ do -- // ESP Functions
 
         print(Handle);
 
-        local trinketData = resolveTrinketFromHandle(handle);
+        local trinketData = resolveTrinketFromHandle(Handle);
         if (not trinketData) then print('wow') return end;
 
         local code = [[
-            local handle = ...;
+            local Handle = ...;
             return setmetatable({}, {
                 __index = function(_, p)
                     if (p == 'Position') then
-                        return handle.Position;
+                        return Handle.Position;
                     end;
                 end,
             });
         ]];
 
-        local espObj = espConstructor.new({ code = code, vars = { handle } }, trinketData.Name);
+        local espObj = espConstructor.new({ code = code, vars = { Handle } }, trinketData.Name);
 
         local connection;
         connection = spawnPart:GetPropertyChangedSignal('Parent'):Connect(function()
