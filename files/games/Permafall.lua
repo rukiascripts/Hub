@@ -1281,11 +1281,13 @@ do -- // ESP Section
             for _, trinket in ipairs(Trinkets) do
                 local toggle = section:AddToggle({
                     text = trinket.Name,
-                    flag = toCamelCase('show ' .. trinket.Name),  -- Add space here!
+                    flag = toCamelCase('show ' .. trinket.Name),
                 }):AddColor({
-                    flag = toCamelCase(trinket.Name .. ' Color'),  -- Add space here!
+                    flag = toCamelCase(trinket.Name .. ' Color'),
                     color = trinket.Color or Color3.fromRGB(255, 255, 255)
                 });
+                
+                print('Created toggle for:', trinket.Name, 'with flag:', toCamelCase('show ' .. trinket.Name))
                 
                 table.insert(trinketToggles, toggle);
             end;
@@ -1310,3 +1312,8 @@ do -- // ESP Section
         callback = functions.onNewNpcAdded
     });
 end;
+
+-- Add this to test if flags work
+    task.wait(2)
+    print('Testing Goblet flag:', library.flags['show Goblet'])
+    print('Testing main toggle:', library.flags.trinkets)
