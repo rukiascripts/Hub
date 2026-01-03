@@ -1094,57 +1094,56 @@ local function getHandleMeshInfo(handle)
 end;
 
 local function resolveTrinketFromHandle(handle)
-    print('=== resolveTrinketFromHandle Debug ===')
-    print('handle:', handle)
-    
     if (not handle or not IsA(handle, 'BasePart')) then
-        print('Failed: not a BasePart')
         return nil;
     end;
 
     local meshInfo = getHandleMeshInfo(handle);
-    print('meshInfo:', meshInfo)
-    
     if (not meshInfo) then
-        print('Failed: no mesh info')
         return nil;
     end;
-    
-    print('MeshId from handle:', meshInfo.MeshId)
-    print('MeshType from handle:', meshInfo.MeshType)
 
     local handleColor = handle.Color;
-    print('Handle Color:', handleColor)
 
     -- First loop: MeshType matching
-    print('--- Checking MeshType matches ---')
-    for i, trinket in ipairs(Trinkets) do
+    for _, trinket in ipairs(Trinkets) do
         if (trinket.MeshType) then
-            print(string.format('Trinket %d (%s): MeshType=%s', i, trinket.Name, trinket.MeshType))
             if (trinket.MeshType == meshInfo.MeshType) then
-                print('  -> MeshType MATCH!')
                 if (trinket.Color) then
-                    print('  -> Has Color:', trinket.Color, 'Match?', handleColor == trinket.Color)
+                    if (handleColor == trinket.Color) then
+                        return trinket;
+                    end;
                 elseif (trinket.VertexColor) then
                     local trinketColor = Color3.new(trinket.VertexColor.X, trinket.VertexColor.Y, trinket.VertexColor.Z);
-                    print('  -> Has VertexColor:', trinketColor, 'Match?', handleColor == trinketColor)
-                end
-            end
-        end
-    end
+                    if (handleColor == trinketColor) then
+                        return trinket;
+                    end;
+                else
+                    return trinket;  -- No color requirement, return immediately
+                end;
+            end;
+        end;
+    end;
 
     -- Second loop: MeshId matching
-    print('--- Checking MeshId matches ---')
-    for i, trinket in ipairs(Trinkets) do
+    for _, trinket in ipairs(Trinkets) do
         if (trinket.MeshId) then
-            local normalizedTrinket = normalizeId(trinket.MeshId)
-            local normalizedHandle = normalizeId(meshInfo.MeshId)
-            print(string.format('Trinket %d (%s): %s vs %s', i, trinket.Name, normalizedTrinket, normalizedHandle))
-            if (normalizedTrinket == normalizedHandle) then
-                print('  -> MeshId MATCH!')
-            end
-        end
-    end
+            if (normalizeId(trinket.MeshId) == normalizeId(meshInfo.MeshId)) then
+                if (trinket.Color) then
+                    if (handleColor == trinket.Color) then
+                        return trinket;
+                    end;
+                elseif (trinket.VertexColor) then
+                    local trinketColor = Color3.new(trinket.VertexColor.X, trinket.VertexColor.Y, trinket.VertexColor.Z);
+                    if (handleColor == trinketColor) then
+                        return trinket;
+                    end;
+                else
+                    return trinket;  -- No color requirement, return immediately
+                end;
+            end;
+        end;
+    end;
 
     return nil;
 end;
@@ -1158,7 +1157,7 @@ do -- // ESP Functions
         if (not Handle) then return end;
 
         local trinketData = resolveTrinketFromHandle(Handle);
-        if (not trinketData) then print('wow') return end;
+        if (not trinketData) then return end;
 
         local code = [[
             local Handle = ...;
@@ -1192,7 +1191,6 @@ do -- // ESP Functions
         if (IsA(npc, 'BasePart') or IsA(npc, 'MeshPart')) then
             npcObj = espConstructor.new(npc, npc.Name);
         else
-            print('npc vaslid bro');
 
             local code = [[
                 local npc = ...;
@@ -1205,18 +1203,12 @@ do -- // ESP Functions
                 });
             ]]
 
-            print('npc check 2')
-
             npcObj = espConstructor.new({code = code, vars = {npc}}, npc.Name);
-
-            print('npc espConstructor check')
         end;
 
         local connection;
         connection = npc:GetPropertyChangedSignal('Parent'):Connect(function()
             if (not npc.Parent) then
-                print('and there goes my npc sob');
-
                 npcObj:Destroy();
                 connection:Disconnect();
             end;
