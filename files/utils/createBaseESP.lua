@@ -94,6 +94,8 @@ local library = sharedRequire('UILibrary.lua');
 
 			connection = commEvent:Connect(function(data)
 				if (data.updateType == 'ready') then
+					print("Actor is ready, sending broadcast event...") -- Debug print
+
 					commEvent:Fire({updateType = 'giveEvent', event = broadcastEvent, gameName = gameName});
 					actor:Destroy();
 
@@ -127,7 +129,7 @@ local library = sharedRequire('UILibrary.lua');
 			end;
 		end);
 
-		loadstring(sharedRequire('utils/createBaseESPParallel.lua'))(commId);
+		sharedRequire('utils/createBaseESPParallel.lua')(commId);
 
 		table.insert(actors, {commEvent = commEvent});
 		readyCount = 1;
@@ -236,6 +238,8 @@ local library = sharedRequire('UILibrary.lua');
 	end;
 
 	library.OnFlagChanged:Connect(function(data)
+		print("Broadcasting flag:", data.flag) -- This should be your first debug check
+
 		broadcastEvent:Fire({
 			type = data.type,
 			flag = data.flag,
@@ -246,4 +250,3 @@ local library = sharedRequire('UILibrary.lua');
 	end);
 
 	return createBaseEsp;
-
