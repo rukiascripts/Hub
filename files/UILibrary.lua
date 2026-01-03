@@ -631,6 +631,8 @@ do -- // Load
 				value = self.value,
 				state = self.state
 			});
+
+			print('OnFlagChanged fired with flag:', self.flag, 'state:', self.state)
 		end
 
 		task.defer(function()
