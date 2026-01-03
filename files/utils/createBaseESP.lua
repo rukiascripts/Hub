@@ -94,8 +94,6 @@ local library = sharedRequire('UILibrary.lua');
 
 			connection = commEvent:Connect(function(data)
 				if (data.updateType == 'ready') then
-					print("Actor is ready, sending broadcast event...") -- Debug print
-
 					commEvent:Fire({updateType = 'giveEvent', event = broadcastEvent, gameName = gameName});
 					actor:Destroy();
 
@@ -118,31 +116,19 @@ local library = sharedRequire('UILibrary.lua');
 		print('All actors have been loaded');
 	else
 		local commId, commEvent = getgenv().syn.create_comm_channel();
-		print("[ESP] Comm Channel Created:", commId);
 
 		local connection;
 		connection = commEvent:Connect(function(data)
-			-- Log exactly what the actor is sending
-			print("[ESP] Received from Actor:", data and data.updateType or "NIL DATA");
-
-			if (data and data.updateType == 'ready') then
-				print("[ESP] Actor Ready, providing broadcast event");
-				
-				-- Use a table to wrap the event for safer passing
-				commEvent:Fire({
-					updateType = 'giveEvent', 
-					event = broadcastEvent
-				});
-				
+			if (data.updateType == 'ready') then
 				connection:Disconnect();
+				connection = nil;
+
+				commEvent:Fire({updateType = 'giveEvent', event = broadcastEvent});
 			end;
 		end);
 
-		-- Load the parallel logic
-		local espLogic = sharedRequire('utils/createBaseESPParallel.lua');
-		task.spawn(function()
-			loadstring(espLogic)(commId);
-		end)
+		local createBaseESPParallel = sharedRequire('utils/createBaseESPParallel.lua');
+		createBaseESPParallel(commId);
 
 		table.insert(actors, {commEvent = commEvent});
 		readyCount = 1;
@@ -251,8 +237,6 @@ local library = sharedRequire('UILibrary.lua');
 	end;
 
 	library.OnFlagChanged:Connect(function(data)
-		print("Broadcasting flag:", data.flag) -- This should be your first debug check
-
 		broadcastEvent:Fire({
 			type = data.type,
 			flag = data.flag,
