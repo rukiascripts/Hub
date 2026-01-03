@@ -1114,8 +1114,6 @@ local function resolveTrinketFromHandle(handle)
 
     local handleColor = handle.Color;
 
-    print('meshType:', meshInfo.MeshType, 'meshId:', meshInfo.MeshId, 'color:', handleColor);
-
     for _, trinket in ipairs(Trinkets) do
         if (trinket.MeshType) then
             if (trinket.MeshType == meshInfo.MeshType) then
@@ -1150,6 +1148,7 @@ end;
 
 do -- // ESP Functions
     function functions.onNewTrinketAdded(spawnPart, espConstructor)
+        print(spawnPart);
         if (not IsA(spawnPart, 'BasePart')) then
             return;
         end;
@@ -1196,9 +1195,7 @@ do -- // ESP Functions
     function functions.onNewNpcAdded(npc, espConstructor)
         local npcObj;
 
-        print(npc);
-
-        if (IsA(npc, 'BasePart') and not FindFirstChild(npc, 'MeshPart')) then
+        if (IsA(npc, 'Model') and not npc.Name == 'Purchasable') then
             npcObj = espConstructor.new(npc, npc.Name);
         else
             local code = [[
@@ -1228,7 +1225,7 @@ end;
 do -- // ESP Section
     makeESP({
         sectionName = 'Trinkets',
-        type = 'childAdded',
+        type = 'descendantAdded',
         args = workspace.TrinketSpawn,
         callback = functions.onNewTrinketAdded
     });
