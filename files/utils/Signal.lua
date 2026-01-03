@@ -42,15 +42,21 @@ end
 -- @tparam function handler Function handler called with arguments passed when `:Fire(...)` is called
 -- @treturn Connection Connection object that can be disconnected
 function Signal:Connect(handler)
-	if not self._bindableEvent then return error("Signal has been destroyed"); end --Fixes an error while respawning with the UI injected
+    if not self._bindableEvent then return error("Signal has been destroyed"); end
 
-	if not (type(handler) == "function") then
-		error(("connect(%s)"):format(typeof(handler)), 2)
-	end
+    if not (type(handler) == "function") then
+        error(("connect(%s)"):format(typeof(handler)), 2)
+    end
 
-	return self._bindableEvent.Event:Connect(function()
-		handler(unpack(self._argData, 1, self._argCount))
-	end)
+    return self._bindableEvent.Event:Connect(function()
+        -- Capture the data locally before it's cleared by :Fire()
+        local data = self._argData
+        local count = self._argCount
+        
+        if data then
+            handler(unpack(data, 1, count))
+        end
+    end)
 end
 
 --- Wait for fire to be called, and return the arguments it was given.
