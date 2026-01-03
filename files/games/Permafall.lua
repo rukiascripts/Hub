@@ -1161,35 +1161,39 @@ end;
 
 
 do -- // ESP Functions
-    function functions.onNewTrinketAdded(spawnPart, espConstructor)
-        if (spawnPart.Name ~= 'SPAWN') then return end;
-
-        local Handle = FindFirstChild(spawnPart, 'Handle');
-        if (not Handle) then return end;
-
-        local trinketData = resolveTrinketFromHandle(Handle);
-        if (not trinketData) then return end;
-
-        local code = [[
-            local Handle = ...;
-            return setmetatable({}, {
-                __index = function(_, p)
-                    if (p == 'Position') then
-                        return Handle.Position;
-                    end;
-                end,
-            });
-        ]];
-
-        local espObj = espConstructor.new({ code = code, vars = { Handle } }, trinketData.Name);
-
-        local connection;
-        connection = spawnPart:GetPropertyChangedSignal('Parent'):Connect(function()
-            if (not spawnPart.Parent) then
-                espObj:Destroy();
-                connection:Disconnect();
+    function functions.onNewTrinketAdded(descendant, espConstructor)
+        -- The descendant could be SPAWN, Handle, Mesh, or anything else
+        
+        -- If it's a Handle, use it directly
+        if descendant.Name == 'Handle' and descendant.Parent and descendant.Parent.Name == 'SPAWN' then
+            local trinketData = resolveTrinketFromHandle(descendant);
+            if (not trinketData) then 
+                print('Could not resolve trinket from handle')
+                return 
             end;
-        end);
+
+            local code = [[
+                local handle = ...;
+                return setmetatable({}, {
+                    __index = function(_, p)
+                        if (p == 'Position') then
+                            return handle.Position;
+                        end;
+                    end,
+                });
+            ]];
+
+            local espObj = espConstructor.new({ code = code, vars = { descendant } }, trinketData.Name);
+
+            local spawnPart = descendant.Parent;
+            local connection;
+            connection = spawnPart:GetPropertyChangedSignal('Parent'):Connect(function()
+                if (not spawnPart.Parent) then
+                    espObj:Destroy();
+                    connection:Disconnect();
+                end;
+            end);
+        end
     end;
 
     function functions.onNewBagAdded()
