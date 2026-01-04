@@ -1123,11 +1123,15 @@ local function getHandleMeshInfo(handle)
 end;
 
 local function colorsMatch(c1, c2)
-    local t = 0.05 -- Tolerance for lighting/rounding
-    return math.abs(c1.R - c2.R) < t and math.abs(c1.G - c2.G) < t and math.abs(c1.B - c2.B) < t
+    -- Increased tolerance to 0.1 to account for heavy game lighting
+    local t = 0.1 
+    return math.abs(c1.R - c2.R) < t and 
+           math.abs(c1.G - c2.G) < t and 
+           math.abs(c1.B - c2.B) < t
 end
 
 local function resolveTrinketFromHandle(handle)
+    if not handle then return nil end
     local mesh = handle:FindFirstChildWhichIsA("SpecialMesh") or handle:FindFirstChild("Mesh")
     if not mesh then return nil end
 
@@ -1136,22 +1140,37 @@ local function resolveTrinketFromHandle(handle)
     local hColor = handle.Color
 
     for _, trinket in ipairs(Trinkets) do
-        local idMatch = (trinket.MeshId and normalizeId(trinket.MeshId) == hId)
-        local typeMatch = (trinket.MeshType and trinket.MeshType == hType)
+        local isMatch = false
+        if trinket.MeshId and hId ~= "" then
+            if normalizeId(trinket.MeshId) == hId then
+                isMatch = true
+            end
+        elseif trinket.MeshType and trinket.MeshType == hType then
+            isMatch = true
+        end
 
-        if idMatch or typeMatch then
-            -- If it's a Gem/Opal (has color requirements)
+        if isMatch then
+            -- Requirement: Color3
             if trinket.Color then
-                if colorsMatch(hColor, trinket.Color) then return trinket end
+                if colorsMatch(hColor, trinket.Color) then
+                    return trinket
+                else
+                    -- This will tell us exactly what the color mismatch is
+                    -- print("Color Mismatch for " .. trinket.Name .. " | Game: " .. tostring(hColor) .. " | Table: " .. tostring(trinket.Color))
+                end
+            -- Requirement: VertexColor
             elseif trinket.VertexColor then
                 local vColor = Color3.new(trinket.VertexColor.X, trinket.VertexColor.Y, trinket.VertexColor.Z)
-                if colorsMatch(hColor, vColor) then return trinket end
+                if colorsMatch(hColor, vColor) then
+                    return trinket
+                end
             else
-                -- It's a Goblet/Scroll/Ring (No color check needed)
+                -- No color requirement (Goblet/Scroll)
                 return trinket
             end
         end
     end
+    return nil
 end
 
 do -- // ESP Functions
