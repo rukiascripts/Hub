@@ -215,8 +215,6 @@ local library = sharedRequire('UILibrary.lua');
 			local smallData = table.clone(self);
 			smallData._actor = nil;
 			
-			print(showESPFlag);
-
 			self._actor.commEvent:Fire({
 				updateType = 'new',
 				data = smallData,
