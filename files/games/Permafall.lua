@@ -1113,7 +1113,7 @@ do -- // ESP Functions
 
         -- Only create the ESP if the specific NPC toggle is enabled
         -- and the main 'Npcs' toggle is enabled (handled by your library.flags)
-        local espObject = espConstructor.new(FindFirstChild(npc, 'Head') or npc.PrimaryPart, npcName, nil, false)
+        local espObject = espConstructor.new(npc:FindFirstChild('Head') or npc.PrimaryPart, npcName, nil, false)
 
         -- Handle cleanup when the NPC is removed
         npc.Destroying:Connect(function()
@@ -1146,7 +1146,7 @@ do -- // ESP Section
         makeESP({
             sectionName = 'Npcs',
             type = 'childAdded', -- Using childAdded because NPCs are in a folder
-            args = {workspace.NPCs},
+            args = workspace.NPCs,
             callback = functions.onNewNpcAdded,
 
             onLoaded = function(section)
