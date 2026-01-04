@@ -206,12 +206,21 @@ local library = sharedRequire('UILibrary.lua');
 
 			local smallData = table.clone(self);
 			smallData._actor = nil;
+			smallData._maid = nil;
+
 			self._actor.commEvent:Fire({
 				updateType = 'new',
 				data = smallData,
 				isCustomInstance = isCustomInstance,
 				showFlag = showESPFlag
 			});
+
+			local visibleState = flags[self._showFlag]; -- Looks for "showNpc"
+			if(visibleState == nil) then
+				visibleState = true;
+			elseif (not visibleState) then
+				return self:Unload();
+			end;
 
 			return self;
 		end;
