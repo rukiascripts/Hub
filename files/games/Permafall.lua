@@ -1107,28 +1107,22 @@ do -- // ESP Functions
     local npcToggles = {}
 
     function functions.onNewNpcAdded(npc, espConstructor)
-        -- Ensure we are dealing with a Model
         if not npc:IsA("Model") then return end
 
-        -- Use a task.spawn so we don't hang the main watcher thread while waiting
         task.spawn(function()
-            -- Wait for a valid part to attach the ESP to
-            local root = npc:WaitForChild('Head', 5) or npc:WaitForChild('HumanoidRootPart', 5) or npc.PrimaryPart
+            local root = npc:WaitForChild("Head", 10) or npc:WaitForChild("HumanoidRootPart", 10) or npc.PrimaryPart
             
-            -- If after 5 seconds we still have nothing, skip to avoid the error
-            if not root then 
-                warn("[ESP] Could not find root part for NPC: " .. npc.Name)
-                return 
-            end
+            if not root then return end
 
-            local npcName = npc.Name
-            local espObject = espConstructor.new(root, npcName, nil, false)
+            -- Change #2 (tag) to 'NPC' instead of npc.Name.
+            -- This forces all NPCs to use the flag: library.flags.showNpc
+            local espObject = espConstructor.new(root, 'NPC', nil, false)
 
-            -- Handle cleanup
-            local connection
-            connection = npc.Destroying:Connect(function()
+            -- We manually override the display text so it still shows the NPC's actual name
+            espObject._text = npc.Name
+
+            npc.Destroying:Connect(function()
                 espObject:Destroy()
-                if connection then connection:Disconnect() end
             end)
         end)
     end
@@ -1157,37 +1151,20 @@ do -- // ESP Section
 
         makeESP({
             sectionName = 'Npcs',
-            type = 'childAdded', -- Using childAdded because NPCs are in a folder
+            type = 'childAdded',
             args = workspace.NPCs,
             callback = functions.onNewNpcAdded,
 
             onLoaded = function(section)
-                local togglesList = {}
-                
-                -- 1. Get all current NPCs to create initial toggles
-                -- 2. You might want a predefined list if NPCs haven't spawned yet
-                local currentNpcs = workspace.NPCs:GetChildren()
-                local added = {}
+                -- This adds the single toggle that all NPCs created above will check
+                section:AddToggle({
+                    text = 'Show All NPCs',
+                    flag = 'showNpc' 
+                })
 
-                for _, npc in ipairs(currentNpcs) do
-                    if not added[npc.Name] then
-                        added[npc.Name] = true
-                        
-                        local t = section:AddToggle({
-                            text = 'Show ' .. npc.Name,
-                            -- This flag matches 'Show NPCName' which is what 
-                            -- createBaseEsp looks for in self._showFlag
-                            flag = toCamelCase('Show ' .. npc.Name) 
-                        })
-                        
-                        table.insert(togglesList, t)
-                    end
-                end
-
-                -- Return the list so makeEsp can manage visibility 
-                -- (hide these toggles when the main "Npcs" toggle is off)
+                -- Return an empty list so the utility doesn't try to manage sub-toggles
                 return {
-                    list = togglesList
+                    list = {}
                 }
             end
         })
