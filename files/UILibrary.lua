@@ -629,7 +629,8 @@ do -- // Load
 				flag = self.flag,
 				text = self.text,
 				value = self.value,
-				state = self.state
+				state = self.state,
+				type = 'toggle'
 			});
 		end
 
@@ -1183,7 +1184,8 @@ do -- // Load
 			library.OnFlagChanged:Fire({
 				flag = self.flag,
 				text = self.text,
-				value = self.value
+				value = self.value,
+				type = 'slider'
     		})
 		end
 
@@ -1724,7 +1726,8 @@ do -- // Load
 			library.OnFlagChanged:Fire({
 				flag = self.flag,
 				text = self.text,
-				value = self.value
+				value = self.value,
+				type = 'box'
 			});
 		end
 		task.defer(function()
@@ -2148,7 +2151,8 @@ do -- // Load
 				library.OnFlagChanged:Fire({
 					flag = self.flag,
 					text = self.text,
-					color = self.color
+					color = self.color,
+					type = 'color'
 				});
 			end;
 		end
