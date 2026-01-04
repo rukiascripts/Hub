@@ -1083,6 +1083,19 @@ end;
 
 
 do -- // ESP Functions
+    function EntityESP:Plugin()
+        local classText = '';
+
+        if (library.flags.showClass) then
+            classText = ' [Freshie]';
+        end;
+
+        return {
+            text = classText,
+            playerName = self._playerName,
+        };
+    end;
+
     function functions.onNewTrinketAdded(descendant, espConstructor)
        
     end;
