@@ -1107,17 +1107,29 @@ do -- // ESP Functions
     local npcToggles = {}
 
     function functions.onNewNpcAdded(npc, espConstructor)
-        -- The tag/flag we will check against the UI
-        local npcName = npc.Name
-        local flagName = toCamelCase('Show ' .. npcName)
+        -- Ensure we are dealing with a Model
+        if not npc:IsA("Model") then return end
 
-        -- Only create the ESP if the specific NPC toggle is enabled
-        -- and the main 'Npcs' toggle is enabled (handled by your library.flags)
-        local espObject = espConstructor.new(npc:FindFirstChild('Head') or npc.PrimaryPart, npcName, nil, false)
+        -- Use a task.spawn so we don't hang the main watcher thread while waiting
+        task.spawn(function()
+            -- Wait for a valid part to attach the ESP to
+            local root = npc:WaitForChild('Head', 5) or npc:WaitForChild('HumanoidRootPart', 5) or npc.PrimaryPart
+            
+            -- If after 5 seconds we still have nothing, skip to avoid the error
+            if not root then 
+                warn("[ESP] Could not find root part for NPC: " .. npc.Name)
+                return 
+            end
 
-        -- Handle cleanup when the NPC is removed
-        npc.Destroying:Connect(function()
-            espObject:Destroy()
+            local npcName = npc.Name
+            local espObject = espConstructor.new(root, npcName, nil, false)
+
+            -- Handle cleanup
+            local connection
+            connection = npc.Destroying:Connect(function()
+                espObject:Destroy()
+                if connection then connection:Disconnect() end
+            end)
         end)
     end
 end;
