@@ -35,7 +35,7 @@ local function makeEsp(options)
 	});
 
 	if (library.flags[options.sectionName] == nil) then
-		library.flags[options.sectionName] = false; -- or true if you want it enabled by default
+		library.flags[options.sectionName] = true; -- or true if you want it enabled by default
 	end;
 
 	print('Created ESP with flag:', options.sectionName, 'camelCase tag:', tag);
