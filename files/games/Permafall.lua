@@ -1087,58 +1087,58 @@ end;
 -- // workspace.TrinketSpawn.SPAWN.Handle.Mesh (Handle is where the UI will be placed and Mesh is how we determine which Trinket it is.)
 
 do -- // Set Trinket Data
-    -- Updated to strictly extract only the numbers from the string
-local function normalizeId(id)
-    if not id then return "" end
-    return tostring(id):gsub("%D", "") 
-end
+    local GEM_ID = "2028771435602015" 
 
--- Updated Table (Removed potential hidden spaces/formatting issues)
-Trinkets = {
-    { ['Name'] = 'Goblet', ['MeshId'] = '13116112' },
-    { ['Name'] = 'Amethyst', ['MeshId'] = '2877143560', ['Color'] = Color3.fromRGB(167, 95, 209) },
-    { ['Name'] = 'Diamond', ['MeshId'] = '2877143560', ['Color'] = Color3.fromRGB(248, 248, 248) },
-    { ['Name'] = 'Sapphire', ['MeshId'] = '2877143560', ['Color'] = Color3.fromRGB(0, 0, 255) },
-    { ['Name'] = 'Pure Diamond', ['MeshId'] = '2877143560', ['Color'] = Color3.fromRGB(18, 238, 212) },
-    { ['Name'] = 'Ruby', ['MeshId'] = '2877143560', ['Color'] = Color3.fromRGB(255, 0, 0) },
-    { ['Name'] = 'Emerald', ['MeshId'] = '2877143560', ['Color'] = Color3.fromRGB(31, 128, 29) },
-    { ['Name'] = 'Opal', ['MeshType'] = 'Sphere', ['VertexColor'] = Vector3.new(1, 1, 1) },
-    { ['Name'] = 'Scroll', ['MeshId'] = '60791940' },
-    { ['Name'] = 'Ring', ['MeshId'] = '2637545558' },
-}
+    Trinkets = {
+        { ['Name'] = 'Goblet', ['MeshId'] = '13116112' },
+        { ['Name'] = 'Amethyst', ['MeshId'] = GEM_ID, ['Color'] = Color3.fromRGB(167, 95, 209) },
+        { ['Name'] = 'Diamond', ['MeshId'] = GEM_ID, ['Color'] = Color3.fromRGB(248, 248, 248) },
+        { ['Name'] = 'Sapphire', ['MeshId'] = GEM_ID, ['Color'] = Color3.fromRGB(0, 0, 255) },
+        { ['Name'] = 'Pure Diamond', ['MeshId'] = GEM_ID, ['Color'] = Color3.fromRGB(18, 238, 212) },
+        { ['Name'] = 'Ruby', ['MeshId'] = GEM_ID, ['Color'] = Color3.fromRGB(255, 0, 0) },
+        { ['Name'] = 'Emerald', ['MeshId'] = GEM_ID, ['Color'] = Color3.fromRGB(31, 128, 29) },
+        { ['Name'] = 'Opal', ['MeshType'] = 'Sphere', ['VertexColor'] = Vector3.new(1, 1, 1) },
+        { ['Name'] = 'Scroll', ['MeshId'] = '60791940' },
+        { ['Name'] = 'Ring', ['MeshId'] = '2637545558' },
+    };
+end;
+
+local function normalizeId(id)
+    return tostring(id):gsub('%D', ''):trim()
 end;
 
 local function resolveTrinketFromHandle(handle)
-    if not handle then return nil end
+    if not handle or not handle:IsA('BasePart') then return nil end
+
     local mesh = handle:FindFirstChild("Mesh") or handle:FindFirstChildWhichIsA("SpecialMesh")
     if not mesh then return nil end
 
-    local hId = tostring(mesh.MeshId):gsub('%D', '')
+    local hId = normalizeId(mesh.MeshId)
+    local hType = mesh.MeshType.Name
     local hColor = handle.Color
 
     for _, trinket in ipairs(Trinkets) do
-        -- Check MeshId match (normalized to remove spaces/%20)
-        local isMeshMatch = trinket.MeshId and (tostring(trinket.MeshId):gsub('%D', '') == hId)
-        -- Check MeshType match (for Opal)
-        local isTypeMatch = trinket.MeshType and (trinket.MeshType == mesh.MeshType.Name)
+        -- Check if it's a Mesh ID match or a Mesh Type match (for Opal)
+        local isMatch = (trinket.MeshId and normalizeId(trinket.MeshId) == hId) or 
+                        (trinket.MeshType and trinket.MeshType == hType)
 
-        if isMeshMatch or isTypeMatch then
-            -- If it has a color requirement, it MUST match exactly (per your test)
+        if isMatch then
+            -- 1. Check Color3 (Gems)
             if trinket.Color then
-                if hColor == trinket.Color then
-                    return trinket
-                end
+                if hColor == trinket.Color then return trinket end
+            
+            -- 2. Check VertexColor (Opal)
             elseif trinket.VertexColor then
                 local vColor = Color3.new(trinket.VertexColor.X, trinket.VertexColor.Y, trinket.VertexColor.Z)
-                if hColor == vColor then
-                    return trinket
-                end
+                if hColor == vColor then return trinket end
+            
+            -- 3. No color requirement (Goblet/Scroll)
             else
-                -- No color requirement (Goblet/Scroll), return immediately
                 return trinket
             end
         end
     end
+
     return nil
 end
 
