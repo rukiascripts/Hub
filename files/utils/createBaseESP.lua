@@ -137,10 +137,6 @@ local library = sharedRequire('UILibrary.lua');
 			})
 		end
 
-
-		print('Created ESP with flag:', options.sectionName, 'camelCase tag:', tag);
-		print('Flag state:', library.flags[options.sectionName]);
-
 		table.insert(actors, {commEvent = commEvent});
 		readyCount = 1;
 	end;
