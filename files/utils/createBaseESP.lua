@@ -216,6 +216,8 @@ local library = sharedRequire('UILibrary.lua');
 			});
 
 			local visibleState = library.flags[self._showFlag]; -- Looks for "showNpc"
+			print(visibleState);
+			print(self._showFlag);
 			if(visibleState == nil) then
 				visibleState = true;
 			elseif (not visibleState) then
