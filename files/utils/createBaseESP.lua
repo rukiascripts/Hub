@@ -216,16 +216,11 @@ local library = sharedRequire('UILibrary.lua');
 			});	
 			
 			local isEnabled = library.flags[self._showFlag]
-			local instPos = self._instance.Position -- We know it's a Head now
-			local camera = workspace.CurrentCamera;
-
-			local _, visible = worldToViewportPoint(camera, instPos)
-
+			
 			print(string.format("ID: %s | Flag: %s | Enabled: %s | Visible: %s", 
 				tostring(self._id), 
 				tostring(self._showFlag), 
 				tostring(isEnabled), 
-				tostring(visible)
 			))
 
 			return self;
