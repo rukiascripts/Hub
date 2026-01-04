@@ -1245,7 +1245,7 @@ do -- // ESP Section
                 for _, npcName in ipairs(uniqueNpcs) do
                     local toggle = section:AddToggle({
                         text = npcName,
-                        flag = toCamelCase('Show ' .. npcName),  -- Add this to match ESP's _showFlag
+                        flag = 'show'..npcName,
                         state = true,
                     });
 
