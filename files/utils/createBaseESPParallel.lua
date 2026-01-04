@@ -226,6 +226,8 @@ return [[
 				local showESPFlag = data.showFlag;
 				local isCustomInstance = data.isCustomInstance;
 				data = data.data;
+
+				print('Creating ESP with showFlag:', showESPFlag, 'Flags state:', flags[showESPFlag]);
 		
 				BaseESPParallel.new(data, showESPFlag, isCustomInstance);
 			end;
