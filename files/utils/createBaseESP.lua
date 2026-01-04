@@ -127,8 +127,7 @@ local library = sharedRequire('UILibrary.lua');
 			end;
 		end);
 
-		local renderer = sharedRequire('utils/createBaseESPParallel.lua');
-		renderer(commEvent);
+		loadstring(sharedRequire('utils/createBaseESPParallel.lua'))(commId);
 
 		for flag, value in next, library.flags do
 			broadcastEvent:Fire({
