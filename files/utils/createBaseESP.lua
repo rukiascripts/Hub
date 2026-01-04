@@ -204,30 +204,35 @@ local library = sharedRequire('UILibrary.lua');
 				end;
 			end;
 
-		local packet = {
+					-- Inside BaseEsp.new
+			local packet = {
 				_id = self._id,
-				_tag = typeof(tag) == 'table' and tag.tag or tag,
-				_text = typeof(tag) == 'table' and tag.displayName or tag,
-				_instance = instance,
-				_color = color or whiteColor,
-				_isLazy = isLazy,
-				_showFlag = toCamelCase('Show ' .. (typeof(tag) == 'table' and tag.tag or tag)),
-				_maxDistanceFlag = BaseEsp.Flag .. ' Max Distance',
-				_showHealthFlag = BaseEsp.Flag .. ' Show Health',
-				_colorFlag = toCamelCase((typeof(tag) == 'table' and tag.tag or tag) .. ' Color'),
-				_colorFlag2 = BaseEsp.Flag .. ' Color',
-				_showDistanceFlag = BaseEsp.Flag .. ' Show Distance',
+				_tag = self._tag,
+				_instance = instance, -- Roblox Instances can be passed by reference
+				_color = self._color,
+				_isLazy = self._isLazy,
+				_text = self._text,
+				_showFlag = self._showFlag,
+				_maxDistanceFlag = self._maxDistanceFlag,
+				_showHealthFlag = self._showHealthFlag,
+				_colorFlag = self._colorFlag,
+				_colorFlag2 = self._colorFlag2,
+				_showDistanceFlag = self._showDistanceFlag
 			}
 
-			-- IMPORTANT: Your Parallel script expects: { updateType = 'new', data = packet ... }
-			-- If using your Signal class, fire it like this:
+			-- If it's a custom instance, add the code/vars
+			if (isCustomInstance) then
+				packet._code = instance.code
+				packet._vars = instance.vars
+			end
+
+			-- Fire specifically what the Parallel script's updateTypes.new expects
 			self._actor.commEvent:Fire({
 				updateType = 'new',
 				data = packet,
-				showFlag = BaseEsp.Flag, -- This MUST match the toggle flag in makeEsp
-				isCustomInstance = (typeof(instance) == 'table' and instance.code ~= nil)
-			})
-
+				isCustomInstance = isCustomInstance,
+				showFlag = showESPFlag -- This is the Section Toggle
+			});
 
 			return self;
 		end;
