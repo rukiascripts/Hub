@@ -255,13 +255,6 @@ return [[
 				enableESPSearch = gameName == 'Voxl Blade' or gameName == 'DeepWoken' or gameName == 'Rogue Lineage';
 		
 				event.Event:Connect(function(data)
-					 print('Actor received flag update:', data.flag, data.state, data.type);
-    
-					if (data.type == 'toggle') then
-						flags[data.flag] = data.state;
-						print('Set flag', data.flag, 'to', flags[data.flag]);
-					end
-
 					if (data.type == 'color') then
 						flags[data.flag] = data.color;
 					elseif (data.type == 'slider') then
