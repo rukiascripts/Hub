@@ -204,15 +204,35 @@ local library = sharedRequire('UILibrary.lua');
 				end;
 			end;
 
-			local smallData = table.clone(self);
-			smallData._actor = nil;
+					-- Inside BaseEsp.new
+			local packet = {
+				_id = self._id,
+				_tag = self._tag,
+				_instance = instance, -- Roblox Instances can be passed by reference
+				_color = self._color,
+				_isLazy = self._isLazy,
+				_text = self._text,
+				_showFlag = self._showFlag,
+				_maxDistanceFlag = self._maxDistanceFlag,
+				_showHealthFlag = self._showHealthFlag,
+				_colorFlag = self._colorFlag,
+				_colorFlag2 = self._colorFlag2,
+				_showDistanceFlag = self._showDistanceFlag
+			}
+
+			-- If it's a custom instance, add the code/vars
+			if (isCustomInstance) then
+				packet._code = instance.code
+				packet._vars = instance.vars
+			end
+
+			-- Fire specifically what the Parallel script's updateTypes.new expects
 			self._actor.commEvent:Fire({
 				updateType = 'new',
-				data = smallData,
+				data = packet,
 				isCustomInstance = isCustomInstance,
-				showFlag = showESPFlag
+				showFlag = showESPFlag -- This is the Section Toggle
 			});
-
 
 			return self;
 		end;
