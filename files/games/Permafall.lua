@@ -1113,7 +1113,7 @@ do -- // ESP Functions
 
         -- Only create the ESP if the specific NPC toggle is enabled
         -- and the main 'Npcs' toggle is enabled (handled by your library.flags)
-        local espObject = espConstructor.new(npc, npcName, nil, false)
+        local espObject = espConstructor.new(FindFirstChild(npc, 'Head') or npc.PrimaryPart, npcName, nil, false)
 
         -- Handle cleanup when the NPC is removed
         npc.Destroying:Connect(function()
