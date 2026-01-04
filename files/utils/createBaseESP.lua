@@ -204,36 +204,37 @@ local library = sharedRequire('UILibrary.lua');
 				end;
 			end;
 
-					-- Inside BaseEsp.new
 			local packet = {
 				_id = self._id,
 				_tag = self._tag,
-				_instance = instance, -- Roblox Instances can be passed by reference
+				_text = self._text,
+				_instance = instance,
 				_color = self._color,
 				_isLazy = self._isLazy,
-				_text = self._text,
+				
+				-- These are the flag strings the parallel actor uses to look up values in its local 'flags' table
 				_showFlag = self._showFlag,
 				_maxDistanceFlag = self._maxDistanceFlag,
 				_showHealthFlag = self._showHealthFlag,
 				_colorFlag = self._colorFlag,
 				_colorFlag2 = self._colorFlag2,
-				_showDistanceFlag = self._showDistanceFlag
-			}
+				_showDistanceFlag = self._showDistanceFlag,
+			};
 
-			-- If it's a custom instance, add the code/vars
+			-- Adding custom instance data if applicable
 			if (isCustomInstance) then
-				packet._code = instance.code
-				packet._vars = instance.vars
-			end
+				packet._code = instance.code;
+				packet._vars = instance.vars;
+			end;
 
-			-- Fire specifically what the Parallel script's updateTypes.new expects
+			-- Fire the sanitized packet
 			self._actor.commEvent:Fire({
 				updateType = 'new',
 				data = packet,
 				isCustomInstance = isCustomInstance,
-				showFlag = showESPFlag -- This is the Section Toggle
+				showFlag = showESPFlag -- This matches the 'Enable' toggle flag
 			});
-
+			
 			return self;
 		end;
 
