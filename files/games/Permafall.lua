@@ -1245,7 +1245,7 @@ do -- // ESP Section
                 for _, npcName in ipairs(uniqueNpcs) do
                     local toggle = section:AddToggle({
                         text = npcName,
-                        flag = 'show' .. npcName:gsub('^%l', string.upper);,
+                        flag = 'show' .. npcName:gsub('^%l', string.upper),
                         state = true,
                     });
 
