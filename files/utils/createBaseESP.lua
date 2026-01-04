@@ -215,7 +215,7 @@ local library = sharedRequire('UILibrary.lua');
 				showFlag = showESPFlag
 			});
 
-			local visibleState = flags[self._showFlag]; -- Looks for "showNpc"
+			local visibleState = library.flags[self._showFlag]; -- Looks for "showNpc"
 			if(visibleState == nil) then
 				visibleState = true;
 			elseif (not visibleState) then
