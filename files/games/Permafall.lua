@@ -1174,14 +1174,9 @@ do -- // ESP Functions
     function functions.onNewNpcAdded(npc, espConstructor)
         local npcName = npc.Name;
         
-        local tagData = {
-            displayName = npcName,
-            tag = toCamelCase('Show ' .. npcName)
-        };
-        
         local npcObj;
         if (npc:IsA('BasePart') or npc:IsA('MeshPart')) then
-            npcObj = espConstructor.new(npc, tagData);
+            npcObj = espConstructor.new(npc, npcName);
         else
             local code = [[
                 local npc = ...;
@@ -1194,7 +1189,7 @@ do -- // ESP Functions
                 });
             ]]
 
-            npcObj = espConstructor.new({code = code, vars = {npc}}, tagData);
+            npcObj = espConstructor.new({code = code, vars = {npc}}, npcName);
         end;
 
         local connection;
@@ -1234,7 +1229,7 @@ do -- // ESP Section
             args = workspace.NPCs,
             callback = functions.onNewNpcAdded,
             
-            onLoaded = function(section)
+           onLoaded = function(section)
                 local npcToggles = {};
                 
                 local uniqueNpcs = {};
@@ -1249,9 +1244,9 @@ do -- // ESP Section
                 
                 for _, npcName in ipairs(uniqueNpcs) do
                     local toggle = section:AddToggle({
-                        text = 'Show ' .. npcName,
+                        text = npcName,
                         flag = toCamelCase('Show ' .. npcName),
-                        state = true 
+                        state = true
                     });
                     
                     table.insert(npcToggles, toggle);
