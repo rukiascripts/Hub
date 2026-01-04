@@ -215,7 +215,7 @@ local library = sharedRequire('UILibrary.lua');
 				showFlag = showESPFlag
 			});	
 			
-			local isEnabled = flags[self._showFlag]
+			local isEnabled = library.flags[self._showFlag]
 			local instPos = self._instance.Position -- We know it's a Head now
 
 			local _, visible = worldToViewportPoint(camera, instPos)
