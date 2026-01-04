@@ -1104,15 +1104,22 @@ do -- // ESP Functions
 
     end;
 
-    function functions.onNewNpcAdded(npc, espConstructor)
-        if (IsA(npc, 'Model')) then
-            local esp = espConstructor.new(FindFirstChild(npc, 'Head') or npc.PrimaryPart, npc.Name);
+    local npcToggles = {}
 
-            npc.Destroying:Once(function()
-                esp:Destroy();
-            end);
-        end;
-    end;
+    function functions.onNewNpcAdded(npc, espConstructor)
+        -- The tag/flag we will check against the UI
+        local npcName = npc.Name
+        local flagName = toCamelCase('Show ' .. npcName)
+
+        -- Only create the ESP if the specific NPC toggle is enabled
+        -- and the main 'Npcs' toggle is enabled (handled by your library.flags)
+        local espObject = espConstructor.new(npc, npcName, nil, false)
+
+        -- Handle cleanup when the NPC is removed
+        npc.Destroying:Connect(function()
+            espObject:Destroy()
+        end)
+    end
 end;
 
 
@@ -1138,9 +1145,39 @@ do -- // ESP Section
 
         makeESP({
             sectionName = 'Npcs',
-            type = 'tagAdded',
-            args = 'NPC',
-            callback = functions.onNewNpcAdded
-        });
+            type = 'childAdded', -- Using childAdded because NPCs are in a folder
+            args = {workspace.NPCs},
+            callback = functions.onNewNpcAdded,
+
+            onLoaded = function(section)
+                local togglesList = {}
+                
+                -- 1. Get all current NPCs to create initial toggles
+                -- 2. You might want a predefined list if NPCs haven't spawned yet
+                local currentNpcs = workspace.NPCs:GetChildren()
+                local added = {}
+
+                for _, npc in ipairs(currentNpcs) do
+                    if not added[npc.Name] then
+                        added[npc.Name] = true
+                        
+                        local t = section:AddToggle({
+                            text = 'Show ' .. npc.Name,
+                            -- This flag matches 'Show NPCName' which is what 
+                            -- createBaseEsp looks for in self._showFlag
+                            flag = toCamelCase('Show ' .. npc.Name) 
+                        })
+                        
+                        table.insert(togglesList, t)
+                    end
+                end
+
+                -- Return the list so makeEsp can manage visibility 
+                -- (hide these toggles when the main "Npcs" toggle is off)
+                return {
+                    list = togglesList
+                }
+            end
+        })
 	end;
 end;
