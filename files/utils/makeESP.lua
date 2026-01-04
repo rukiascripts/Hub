@@ -34,13 +34,11 @@ local function makeEsp(options)
 		flag = options.sectionName
 	});
 
-	-- Wait for the toggle's task.defer to complete so the flag is initialized
-	task.wait();
-
 	local showDistance = espSection:AddToggle({
 		text = 'Show Distance',
 		flag = options.sectionName .. ' Show Distance'
 	})
+
 
 	if (not options.noColorPicker) then
 		enableToggle:AddColor({
