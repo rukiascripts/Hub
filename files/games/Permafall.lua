@@ -1161,46 +1161,52 @@ local function getHandleMeshInfo(handle)
     };
 end;
 
-local function colorsMatch(c1, c2, tolerance)
-    if not c1 or not c2 then return false end
-    tolerance = tolerance or 0.01 -- Adjust if detection is still strict
-    return math.abs(c1.R - c2.R) < tolerance and
-           math.abs(c1.G - c2.G) < tolerance and
-           math.abs(c1.B - c2.B) < tolerance
+-- Helper to handle the "floating point" color issue
+local function colorsMatch(c1, c2)
+    local t = 0.02 -- Tolerance: allows for tiny rounding errors
+    return math.abs(c1.R - c2.R) < t and math.abs(c1.G - c2.G) < t and math.abs(c1.B - c2.B) < t
 end
 
 local function resolveTrinketFromHandle(handle)
     if (not handle or not handle:IsA('BasePart')) then return nil end
 
+    -- 1. Get the Mesh object
     local mesh = handle:FindFirstChildWhichIsA("SpecialMesh") or handle:FindFirstChild("Mesh")
-    if not mesh then return nil end
+    if (not mesh) then return nil end
 
-    local handleMeshId = normalizeId(mesh.MeshId)
-    local handleMeshType = mesh.MeshType.Name
-    local handleColor = handle.Color
+    local hMeshId = normalizeId(mesh.MeshId)
+    local hMeshType = mesh.MeshType.Name
+    local hColor = handle.Color
 
+    -- 2. Loop through our data
     for _, trinket in ipairs(Trinkets) do
-        local match = false
-        
-        if trinket.MeshId and handleMeshId ~= "" then
-            if normalizeId(trinket.MeshId) == handleMeshId then
-                match = true
+        local isMatch = false
+
+        -- Check by MeshId (Gems, Goblet, Scroll, Ring)
+        if trinket.MeshId and hMeshId ~= "" then
+            if normalizeId(trinket.MeshId) == hMeshId then
+                isMatch = true
             end
-        elseif trinket.MeshType and trinket.MeshType == handleMeshType then
-            match = true
+        -- Check by MeshType (Opal / Sphere)
+        elseif trinket.MeshType and trinket.MeshType == hMeshType then
+            isMatch = true
         end
 
-        if match then
+        -- 3. If the Mesh matches, verify the Color (if required)
+        if isMatch then
+            -- If the table entry has a specific Color requirement
             if trinket.Color then
-                if colorsMatch(handleColor, trinket.Color) then
+                if colorsMatch(hColor, trinket.Color) then
                     return trinket
                 end
+            -- If the table entry has a VertexColor requirement (Opal)
             elseif trinket.VertexColor then
                 local vColor = Color3.new(trinket.VertexColor.X, trinket.VertexColor.Y, trinket.VertexColor.Z)
-                if colorsMatch(handleColor, vColor) then
+                if colorsMatch(hColor, vColor) then
                     return trinket
                 end
             else
+                -- No color requirement (Goblet/Scroll), so the mesh match is enough!
                 return trinket
             end
         end
@@ -1208,7 +1214,6 @@ local function resolveTrinketFromHandle(handle)
 
     return nil
 end
-
 do -- // ESP Functions
     function EntityESP:Plugin()
         local classText = '';
