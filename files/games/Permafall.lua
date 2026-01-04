@@ -1122,12 +1122,11 @@ local function getHandleMeshInfo(handle)
     };
 end;
 
-local function colorsMatch(c1, c2)
-    -- Increased tolerance to 0.1 to account for heavy game lighting
-    local t = 0.1 
-    return math.abs(c1.R - c2.R) < t and 
-           math.abs(c1.G - c2.G) < t and 
-           math.abs(c1.B - c2.B) < t
+local function getDominantColor(c)
+    if c.R > c.G and c.R > c.B then return "Red" end
+    if c.G > c.R and c.G > c.B then return "Green" end
+    if c.B > c.R and c.B > c.G then return "Blue" end
+    return "White"
 end
 
 local function resolveTrinketFromHandle(handle)
