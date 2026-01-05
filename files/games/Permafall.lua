@@ -639,7 +639,7 @@ do -- // Auto Sprint
         maid.autoSprint = true
 
         -- Trigger sprint when W is pressed
-        maid.sprintBegan = UIS.InputBegan:Connect(function(input, gpe)
+        maid.sprintBegan = UserInputService.InputBegan:Connect(function(input, gpe)
             if gpe then return end
             if input.KeyCode == Enum.KeyCode.W then
                 -- Note: Based on your decomp, the remote is likely in the Character or a child of it
@@ -654,7 +654,7 @@ do -- // Auto Sprint
         end)
 
         -- Stop sprint when W is released
-        maid.sprintEnded = UIS.InputEnded:Connect(function(input, gpe)
+        maid.sprintEnded = UserInputService.InputEnded:Connect(function(input, gpe)
             if input.KeyCode == Enum.KeyCode.W then
                 local remote = game:GetService("Players").LocalPlayer.Character:FindFirstChild("Communicate")
                 if remote then
