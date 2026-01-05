@@ -1520,6 +1520,7 @@ do -- // ESP Section
             sectionName = 'Trinkets',
             type = 'descendantAdded',
             args = workspace.TrinketSpawn,
+            noColorPicker = true,
             callback = functions.onNewTrinketAdded,
             onLoaded = function(section)
                 return {list = makeList(Trinkets, section)};
@@ -1530,7 +1531,11 @@ do -- // ESP Section
             sectionName = 'Npcs',
             type = 'childAdded',
             args = workspace.NPCs,
+            noColorPicker = true,
             callback = functions.onNewNpcAdded,
+            onLoaded = function(section)
+                return {list = makeList(workspace.NPCs, section)};
+            end,
         });
 	end;
 end;
