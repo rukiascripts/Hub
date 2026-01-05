@@ -493,38 +493,36 @@ do -- // Auto Sprint
             return;
         end;
 
-        local isSprinting = false
+        local isRunningLogic = false -- Prevents the script from triggering itself
 
         maid.autoSprint = UserInputService.InputBegan:Connect(function(input, gpe)
-            if gpe or input.KeyCode ~= Enum.KeyCode.W then return end;
+            -- 1. Ignore if typing in chat
+            -- 2. Only run for the W key
+            -- 3. IMPORTANT: Stop if we are already middle of the sprint logic
+            if gpe or input.KeyCode ~= Enum.KeyCode.W or isRunningLogic then 
+                return 
+            end;
 
-            if not isSprinting then
-                isSprinting = true
-                
-                -- 1. We virtually "Release" W for a split second 
-                -- This ensures the game doesn't see two 'Down' inputs at once
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game)
-                task.wait(0.02)
-                
-                -- 2. Send the first tap of the Double-Tap
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game)
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game)
-                task.wait(0.02)
-                
-                -- 3. Send the final "Hold"
-                -- This triggers the game's source code perfectly
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game)
-            end
-        end)
+            isRunningLogic = true; -- Lock the script
 
-        maid.autoSprintReset = UserInputService.InputEnded:Connect(function(input)
-            if input.KeyCode == Enum.KeyCode.W then
-                isSprinting = false
-            end
-        end)
-    end
-end
+            -- This simulates the 'Double Tap' once
+            -- We don't need a task.wait here because the game script 
+            -- will pick up the Virtual Tap immediately.
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game);
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game);
 
+            -- We keep the lock on until you actually let go of the physical W key
+            -- This prevents the "overload" of animation tracks.
+            local connection
+            connection = UserInputService.InputEnded:Connect(function(endedInput)
+                if endedInput.KeyCode == Enum.KeyCode.W then
+                    isRunningLogic = false; -- Unlock for the next press
+                    connection:Disconnect();
+                end;
+            end);
+        end);
+    end;
+end;
 local myChatLogs = {};
 
 local assetsList = {'ModeratorJoin.mp3', 'ModeratorLeft.mp3'};
