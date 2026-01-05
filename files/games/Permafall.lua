@@ -1468,6 +1468,47 @@ do -- // ESP Section
             text = 'Show Class'
         });
 
+        local function makeList(folder, section)
+            local seen = {};
+            local list = {};
+
+            if (typeof(folder) == "table" and not folder.ClassName) then
+                for _, item in next, folder do
+                    if (item.Name and not seen[item.Name]) then
+                        seen[item.Name] = true;
+                        table.insert(list, item.Name);
+                    end;
+                end;
+            else
+                for _, instance in next, folder:GetChildren() do
+                    if (seen[instance.Name]) then continue end;
+
+                    seen[instance.Name] = true;
+                    table.insert(list, instance.Name);
+                end;
+            end;
+
+            table.sort(list, function(a, b)
+                return a < b;
+            end);
+
+            return Utility.map(list, function(name)
+                local t = section:AddToggle({
+                    text = name,
+                    flag = string.format('Show %s', name),
+                    state = true
+                });
+
+                t:AddColor({
+                    text = string.format('%s Color', name),
+                    color = Color3.fromRGB(255, 255, 255)
+                });
+
+                return t;
+            end);
+        end;
+
+
        makeESP({
             sectionName = 'Dropped Items',
             type = 'childAdded',
@@ -1479,7 +1520,10 @@ do -- // ESP Section
             sectionName = 'Trinkets',
             type = 'descendantAdded',
             args = workspace.TrinketSpawn,
-            callback = functions.onNewTrinketAdded
+            callback = functions.onNewTrinketAdded,
+            onLoaded = function(section)
+                return {list = makeList(Trinkets, section)};
+            end,
         });
 
         makeESP({
