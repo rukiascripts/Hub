@@ -642,11 +642,39 @@ do -- // Core Hook
         local args = {...}
 
         if (getnamecallmethod() == 'FireServer' and self.Name == 'Communicate') then
-            if (maid.noFall and type(args[1]) == 'table' and args[1].InputType == 'Landed') then
-                -- // Change StudsFallen to 0 so we take no damage and effectively stop "FallDamage". 
-                args[1].StudsFallen = 0
-                -- // If legitNoFall is enabled then it'll perfect roll everytime you take "FallDamage". However, you still take 0 damage it just makes it look legit.
-                args[1].FallBrace = library.flags.legitNoFall or false;
+            if (type(args[1]) == 'table' and args[1].InputType) then
+                local InputType = args[1];
+
+                if (library.flags.noFallDamage and InputType == 'Landed') then
+                    -- // Change StudsFallen to 0 so we take no damage and effectively stop "FallDamage". 
+                    args[1].StudsFallen = 0
+                    -- // If legitNoFall is enabled then it'll perfect roll everytime you take "FallDamage". However, you still take 0 damage it just makes it look legit.
+                    args[1].FallBrace = library.flags.legitNoFall or false;
+
+                elseif (library.flags.autoAimSagitta and InputType == 'MouseButton1') then
+                    local MouseTarget = args[1].MouseTarget;
+                    if (MouseTarget) then
+                        local mousePosition = args[1].Hit.Position;
+                        local closestCharacter = nil;
+                        local closestDistance = math.huge;
+
+                        for _, entity in next, workspace.Live:GetChildren() do
+                            if (entity == LocalPlayer.Character) then continue end;
+                            local rootPart = entity:FindFirstChild('HumanoidRootPart');
+                            if (not rootPart) then continue end;
+
+                            local distance = (rootPart.Position - mousePosition).Magnitude;
+                            if (distance < closestDistance) then
+                                closestDistance = distance;
+                                closestCharacter = rootPart;
+                            end;
+                        end;
+
+                        if (closestCharacter) then
+                            args[1].Hit = CFrame.new(closestCharacter.Position);
+                        end;
+                    end;
+                end;
 
                 return oldNamecall(self, unpack(args));
             end;
@@ -657,14 +685,6 @@ do -- // Core Hook
 end;
 
 do -- // Removal Functions
-    function functions.noFall(toggle)
-        if (not toggle) then
-            maid.noFall = nil;
-            return;
-        end;
-
-        maid.noFall = true;
-    end
 
     function functions.noStun(toggle)
           if(not toggle) then
@@ -714,7 +734,6 @@ do -- // Removals
 	playerMods:AddToggle({
 		text = 'No Fall Damage',
 		tip = 'Removes fall damage for you',
-        callback = functions.noFall
 	});
 
     playerMods:AddToggle({
@@ -798,6 +817,11 @@ do -- // Local Cheats
 	localCheats:AddBind({text = 'Go To Ground', callback = functions.goToGround, mode = 'hold', nomouse = true});
 
 	localCheats:AddDivider("Gameplay-Assist");
+
+    localCheats:AddToggle({
+		text = 'Auto Aim Sagitta',
+		tip = 'Automatically places the Sagitta onto the nearest character relative to the mouse positioning.'
+	});
 
 	localCheats:AddToggle({
 		text = 'Auto Sprint',
