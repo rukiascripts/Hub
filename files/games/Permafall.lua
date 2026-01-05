@@ -914,24 +914,27 @@ do -- // Load All Buyables
 end;
 
 do -- // Automation Functions
-
     function functions.pickupItem(item, isSilver)
         if (not item) then return end;
         if (not item.Name:find('Dropped_')) then return end;
         if (not isSilver and item:GetAttribute('Silver')) then return end;
         if (isSilver and not item:GetAttribute('Silver')) then return end;
 
-        local touchInterest = FindFirstChildWhichIsA(item, 'TouchTransmitter');
-        if (touchInterest) then firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, false); end;
+        local touchInterest = item:FindFirstChildWhichIsA('TouchTransmitter');
+        if (touchInterest) then 
+            firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, 0); 
+            task.wait(0.1);
+            firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, 1);
+        end;
     end;
 
     maid.newThrownChild = workspace.Thrown.ChildAdded:Connect(function(child)
-        if (library.flags.autoPickupItems) then
-            functions.pickupItem(child);
-        end;
-
-        if (library.flags.autoPickupSilver) then
-            functions.pickupItem(child, isSilver);
+        task.wait(0.05);
+        
+        if (library.flags.autoPickupSilver and child:GetAttribute('Silver')) then
+            functions.pickupItem(child, true);
+        elseif (library.flags.autoPickupItems and not child:GetAttribute('Silver')) then
+            functions.pickupItem(child, false);
         end;
     end);
 end;
@@ -945,7 +948,9 @@ do -- // Automation
         callback = function(state)
             if (state) then
                 for _, child in workspace.Thrown:GetChildren() do
-                    functions.pickupItem(child);
+                    if (not child:GetAttribute('Silver')) then
+                        functions.pickupItem(child, false);
+                    end;
                 end;
             end;
         end
@@ -957,7 +962,9 @@ do -- // Automation
         callback = function(state)
             if (state) then
                 for _, child in workspace.Thrown:GetChildren() do
-                    functions.pickupItem(child, true);
+                    if (child:GetAttribute('Silver')) then
+                        functions.pickupItem(child, true);
+                    end;
                 end;
             end;
         end
