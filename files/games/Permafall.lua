@@ -627,20 +627,23 @@ do -- // Core Hook
 end;
 
 do -- // Auto Sprint
-    -- // AUTO SPRINT LOGIC
     function functions.autoSprint(toggle)
+        -- Cleanup if toggled off
         if (not toggle) then
+            if maid.sprintBegan then maid.sprintBegan:Disconnect() end
+            if maid.sprintEnded then maid.sprintEnded:Disconnect() end
             maid.autoSprint = nil
             return
         end
+
         maid.autoSprint = true
 
-        -- Force a check immediately when W is pressed
-        maid.sprintLoop = UserInputService.InputBegan:Connect(function(input, gpe)
+        -- Trigger sprint when W is pressed
+        maid.sprintBegan = UIS.InputBegan:Connect(function(input, gpe)
             if gpe then return end
             if input.KeyCode == Enum.KeyCode.W then
-                -- This signals the game's remote that we want to sprint
-                local remote = LocalPlayer.Character:FindFirstChild("Communicate") -- Update path if needed
+                -- Note: Based on your decomp, the remote is likely in the Character or a child of it
+                local remote = game:GetService("Players").LocalPlayer.Character:FindFirstChild("Communicate")
                 if remote then
                     remote:FireServer({
                         ["InputType"] = "Sprinting",
@@ -649,8 +652,21 @@ do -- // Auto Sprint
                 end
             end
         end)
+
+        -- Stop sprint when W is released
+        maid.sprintEnded = UIS.InputEnded:Connect(function(input, gpe)
+            if input.KeyCode == Enum.KeyCode.W then
+                local remote = game:GetService("Players").LocalPlayer.Character:FindFirstChild("Communicate")
+                if remote then
+                    remote:FireServer({
+                        ["InputType"] = "Sprinting",
+                        ["Enabled"] = false
+                    })
+                end
+            end
+        end)
     end
-end;
+end
 
 do -- // Removal Functions
     function functions.noFall(toggle)
