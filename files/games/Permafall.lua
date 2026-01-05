@@ -53,7 +53,7 @@ local Players, RunService, UserInputService, HttpService, CollectionService, Mem
 local LocalPlayer = Players.LocalPlayer;
 local playerMouse = LocalPlayer:GetMouse();
 
-local oldAmbient, oldBrightness;
+local oldAmbient, oldBrightness = Lighting.Ambient, Lighting.Brightness;
 
 local BodyMoverTag = 'good';
 
@@ -72,6 +72,7 @@ local maid = Maid.new();
 local localCheats = column1:AddSection('Local Cheats');
 local notifier = column1:AddSection('Notifier');
 local playerMods = column1:AddSection('Player Mods');
+local automation = column2:AddSection('Automation');
 local misc = column2:AddSection('Misc');
 local visuals = column2:AddSection('Visuals');
 local farms = column2:AddSection('Farms');
@@ -691,12 +692,17 @@ do -- // Removals
         callback = functions.noFall
 	});
 
+    playerMods:AddToggle({
+        text = 'Legit No Fall',
+        tip = ' Removes fall damage but still rolls'
+    });
+
 	playerMods:AddToggle({
 		text = 'No Stun',
 		tip = 'Makes it so you will not get stunned in combat',
         callback = functions.noStun
 	});
-
+    
 	playerMods:AddToggle({
 		text = 'No Fire Damage',
 		flag = 'Anti Fire',
@@ -905,6 +911,47 @@ do -- // Load All Buyables
             end;
         end;
     end;
+end;
+
+do -- // Automation Functions
+    function functions.autoPickupDroppedItems(toggle)
+        if (not toggle) then
+            return;
+        end;
+
+        local function pickupItem(item)
+            if (item and not item.Name:find('Dropped_')) then return end;
+
+            local pickupSilver = library.flags.autoPickupSilver;
+
+            if (not pickupSilver and item:GetAttribute('Silver') > 0) then return end;
+
+            local TouchInterest = FindFirstChildWhichIsA(item, 'TouchInterest');
+            if (TouchInterest) then firetouchinterest(TouchInterest); end;
+        end;
+
+        for _, child in workspace.Thrown:GetChildren() do
+            pickupItem(child);
+        end;
+
+        maid.autoPickupDroppedItems = workspace.Thrown:Connect(pickupItem)
+    end;
+end;
+
+
+do -- // Automation
+    automation:AddDivider('Pickup')
+
+    automation:AddToggle({
+        text = 'Auto Pickup Items',
+        tip = 'Automatically picks up any items that get dropped.',
+        callback = functions.autoPickupDroppedItems
+    })
+
+    automation:AddToggle({
+        text = 'Auto Pickup Silver',
+        tip = 'Automatically picks up any silver that get dropped. [WARNING: THEY HAVE LOGS FOR SILVER PICKUPS]',
+    })
 end;
 
 do -- // Opens dialogue stuff
@@ -1275,13 +1322,40 @@ do -- // ESP Functions
         end);
     end;
 
-    function functions.onDroppedItemAdded()
+    function functions.onDroppedItemAdded(item, espConstructor)
+        if (not item or not item.Name:find('Dropped_')) then return end;
 
+        local itemName = item:GetAttribute('Item');
+        
+        local itemObj;
+        if (item:IsA('BasePart') or item:IsA('MeshPart')) then
+            itemObj = espConstructor.new(npc, npcName);
+        else
+            local code = [[
+                local npc = ...;
+                return setmetatable({}, {
+                    __index = function(_, p)
+                        if (p == 'Position') then
+                            return npc.PrimaryPart and npc.PrimaryPart.Position or npc.WorldPivot.Position
+                        end;
+                    end,
+                });
+            ]]
+
+            itemObj = espConstructor.new({code = code, vars = {item}}, itemName);
+        end;
+        
+        local connection;
+        connection = item:GetPropertyChangedSignal('Parent'):Connect(function()
+            if (not item.Parent) then
+                itemObj:Destroy();
+                connection:Disconnect();
+            end;
+        end);
     end;
 
     function functions.onNewNpcAdded(npc, espConstructor)
         local npcName = npc.Name;
-        local showFlag = toCamelCase('Show ' .. npcName);
         
         local npcObj;
         if (npc:IsA('BasePart') or npc:IsA('MeshPart')) then
@@ -1301,8 +1375,6 @@ do -- // ESP Functions
             npcObj = espConstructor.new({code = code, vars = {npc}}, npcName);
         end;
         
-        npcObj._showFlag = showFlag;
-
         local connection;
         connection = npc:GetPropertyChangedSignal('Parent'):Connect(function()
             if (not npc.Parent) then
@@ -1319,11 +1391,16 @@ do -- // ESP Section
             text = 'Show Class'
         });
 
-        makeESP({
+        local dropppedItems = makeESP({
             sectionName = 'Dropped Items',
-            type = 'tagAdded',
-            args = 'LootDrop',
+            type = 'childAdded',
+            args = workspace.Thrown,
             callback = functions.onDroppedItemAdded
+        });
+
+        droppedItems:AddToggle({
+            text = 'Show Item Owner',
+            tip = 'Shows who dropped the Item.',
         });
 
         makeESP({
