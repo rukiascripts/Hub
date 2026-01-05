@@ -867,7 +867,7 @@ do -- // Performance Functions
         Lighting.GlobalShadows = not t;
     end;
 
-    function functions.disableWeather(t)
+    function functions.disableWeatherEffects(t)
         if (not t) then
             for part, _ in pairs(movedParts) do
                 if (part and part.Parent == ReplicatedFirst) then
@@ -876,7 +876,7 @@ do -- // Performance Functions
                 end;
             end;
 
-            table.clear(movedParts) ;
+            table.clear(movedParts);
             return;
         end;
 
@@ -926,8 +926,6 @@ do -- // Automation Functions
 
         local touchInterest = item:FindFirstChildWhichIsA('TouchTransmitter');
         if (touchInterest) then 
-            firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, 0); 
-            task.wait(0.1);
             firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, 1);
         end;
     end;
@@ -1087,6 +1085,12 @@ do -- // Misc
 		text = 'Disable Shadows',
 		tip = 'Disabling all shadows adds a large bump to your FPS',
 		callback = functions.disableShadows
+	});
+
+    	misc:AddToggle({
+		text = 'Disable Weather Effects',
+		tip = 'Disables Weather Effects because Rain and Snow tank your FPS',
+		callback = functions.disableWeatherEffects
 	});
 end;
 
