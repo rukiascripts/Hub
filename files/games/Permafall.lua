@@ -1119,36 +1119,33 @@ local function resolveTrinketFromHandle(handle)
     local hType = mesh.MeshType.Name
     local hColor = handle.Color
 
-    for _, trinket in ipairs(Trinkets) do
-        local isMatch = false
-
-        -- 1. Check for Opal by MeshType ONLY
-        if trinket.Name == 'Opal' and hType == 'Sphere' then
-            isMatch = true
-        
-        -- 2. Check for Gems by your EXACT string
-        elseif trinket.MeshId and trinket.MeshId == hIdRaw then
-            isMatch = true
-            
-        -- 3. Check for Goblet/Scroll by numeric ID (normalized)
-        elseif trinket.MeshId and normalizeId(trinket.MeshId) == normalizeId(hIdRaw) then
-            isMatch = true
+    -- 1. PRIORITY: OPAL CHECK
+    -- If it's a Sphere, it's an Opal. Period.
+    if hType == 'Sphere' then
+        for _, t in ipairs(Trinkets) do
+            if t.Name == 'Opal' then return t end
         end
+    end
 
-        if isMatch then
-            -- Check color for Gems and Opal
-            if trinket.Color then
-                if hColor == trinket.Color then return trinket end
-            elseif trinket.VertexColor then
-                -- VertexColor check for Opal
-                local vColor = Color3.new(trinket.VertexColor.X, trinket.VertexColor.Y, trinket.VertexColor.Z)
-                if hColor == vColor then return trinket end
-            else
-                -- Goblet/Scroll/Ring
-                return trinket
+    -- 2. PRIORITY: GEMS (Strict String)
+    -- Using your exact confirmed string
+    if hIdRaw == "rbxassetid://%202877143560%20" then
+        for _, t in ipairs(Trinkets) do
+            if t.Color and t.Color == hColor then
+                return t
             end
         end
     end
+
+    -- 3. PRIORITY: EVERYTHING ELSE (Normalized)
+    local hIdNorm = normalizeId(hIdRaw)
+    for _, t in ipairs(Trinkets) do
+        if t.MeshId and normalizeId(t.MeshId) == hIdNorm then
+            -- This catches Goblet, Scroll, Ring
+            return t
+        end
+    end
+
     return nil
 end
 
