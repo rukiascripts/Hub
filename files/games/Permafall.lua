@@ -1329,7 +1329,7 @@ do -- // ESP Functions
         local itemOwner = string.gsub(item, 'Dropped_', '');
 
         if (library.flags.showItemOwner) then 
-            itemName = itemName .. ' [OWNER: ' itemOwner..  ']'; 
+            itemName = itemName .. ' [OWNER: ' .. itemOwner ..  ']'; 
         end;
         
         local itemObj;
