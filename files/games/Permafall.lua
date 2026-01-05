@@ -1410,6 +1410,9 @@ do -- // ESP Functions
 
     function functions.onNewNpcAdded(npc, espConstructor)
         local npcName = npc.Name;
+
+        local PurchaseInfo = FindFirstChild(npc, 'PurchaseInfo');
+        if (PurchaseInfo) then npcName = PurchaseInfo.ItemName .. ' [Purchasable]'
         
         local npcObj;
         if (npc:IsA('BasePart') or npc:IsA('MeshPart')) then
