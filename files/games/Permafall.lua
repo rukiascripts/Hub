@@ -937,9 +937,13 @@ end;
 
 do -- // Automation Functions
 
-    function functions.pickupItem(item, isSilver)
+    function functions.pickupItem(item, data)
+        local isSilver = data.isSilver;
+        local isChestCoin = data.isChestCoin;
+
         if (not item) then return end;
-        if (not item.Name:find('Dropped_')) then return end;
+        if (not isChestCoin and not item.Name:find('Dropped_')) then return end;
+        if (isChestCoin and item.Name ~= 'ChestCoin') then return end;
         
         local hasSilver = item:GetAttribute('Silver') and item:GetAttribute('Silver') ~= 0;
 
@@ -979,7 +983,9 @@ do -- // Automation
                 for _, child in Thrown:GetChildren() do
                     local hasSilver = child:GetAttribute('Silver') and child:GetAttribute('Silver') ~= 0;
                     if (not hasSilver) then
-                        functions.pickupItem(child, false);
+                        functions.pickupItem(child, {
+                            isSilver = false;
+                        });
                     end;
                 end;
             end;
@@ -994,7 +1000,25 @@ do -- // Automation
                 for _, child in Thrown:GetChildren() do
                     local hasSilver = child:GetAttribute('Silver') and child:GetAttribute('Silver') ~= 0;
                     if (hasSilver) then
-                        functions.pickupItem(child, true);
+                        functions.pickupItem(child, {
+                            isSilver = true;
+                        });
+                    end;
+                end;
+            end;
+        end;
+    });
+
+    automation:AddToggle({
+        text = 'Auto Pickup Chest Coin',
+        tip = 'Automatically picks up any chest coins',
+        callback = function(state)
+            if (state) then
+                for _, child in Thrown:GetChildren() do
+                    if (child and child.Name == 'ChestCoin') then
+                        functions.pickupItem(child, {
+                            chestCoin = true;
+                        });
                     end;
                 end;
             end;
