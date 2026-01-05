@@ -1112,8 +1112,12 @@ end;
 function functions.fullBright(toggle)
     if (not toggle) then
         maid.fullBright = nil;
-        Lighting.Ambient = oldAmbient;
-        Lighting.Brightness = oldBrightness;
+        if (oldAmbient) then
+            Lighting.Ambient = oldAmbient;
+            Lighting.Brightness = oldBrightness;
+            oldAmbient = nil;
+            oldBrightness = nil;
+        end
         return;
     end;
 
