@@ -968,7 +968,7 @@ do -- // Automation Functions
             });
         end;
         
-        if (library.flags.autoPickupItems and not hasSilver) then
+        if (library.flags.autoPickupBags and not hasSilver) then
             functions.pickupItem(child, {
                 isSilver = false;
             });
@@ -986,8 +986,8 @@ do -- // Automation
     automation:AddDivider('Pickup')
 
     automation:AddToggle({
-        text = 'Auto Pickup Items',
-        tip = 'Automatically picks up any items that get dropped.',
+        text = 'Auto Pickup Bags',
+        tip = 'Automatically picks up any Bags that get dropped.',
         callback = function(state)
             if (state) then
                 for _, child in Thrown:GetChildren() do
@@ -1020,6 +1020,19 @@ do -- // Automation
     });
 
     automation:AddToggle({
+        text = 'Safe Pickup Silver',
+        tip = 'Safely picks up silver (under 2,000 silver because 2,000+ triggers logs)', 
+        callback = function(state)
+            if (not library.flags.autoPickupSilver) then
+               ToastNotif.new({
+                    text = 'This feature requires Auto Pickup Silver to be enabled!',
+                    duration = 5
+                });
+            end;
+        end;
+    });
+
+    automation:AddToggle({
         text = 'Auto Pickup Chest Coin',
         tip = 'Automatically picks up any chest coins',
         callback = function(state)
@@ -1031,19 +1044,6 @@ do -- // Automation
                         });
                     end;
                 end;
-            end;
-        end;
-    });
-
-    automation:AddToggle({
-        text = 'Safe Pickup Silver',
-        tip = 'Safely picks up silver (under 2,000 silver because 2,000+ triggers logs)', 
-        callback = function(state)
-            if (state and not library.flags.autoPickupSilver) then
-               ToastNotif.new({
-                    text = 'This feature requires Auto Pickup Silver to be enabled!',
-                    duration = 5
-                });
             end;
         end;
     });
