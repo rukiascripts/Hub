@@ -929,7 +929,7 @@ do -- // Automation Functions
             if (not pickupSilver and item:GetAttribute('Silver') > 0) then return end;
 
             local TouchInterest = FindFirstChildWhichIsA(item, 'TouchTransmitter');
-            if (TouchInterest) then firetouchinterest(LocalPlayer.Character.HumanoidRootPart, TouchInterest, false); end;
+            if (TouchInterest) then firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, false); end;
         end;
 
         for _, child in workspace.Thrown:GetChildren() do
