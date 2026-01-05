@@ -600,25 +600,28 @@ do -- // Core Hook
         local args = {...}
         local method = getnamecallmethod()
 
+        -- Check if we are firing the specific Communicate remote
         if (method == 'FireServer' and self.Name == 'Communicate') then
             local data = args[1]
-            if type(data) ~= 'table' then return oldNamecall(self, ...) end
-
-            -- Existing No Fall Logic
-            if maid.noFall and data.InputType == 'Landed' then
-                data.StudsFallen = 0
-                data.FallBrace = library.flags.legitNoFall or false
-                return oldNamecall(self, unpack(args))
-            end
-
-            -- // FIXED Auto Sprint Logic
-            if maid.autoSprint and data.InputType == 'Sprinting' then
-                -- Use the UIS variable we defined above
-                -- If we are holding W, we force the server to think Enabled is true
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                    data.Enabled = true
+            
+            -- Safeguard: Ensure the first argument is a table before indexing
+            if type(data) == 'table' then
+                
+                -- No Fall Logic
+                if maid.noFall and data.InputType == 'Landed' then
+                    data.StudsFallen = 0
+                    data.FallBrace = library.flags.legitNoFall or false
+                    return oldNamecall(self, unpack(args))
                 end
-                return oldNamecall(self, unpack(args))
+
+                -- Auto Sprint Logic
+                -- We call IsKeyDown on the SERVICE, not on 'self'
+                if maid.autoSprint and data.InputType == 'Sprinting' then
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                        data.Enabled = true
+                    end
+                    return oldNamecall(self, unpack(args))
+                end
             end
         end
 
@@ -628,39 +631,27 @@ end;
 
 do -- // Auto Sprint
     function functions.autoSprint(toggle)
-        -- Cleanup if toggled off
         if (not toggle) then
             if maid.sprintBegan then maid.sprintBegan:Disconnect() end
-            if maid.sprintEnded then maid.sprintEnded:Disconnect() end
             maid.autoSprint = nil
             return
         end
 
         maid.autoSprint = true
 
-        -- Trigger sprint when W is pressed
+        -- This connection forces the game to start the sprint logic when W is pressed
         maid.sprintBegan = UserInputService.InputBegan:Connect(function(input, gpe)
             if gpe then return end
+            
             if input.KeyCode == Enum.KeyCode.W then
-                -- Note: Based on your decomp, the remote is likely in the Character or a child of it
-                local remote = game:GetService("Players").LocalPlayer.Character:FindFirstChild("Communicate")
+                -- Based on your error log, the path is Workspace.Live[PlayerName].Communicate
+                local char = LocalPlayer.Character
+                local remote = char and char:FindFirstChild("Communicate")
+                
                 if remote then
                     remote:FireServer({
                         ["InputType"] = "Sprinting",
                         ["Enabled"] = true
-                    })
-                end
-            end
-        end)
-
-        -- Stop sprint when W is released
-        maid.sprintEnded = UserInputService.InputEnded:Connect(function(input, gpe)
-            if input.KeyCode == Enum.KeyCode.W then
-                local remote = game:GetService("Players").LocalPlayer.Character:FindFirstChild("Communicate")
-                if remote then
-                    remote:FireServer({
-                        ["InputType"] = "Sprinting",
-                        ["Enabled"] = false
                     })
                 end
             end
