@@ -916,22 +916,21 @@ end;
 do -- // Automation Functions
 
     function functions.pickupItem(item, isSilver)
-        if (not item and not item.Name:find('Dropped_')) then return end;
-
-        if (isSilver) then
-            if (item:GetAttribute('Silver') > 0 ) then return end;
-        end;
+        if (not item) then return end;
+        if (not item.Name:find('Dropped_')) then return end;
+        if (not isSilver and item:GetAttribute('Silver')) then return end;
+        if (isSilver and not item:GetAttribute('Silver')) then return end;
 
         local touchInterest = FindFirstChildWhichIsA(item, 'TouchTransmitter');
         if (touchInterest) then firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, false); end;
     end;
 
     maid.newThrownChild = workspace.Thrown.ChildAdded:Connect(function(child)
-        if (library.flags.autoPickupDroppedItems) then
+        if (library.flags.autoPickupItems) then
             functions.pickupItem(child);
         end;
 
-        if (library.flags.autoPickupDroppedSilver) then
+        if (library.flags.autoPickupSilver) then
             functions.pickupItem(child, isSilver);
         end;
     end);
