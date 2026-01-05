@@ -1187,8 +1187,8 @@ do -- // ESP Functions
         local espObj = espConstructor.new({ code = code, vars = { Handle } }, trinketData.Name);
 
         local connection;
-        connection = spawnPart:GetPropertyChangedSignal('Parent'):Connect(function()
-            if (not spawnPart.Parent) then
+        connection = Handle:GetPropertyChangedSignal('Parent'):Connect(function()
+            if (not Handle.Parent) then
                 espObj:Destroy();
                 connection:Disconnect();
             end;
