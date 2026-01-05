@@ -939,12 +939,15 @@ do -- // Automation Functions
 
         if (not isSilver and hasSilver) then return end;
         if (isSilver and not hasSilver) then return end;
+        if (isSilver and libray.flags.safePickupSilver and item:GetAttribute('Silver') >= 2000) then return end;
 
         local touchInterest = item:FindFirstChildWhichIsA('TouchTransmitter');
         if (touchInterest) then 
             firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, 0);
         end;
     end;
+
+    -- Safe Pickup Silve
 
     maid.newThrownChild = Thrown.ChildAdded:Connect(function(child)
         task.wait(0.05);
@@ -991,8 +994,21 @@ do -- // Automation
                     end;
                 end;
             end;
-        end
-    })
+        end;
+    });
+
+    automation:AddToggle({
+        text = 'Safe Pickup Silver',
+        tip = 'Safely picks up silver (under 2,000 silver)', 
+        callback = function(state)
+            if (state and not library.flags.autoPickupSilver) then
+               ToastNotif.new({
+                    text = 'This feature requires Auto Pickup Silver to be enabled!',
+                    duration = 5
+                });
+            end;
+        end;
+    });
 end;
 
 do -- // Opens dialogue stuff
