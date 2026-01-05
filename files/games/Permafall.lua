@@ -667,7 +667,24 @@ do -- // Removal Functions
     end
 
     function functions.noStun(toggle)
+          if(not toggle) then
+            maid.noStun = nil;
+            return;
+        end;
 
+        local function removeStun(child)
+            if(child and child.Name == 'Stun') then
+                task.defer(function()
+                    child:Destroy();
+                end);
+            end;
+        end;
+
+        for _, child in LocalPlayer.Character:GetChildren() do
+            removeStun(child);
+        end;
+
+        maid.noStun = LocalPlayer.Character.ChildAdded:Connect(removeStun)
     end;
 
     function functions.antiFire(toggle)
@@ -689,10 +706,6 @@ do -- // Removal Functions
         end;
 
         maid.antiFire = LocalPlayer.Character.ChildAdded:Connect(removeFire)
-    end;
-
-    function functions.noStunLessBlatant(toggle)
-
     end;
 end;
 
@@ -720,13 +733,6 @@ do -- // Removals
 		flag = 'Anti Fire',
 		tip = 'Prevent you from taking damage from fire.',
         callback = functions.antiFire
-	});
-
-
-	playerMods:AddToggle({
-		text = 'No Stun Less Blatant',
-		tip = 'Like no stun but it\'s less blatant',
-        callback = functions.noStunLessBlatant
 	});
 end;
 
