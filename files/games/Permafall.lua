@@ -56,7 +56,7 @@ local playerMouse = LocalPlayer:GetMouse();
 local Thrown = workspace.Thrown;
 local Map    = workspace.Map;
 
-local oldAmbient, oldBrightness = Lighting.Ambient, Lighting.Brightness;
+local oldAmbient, oldBrightness;
 
 local BodyMoverTag = 'good';
 
@@ -765,16 +765,16 @@ do -- // Local Cheats
         textpos = 2
 	});
 
-	localCheats:AddToggle({
-		text = 'No Clip',
-		callback = functions.noClip
-	});
+	-- localCheats:AddToggle({
+	-- 	text = 'No Clip',
+	-- 	callback = functions.noClip
+	-- });
 
-	localCheats:AddToggle({
-		text = 'Disable When Knocked',
-		tip = 'Disables noclip when you get ragdolled',
-		flag = 'Disable No Clip When Knocked'
-	});
+	-- localCheats:AddToggle({
+	-- 	text = 'Disable When Knocked',
+	-- 	tip = 'Disables noclip when you get ragdolled',
+	-- 	flag = 'Disable No Clip When Knocked'
+	-- });
 
     localCheats:AddToggle({
 		text = 'Knocked Ownership',
@@ -782,11 +782,11 @@ do -- // Local Cheats
         callback = functions.knockedOwnership
 	})
 
-	localCheats:AddToggle({
-		text = 'Click Destroy',
-		tip = 'Everything you click on will be destroyed (client sided)',
-		callback = functions.clickDestroy
-	});
+	-- localCheats:AddToggle({
+	-- 	text = 'Click Destroy',
+	-- 	tip = 'Everything you click on will be destroyed (client sided)',
+	-- 	callback = functions.clickDestroy
+	-- });
 
 	localCheats:AddBind({text = 'Go To Ground', callback = functions.goToGround, mode = 'hold', nomouse = true});
 
@@ -1117,8 +1117,10 @@ function functions.fullBright(toggle)
         return;
     end;
 
-    oldAmbient = Lighting.Ambient;
-    oldBrightness = Lighting.Brightness;
+    if (not maid.fullBright) then
+        oldAmbient = Lighting.Ambient;
+        oldBrightness = Lighting.Brightness;
+    end;
 
     maid.fullBright = Lighting:GetPropertyChangedSignal('Ambient'):Connect(function()
         Lighting.Ambient = Color3.fromRGB(255, 255, 255);
