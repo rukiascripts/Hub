@@ -920,7 +920,8 @@ do -- // Automation Functions
         end;
 
         local function pickupItem(item)
-            if (item and not item.Name:find('Dropped_')) then return end;
+            if (not item) then return end;
+            if (not item.Name:find('Dropped_')) then return end;
 
             local pickupSilver = library.flags.autoPickupSilver;
 
@@ -934,7 +935,7 @@ do -- // Automation Functions
             pickupItem(child);
         end;
 
-        maid.autoPickupDroppedItems = workspace.Thrown:Connect(pickupItem)
+        maid.autoPickupDroppedItems = workspace.Thrown.ChildAdded:Connect(pickupItem)
     end;
 end;
 
@@ -1400,8 +1401,22 @@ do -- // ESP Section
             sectionName = 'Dropped Items',
             type = 'childAdded',
             args = workspace.Thrown,
-            callback = functions.onDroppedItemAdded
+            callback = functions.onDroppedItemAdded,
+            onLoaded = function(section)
+                section:AddToggle({
+                    text = 'Show Item Owner',
+                    tip = 'Shows who dropped the Item.',
+                });
+            end
         });
+
+
+        onLoaded = function(section)
+					section:AddToggle({
+						text = 'Show Health',
+						flag = 'Mobs Show Health'
+					});
+				end
 
         makeESP({
             sectionName = 'Trinkets',
