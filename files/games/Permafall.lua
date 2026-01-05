@@ -485,43 +485,6 @@ end;
         end);
     end;
 
-
-do -- // Auto Sprint
-local lastWPress = 0
-local oldTick
-
--- // THE HOOK (The "Liar")
-oldTick = hookfunction(tick, function()
-    local t = oldTick()
-    
-    -- Check if the game's "Client" script is the one asking for the time
-    -- This ensures we don't break other parts of the game
-    if getfenv(2).script and getfenv(2).script.Name == "Client" then
-        -- We return a time that is ALWAYS just slightly ahead of the last tap
-        -- This forces: (FakeTick - LastTap) to be 0.1
-        return lastWPress + 0.1
-    end
-    
-    return t
-end)
-
--- // THE AUTOSPRINT (The "Trigger")
-function functions.autoSprint(toggle)
-    if (not toggle) then
-        maid.autoSprint = nil
-        return
-    end
-
-    maid.autoSprint = UserInputService.InputBegan:Connect(function(input, gpe)
-        if gpe or input.KeyCode ~= Enum.KeyCode.W then return end
-        
-        -- Every time you press W, we update the "Last Tap" time.
-        -- Because of the hook above, the game will think this is a double-tap.
-        lastWPress = oldTick()
-    end)
-end
-end;
-
 local myChatLogs = {};
 
 local assetsList = {'ModeratorJoin.mp3', 'ModeratorLeft.mp3'};
@@ -631,27 +594,67 @@ local function tweenTeleport(rootPart, position, noWait)
     return tween;
 end;
 
-do -- // Removal Functions
-
-    -- // NO FALL HOOK
+do -- // Core Hook
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local args = {...}
         local method = getnamecallmethod()
 
+        -- Existing No Fall Logic
         if (maid.noFall and method == 'FireServer' and self.Name == 'Communicate') then
             if (type(args[1]) == 'table' and args[1].InputType == 'Landed') then
-                -- // We overwrite the damage data right before it leaves
                 args[1].StudsFallen = 0
                 args[1].FallBrace = library.flags.legitNoFall or false
+                return oldNamecall(self, unpack(args))
+            end
+        end
 
-                return oldNamecall(self, unpack(args));
-            end;
-        end;
+        -- // NEW: Auto Sprint Logic
+        -- This intercepts any "Sprinting" signals. 
+        -- If autoSprint is on and the game tries to send a 'Sprinting' = false, 
+        -- we force it to true as long as W is held.
 
-        return oldNamecall(self, ...);
+        if (maid.autoSprint and method == 'FireServer' and self.Name == 'Communicate') then
+            if (type(args[1]) == 'table' and args[1].InputType == 'Sprinting') then
+                -- If we are moving forward, force Enabled to true
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                    args[1].Enabled = true
+                end
+                return oldNamecall(self, unpack(args))
+            end
+        end
+
+        return oldNamecall(self, ...)
     end);
+end;
 
+do -- // Auto Sprint
+    -- // AUTO SPRINT LOGIC
+    function functions.autoSprint(toggle)
+        if (not toggle) then
+            maid.autoSprint = nil
+            return
+        end
+        maid.autoSprint = true
+
+        -- Force a check immediately when W is pressed
+        maid.sprintLoop = UserInputService.InputBegan:Connect(function(input, gpe)
+            if gpe then return end
+            if input.KeyCode == Enum.KeyCode.W then
+                -- This signals the game's remote that we want to sprint
+                local remote = LocalPlayer.Character:FindFirstChild("Communicate") -- Update path if needed
+                if remote then
+                    remote:FireServer({
+                        ["InputType"] = "Sprinting",
+                        ["Enabled"] = true
+                    })
+                end
+            end
+        end)
+    end
+end;
+
+do -- // Removal Functions
     function functions.noFall(toggle)
         if (not toggle) then
             maid.noFall = nil;
