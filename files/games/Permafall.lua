@@ -618,16 +618,41 @@ local function tweenTeleport(rootPart, position, noWait)
 end;
 
 do -- // Removal Functions
+
+    -- // NO FALL HOOK
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local args = {...}
+        local method = getnamecallmethod()
+
+        if (maid.noFall and method == 'FireServer' and self.Name == 'Communicate') then
+            if (type(args[1]) == 'table' and args[1].InputType == 'Landed') then
+                -- // We overwrite the damage data right before it leaves
+                args[1].StudsFallen = 0
+                args[1].FallBrace = true -- // Tell the server we "braced" to look more legit
+                return oldNamecall(self, unpack(args))
+            end
+        end
+
+        return oldNamecall(self, ...)
+    end)
+
     function functions.noFall(toggle)
         if (not toggle) then
-            maid.noFall = nil;
+            if (maid.noFall) then
+                maid.noFall:Destroy();
+                maid.noFall = nil;
+            end;
             return;
         end;
 
-        maid.noFall = Instance.new('Folder');
-        maid.noFall.Name = 'PressedControl';
-        maid.noFall.Parent = LocalPlayer.Character;
-    end;
+        -- We use the folder as the "switch" for the hook 
+        -- AND to satisfy the game script's internal check
+        local PressedControl = Instance.new('Folder');
+        PressedControl.Name = 'PressedControl';
+        PressedControl.Parent = LocalPlayer.Character;
+        maid.noFall = PressedControl ;
+    end
 
     function functions.noStun(toggle)
 
@@ -1214,7 +1239,7 @@ do -- // ESP Functions
         ]];
 
         local espObj = espConstructor.new({ code = code, vars = { Handle } }, Trinket.Name);
-
+ 
         local connection;
         connection = Handle:GetPropertyChangedSignal('Parent'):Connect(function()
             if (not Handle.Parent) then
