@@ -1086,15 +1086,6 @@ end;
 -- // ------- If Trinket has same MeshId we then check the Handle Color to determine which one it is.
 -- // workspace.TrinketSpawn.SPAWN.Handle.Mesh (Handle is where the UI will be placed and Mesh is how we determine which Trinket it is.)
 
-It looks like we swapped one problem for another. Because we switched to a strict string comparison for the gems, the other items (Goblet, Ring, Scroll) likely stopped working because their MeshId properties in the game don't perfectly match the strings in your table (they might also have %20 or different prefixes).
-
-To fix this for good, we will use your exact Gem ID string for the gems, but keep the normalizeId function only for the items that need it.
-
-The Hybrid Solution
-This version uses the strict string for gems while allowing the other items to be detected via their numeric IDs.
-
-Lua
-
 -- We keep this for Goblets/Scrolls/Rings because their IDs often vary in format
 local function normalizeId(id)
     if not id then return "" end
