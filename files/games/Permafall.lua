@@ -1326,17 +1326,20 @@ do -- // ESP Functions
         if (not item or not item.Name:find('Dropped_')) then return end;
 
         local itemName = item:GetAttribute('Item');
+        local itemOwner = string.gsub(item, 'Dropped_', '');
+
+        if (library.flags.showItemOwner) then itemName = itemName .. ' [OWNER: ' itemOwner..  ']';
         
         local itemObj;
         if (item:IsA('BasePart') or item:IsA('MeshPart')) then
-            itemObj = espConstructor.new(npc, npcName);
+            itemObj = espConstructor.new(item, itemName);
         else
             local code = [[
-                local npc = ...;
+                local item = ...;
                 return setmetatable({}, {
                     __index = function(_, p)
                         if (p == 'Position') then
-                            return npc.PrimaryPart and npc.PrimaryPart.Position or npc.WorldPivot.Position
+                            return item.PrimaryPart and item.PrimaryPart.Position or item.WorldPivot.Position
                         end;
                     end,
                 });
