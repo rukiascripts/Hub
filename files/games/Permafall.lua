@@ -1199,7 +1199,7 @@ do -- // ESP Functions
         local Handle = FindFirstChild(spawnPart, 'Handle');
         if (not Handle) then return end;
 
-        local Trinket = getTrinket(Handle);
+        local Trinket = functions.getTrinket(Handle);
         if (not Trinket) then return end;
 
         local code = [[
