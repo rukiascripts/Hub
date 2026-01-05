@@ -487,37 +487,39 @@ end;
 
 
 do -- // Auto Sprint
-    local lastWTap = 0
-    local oldTick
+local lastWPress = 0
+local oldTick
 
-    -- // TIMER HOOK
-    if not oldTick then
-        oldTick = hookfunction(tick, function()
-            -- Get the calling script to see if the game is checking the sprint timer
-            local callingScript = getfenv(2).script
-            if callingScript and callingScript.Name == "Client" then -- Adjust to game's script name
-                -- When the game checks the timer, we return a value that 
-                -- makes (CurrentTick - LastTap) always equal 0.1
-                return lastWTap + 0.1
-            end
-            return oldTick()
-        end)
+-- // THE HOOK (The "Liar")
+oldTick = hookfunction(tick, function()
+    local t = oldTick()
+    
+    -- Check if the game's "Client" script is the one asking for the time
+    -- This ensures we don't break other parts of the game
+    if getfenv(2).script and getfenv(2).script.Name == "Client" then
+        -- We return a time that is ALWAYS just slightly ahead of the last tap
+        -- This forces: (FakeTick - LastTap) to be 0.1
+        return lastWPress + 0.1
+    end
+    
+    return t
+end)
+
+-- // THE AUTOSPRINT (The "Trigger")
+function functions.autoSprint(toggle)
+    if (not toggle) then
+        maid.autoSprint = nil
+        return
     end
 
-    function functions.autoSprint(toggle)
-        if (not toggle) then
-            maid.autoSprint = nil
-            return
-        end
-
-        maid.autoSprint = UserInputService.InputBegan:Connect(function(input, gpe)
-            if gpe or input.KeyCode ~= Enum.KeyCode.W then return end
-            
-            -- We update our internal timer so the Hook knows what to return
-            lastWTap = oldTick()
-        end)
-    end;
-end;
+    maid.autoSprint = UserInputService.InputBegan:Connect(function(input, gpe)
+        if gpe or input.KeyCode ~= Enum.KeyCode.W then return end
+        
+        -- Every time you press W, we update the "Last Tap" time.
+        -- Because of the hook above, the game will think this is a double-tap.
+        lastWPress = oldTick()
+    end)
+end
 
 local myChatLogs = {};
 
