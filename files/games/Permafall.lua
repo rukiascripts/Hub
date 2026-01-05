@@ -520,6 +520,7 @@ function functions.autoSprint(toggle)
         lastWPress = oldTick()
     end)
 end
+end;
 
 local myChatLogs = {};
 
