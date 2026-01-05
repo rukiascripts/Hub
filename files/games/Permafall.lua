@@ -917,6 +917,7 @@ do -- // Automation Functions
     function functions.pickupItem(item, isSilver)
         if (not item) then return end;
         if (not item.Name:find('Dropped_')) then return end;
+        
         if (not isSilver and item:GetAttribute('Silver')) then return end;
         if (isSilver and not item:GetAttribute('Silver')) then return end;
 
@@ -933,7 +934,9 @@ do -- // Automation Functions
         
         if (library.flags.autoPickupSilver and child:GetAttribute('Silver')) then
             functions.pickupItem(child, true);
-        elseif (library.flags.autoPickupItems and not child:GetAttribute('Silver')) then
+        end;
+        
+        if (library.flags.autoPickupItems and not child:GetAttribute('Silver')) then
             functions.pickupItem(child, false);
         end;
     end);
@@ -970,7 +973,6 @@ do -- // Automation
         end
     })
 end;
-
 do -- // Opens dialogue stuff
     function functions.buyItem(name)
         for _, child in NPCFolder:GetChildren() do
