@@ -1410,14 +1410,6 @@ do -- // ESP Section
             end
         });
 
-
-        onLoaded = function(section)
-					section:AddToggle({
-						text = 'Show Health',
-						flag = 'Mobs Show Health'
-					});
-				end
-
         makeESP({
             sectionName = 'Trinkets',
             type = 'descendantAdded',
