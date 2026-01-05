@@ -1396,16 +1396,11 @@ do -- // ESP Section
             text = 'Show Class'
         });
 
-        local dropppedItems = makeESP({
+       makeESP({
             sectionName = 'Dropped Items',
             type = 'childAdded',
             args = workspace.Thrown,
             callback = functions.onDroppedItemAdded
-        });
-
-        droppedItems:AddToggle({
-            text = 'Show Item Owner',
-            tip = 'Shows who dropped the Item.',
         });
 
         makeESP({
