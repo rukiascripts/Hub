@@ -920,10 +920,10 @@ do -- // Automation Functions
         if (not item.Name:find('Dropped_')) then return end;
         
         local hasSilver = item:GetAttribute('Silver') and item:GetAttribute('Silver') ~= 0;
-        
-        -- If we're NOT looking for silver and the item HAS silver, skip it
+        print('inside function')
+        print(hasSilver);
+
         if (not isSilver and hasSilver) then return end;
-        -- If we ARE looking for silver and the item DOESN'T have silver, skip it
         if (isSilver and not hasSilver) then return end;
 
         local touchInterest = item:FindFirstChildWhichIsA('TouchTransmitter');
@@ -939,12 +939,10 @@ do -- // Automation Functions
         
         local hasSilver = child:GetAttribute('Silver') and child:GetAttribute('Silver') ~= 0;
         
-        -- Pick up silver items if silver toggle is on
         if (library.flags.autoPickupSilver and hasSilver) then
             functions.pickupItem(child, true);
         end;
         
-        -- Pick up non-silver items if items toggle is on
         if (library.flags.autoPickupItems and not hasSilver) then
             functions.pickupItem(child, false);
         end;
@@ -961,7 +959,10 @@ do -- // Automation
             if (state) then
                 for _, child in workspace.Thrown:GetChildren() do
                     local hasSilver = child:GetAttribute('Silver') and child:GetAttribute('Silver') ~= 0;
+                    print('inside callback')
+                    print(hasSilver);
                     if (not hasSilver) then
+                        print('og bvro')
                         functions.pickupItem(child, false);
                     end;
                 end;
