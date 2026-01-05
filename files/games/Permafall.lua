@@ -947,8 +947,6 @@ do -- // Automation Functions
         end;
     end;
 
-    -- Safe Pickup Silve
-
     maid.newThrownChild = Thrown.ChildAdded:Connect(function(child)
         task.wait(0.05);
         
