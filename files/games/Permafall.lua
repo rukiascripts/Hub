@@ -538,7 +538,7 @@ local isInDanger;
 
 local moderators = {};
 
-do -- // Mod Logs and chat logger
+do -- // Mod Logs
 	-- Y am I hardcoding this?
 
     local GROUP_ID = 475163115;
@@ -1194,7 +1194,7 @@ do -- // ESP Function Helpers
 
         local MeshIdNormal = tostring(MeshId):gsub('%D', '')
         for _, trinket in ipairs(Trinkets) do
-            if (trinket.MeshId and tostring(t.MeshId):gsub('%D', '') == MeshIdNormal) then
+            if (trinket.MeshId and tostring(trinket.MeshId):gsub('%D', '') == MeshIdNormal) then
                 return trinket;
             end;
         end;
