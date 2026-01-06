@@ -647,20 +647,19 @@ do -- // Core Hook
         task.delay(1,function()
             ReplicatedStorage.GetMouseHit.OnClientInvoke = function()
                 playerMouse = LocalPlayer:GetMouse();
-
-                local mouseT = {};
-                mouseT.Hit = playerMouse.Hit;
+                
+                mouseHit = playerMouse.Hit;
 
                 if (library.flags.autoAimSpells) then
                     local target = Utility:getClosestCharacter(rayParams);
                     target = target and target.Character;
 
                     if (target and target.PrimaryPart) then
-                        mouseT.Hit = target.PrimaryPart.CFrame;
+                        mouseHit = target.PrimaryPart.CFrame;
                     end;
                 end;
 
-                return mouseT;
+                return mouseHit;
             end;
         end);
     end;
