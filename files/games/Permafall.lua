@@ -1454,6 +1454,10 @@ do -- // Setup ESP Data
         {
             ['Name'] = 'Blessing',
         },
+
+        {
+            ['Name'] = 'Chest Coin'
+        }
     }
 end;
 
@@ -1623,6 +1627,8 @@ do -- // ESP Functions
             chestName = 'Chest Food';
         elseif (chestName == 'ChestRR') then
             chestName = 'Race Reroll';
+        elseif (chestName == 'Chest Coin') then
+            chestName = 'Chest Coin';
         elseif (chestName == 'ChestBlue') then
             chestName = 'Blessing';
 
