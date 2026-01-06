@@ -647,15 +647,15 @@ do -- // Core Hook
         task.delay(1,function()
             ReplicatedStorage.GetMouseHit.OnClientInvoke = function()
                 playerMouse = LocalPlayer:GetMouse();
-                
+
                 mouseHit = playerMouse.Hit;
 
                 if (library.flags.autoAimSpells) then
                     local target = Utility:getClosestCharacter(rayParams);
                     target = target and target.Character;
 
-                    if (target and target.PrimaryPart) then
-                        mouseHit = target.PrimaryPart.CFrame;
+                    if (target and target.Head) then
+                        mouseHit = target.Head.CFrame;
                     end;
                 end;
 
@@ -827,7 +827,7 @@ do -- // Local Cheats
 
     localCheats:AddToggle({
 		text = 'Auto Aim Spells',
-		tip = 'Automatically places the Sagitta onto the nearest character relative to the mouse positioning.'
+        tip = 'Automatically aims the spell (sagitta, pulso, etc) onto the nearest characters head.'
 	});
 
 	localCheats:AddToggle({
