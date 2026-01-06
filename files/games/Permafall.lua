@@ -1620,7 +1620,7 @@ do -- // ESP Functions
         if (chestName == 'Chest1') then
             local typeOfChest = FindFirstChild(chest, 'Silver') or FindFirstChild(chest, 'Trinket');
 
-            chestName = typeOfChest or 'unknown type';
+            chestName = typeOfChest.Name or 'unknown type';
         elseif (chestName == 'Chest2') then
             chestName = 'Gold';
         elseif (chestName == 'ChestFood') then
