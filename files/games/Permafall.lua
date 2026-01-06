@@ -1722,6 +1722,21 @@ do -- // ESP Functions
                 connection:Disconnect();
             end;
         end);
+
+        local connection2;
+        connection2 = chest.ChildAdded:Connect(function(child)
+            if (not chest.Parent) then
+                chestObj:Destroy();
+                connection:Disconnect();
+                connection2:Disconnect();
+            end;
+
+            if (library.flags.hideOpenedChests and child.Name == 'Opened') then
+                chestObj:Destroy();
+                connection:Disconnect();
+                connection2:Disconnect();
+            end;
+        end);
     end;   
 
     function functions.onNewNpcAdded(npc, espConstructor)
