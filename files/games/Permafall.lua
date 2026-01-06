@@ -239,6 +239,7 @@ do -- // Functions
 
             if (not CollectionService:HasTag(maid.speedHackBv, 'good')) then
                 CollectionService:AddTag(maid.speedHackBv, 'good');
+                CollectionService:AddTag(maid.speedHackBv, 'DONTDELETE');
             end;
 
             maid.speedHackBv.Parent = not library.flags.fly and rootPart or nil;
@@ -265,6 +266,7 @@ do -- // Functions
 
             if (not CollectionService:HasTag(maid.flyBv, 'good')) then
                 CollectionService:AddTag(maid.flyBv, 'good');
+                CollectionService:AddTag(maid.flyBv, 'DONTDELETE');
             end;
 
             maid.flyBv.Parent = rootPart;
@@ -1427,7 +1429,35 @@ do -- // Setup ESP Data
             ['MeshId'] = 'rbxassetid://%202637545558%20' 
         },
     };
+
+    Chests = {
+        {
+            ['Name'] = 'Trinket',
+        },
+
+        {
+            ['Name'] = 'Silver',
+        },
+
+        {
+            ['Name'] = 'Gold',
+        },
+        
+        {
+            ['Name'] = 'Race Reroll',
+        },
+
+         {
+            ['Name'] = 'Blessing',
+        },
+    }
 end;
+
+
+--[[
+    CanOpen == serverSided boolean (to be able to open chest)
+    opened == serverSided folder (to detect if chest is already opened)
+]]
 
 do -- // ESP Function Helpers
     function functions.getPlayerClass(player)
@@ -1575,6 +1605,55 @@ do -- // ESP Functions
         end);
     end;
 
+    function functions.onNewChestAdded(chest, espConstructor)
+        if (not chest.Name:find('Chest')) then return end;
+        local chestName = chest.Name;
+     
+        if (chestName == 'Chest1') then
+            local typeOfChest = FindFirstChild(chest, 'Silver') or FindFirstChild(chest, 'Trinket');
+
+            chestName = typeOfChest or 'unknown type';
+        elseif (chestName == 'Chest2') then
+            chestName = 'Gold';
+        elseif (chestName == 'ChestRR') then
+            chestName = 'Race Reroll';
+        elseif (chestName == 'ChestBlue') then
+            chestName = 'Blessing';
+
+            if (library.flags.blessingNotifier) then
+                ToastNotif.new({
+                    text = 'A Blessing has spawned!'
+                });
+            end;
+        end;
+        
+        local chestObj;
+        if (chestObj:IsA('BasePart') or chest:IsA('MeshPart')) then
+            chestObj = espConstructor.new(chest, chestName);
+        else
+            local code = [[
+                local chest = ...;
+                return setmetatable({}, {
+                    __index = function(_, p)
+                        if (p == 'Position') then
+                            return chest.PrimaryPart and chest.PrimaryPart.Position or chest.WorldPivot.Position
+                        end;
+                    end,
+                });
+            ]]
+
+            chestObj = espConstructor.new({code = code, vars = {chest}}, chestName);
+        end;
+        
+        local connection;
+        connection = chest:GetPropertyChangedSignal('Parent'):Connect(function()
+            if (not npc.Parent) then
+                chestObj:Destroy();
+                connection:Disconnect();
+            end;
+        end);
+    end;   
+
     function functions.onNewNpcAdded(npc, espConstructor)
         local npcName = npc.Name;
 
@@ -1671,6 +1750,17 @@ do -- // ESP Section
             callback = functions.onNewTrinketAdded,
             onLoaded = function(section)
                 return {list = makeList(Trinkets, section)};
+            end,
+        });
+
+        makeESP({
+            sectionName = 'Chests',
+            type = 'childAdded',
+            args = workspace.Thrown,
+            noColorPicker = true,
+            callback = functions.onNewChestAdded,
+            onLoaded = function(section)
+                return {list = makeList(Chests, section)};
             end,
         });
 
