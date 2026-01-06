@@ -1067,7 +1067,7 @@ do -- // Automation Functions
         if (not item) then return end;
         if (not isChestCoin and not isSilver and not item.Name:find('Dropped_')) then return end;
         if (isChestCoin and item.Name ~= 'ChestCoin') then return end;
-        if (isSilver and item.Name ~= 'ChestSilver' and not item.Name:find('Dropped_')) then return end;
+        if (isSilver and item.Name ~= 'ChestSIlver' and not item.Name:find('Dropped_')) then return end;
         
         local hasSilver = item:GetAttribute('Silver') and item:GetAttribute('Silver') ~= 0;
 
