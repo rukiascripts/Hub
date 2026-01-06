@@ -637,7 +637,49 @@ local function tweenTeleport(rootPart, position, noWait)
 end;
 
 do -- // Core Hook
-    local oldNamecall
+    local function onCharacterAdded(character)
+        if(not character) then return end;
+
+        task.delay(1,function()
+            ReplicatedStorage.GetMouseHit.OnClientInvoke = function()
+                local mouseT = {};
+
+                mouseT.Hit = playerMouse.Hit;
+                mouseT.Target = playerMouse.Target;
+                mouseT.UnitRay = playerMouse.UnitRay;
+                mouseT.X = playerMouse.X;
+                mouseT.Y = playerMouse.Y;
+
+                if (library.flags.silentAim) then
+                    local target = Utility:getClosestCharacter(rayParams);
+                    target = target and target.Character;
+
+                    local cam = workspace.CurrentCamera;
+                    local worldToViewportPoint = cam.WorldToViewportPoint;
+                    local viewportPointToRay = cam.ViewportPointToRay;
+
+                    if (target and target.PrimaryPart) then
+                        local pos = worldToViewportPoint(cam, target.PrimaryPart.Position);
+
+                        mouseT.Hit = target.PrimaryPart.CFrame;
+                        mouseT.Target = target.PrimaryPart;
+                        mouseT.X = pos.X;
+                        mouseT.Y = pos.Y;
+                        mouseT.UnitRay = viewportPointToRay(cam, pos.X, pos.Y, 1)
+                        mouseT.Hit = target.PrimaryPart.CFrame;
+                    end;
+                end;
+
+                return mouseT;
+            end;
+        end);
+    end;
+
+    onCharacterAdded(LocalPlayer.Character);
+    LocalPlayer.CharacterAdded:Connect(onCharacterAdded);
+
+    local oldNamecall;
+
     oldNamecall = hookmetamethod(game, '__namecall', function(self, ...)
         local args = {...}
 
@@ -795,7 +837,7 @@ do -- // Local Cheats
 	localCheats:AddDivider("Gameplay-Assist");
 
     localCheats:AddToggle({
-		text = 'Auto Aim Sagitta',
+		text = 'Auto Aim Spells',
 		tip = 'Automatically places the Sagitta onto the nearest character relative to the mouse positioning.'
 	});
 
