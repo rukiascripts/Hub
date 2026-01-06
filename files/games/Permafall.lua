@@ -37,7 +37,7 @@ local column1, column2 = unpack(library.columns);
 
 local functions = {};
 
-local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService, VirtualInputManager, ReplicatedFirst, TeleportService = Services:Get(
+local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService, VirtualInputManager, ReplicatedFirst, TeleportService, ReplicatedStorage = Services:Get(
     'Players', 
     'RunService',
     'UserInputService', 
@@ -48,7 +48,8 @@ local Players, RunService, UserInputService, HttpService, CollectionService, Mem
     'TweenService', 
     'VirtualInputManager',
     'ReplicatedFirst',
-    'TeleportService'
+    'TeleportService',
+    'ReplicatedStorage'
 );
 
 local LocalPlayer = Players.LocalPlayer;
@@ -641,7 +642,7 @@ do -- // Core Hook
         if(not character) then return end;
 
         task.delay(1,function()
-            ReplicatedStorage:WaitForChild('GetMouseHit').OnClientInvoke = function()
+            ReplicatedStorage.GetMouseHit.OnClientInvoke = function()
                 local mouseT = {};
 
                 mouseT.Hit = playerMouse.Hit;
