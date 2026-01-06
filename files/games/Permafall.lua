@@ -1760,6 +1760,9 @@ do -- // ESP Section
             noColorPicker = true,
             callback = functions.onNewChestAdded,
             onLoaded = function(section)
+                section:AddToggle({
+                    text = 'Show Opened Chests';
+                });
                 return {list = makeList(Chests, section)};
             end,
         });
