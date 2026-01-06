@@ -1063,21 +1063,32 @@ do -- // Automation Functions
     function functions.pickupItem(item, data)
         local isSilver = data.isSilver;
         local isChestCoin = data.isChestCoin;
+        local isChestLoot = data.isChestLoot;
 
         if (not item) then return end;
-        if (not isChestCoin and not isSilver and not item.Name:find('Dropped_')) then return end;
+        
         if (isChestCoin and item.Name ~= 'ChestCoin') then return end;
+        if (isChestLoot and not item.Name:find('Chest')) then return end;
+        if (not isChestCoin and not isSilver and not isChestLoot and not item.Name:find('Dropped_')) then return end;
         if (isSilver and item.Name ~= 'ChestSIlver' and not item.Name:find('Dropped_')) then return end;
         
         local hasSilver = item:GetAttribute('Silver') and item:GetAttribute('Silver') ~= 0;
 
-        if (not isSilver and hasSilver) then return end;
-        if (isSilver and not hasSilver) then return end;
-        if (isSilver and library.flags.safePickupSilver and item:GetAttribute('Silver') >= 2000) then return end;
+        if (not isChestCoin and not isChestLoot) then
+            if (not isSilver and hasSilver) then return end;
+            if (isSilver and not hasSilver) then return end;
+            if (isSilver and library.flags.safePickupSilver and item:GetAttribute('Silver') >= 2000) then return end;
+        end;
 
-        local touchInterest = item:FindFirstChildWhichIsA('TouchTransmitter');
-        if (touchInterest) then 
-            firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, 0);
+        if (isChestLoot and item:IsA('BasePart')) then
+            if (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart')) then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = item.CFrame;
+            end;
+        else
+            local touchInterest = item:FindFirstChildWhichIsA('TouchTransmitter');
+            if (touchInterest) then 
+                firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, 0);
+            end;
         end;
     end;
 
@@ -1098,9 +1109,9 @@ do -- // Automation Functions
             });
         end;
 
-        if (library.flags.autoPickupChestCoin) then
+        if (library.flags.autoPickupChestLoot) then
             functions.pickupItem(child, {
-                isChestCoin = false;
+                isChestLoot  = false;
             });
         end;
     end);
@@ -1157,12 +1168,12 @@ do -- // Automation
     });
 
     automation:AddToggle({
-        text = 'Auto Pickup Chest Coin',
-        tip = 'Automatically picks up any chest coins',
+        text = 'Auto Pickup Chest Loot',
+        tip = 'Automatically picks up any loot from chests',
         callback = function(state)
             if (state) then
                 for _, child in Thrown:GetChildren() do
-                    if (child and child.Name == 'ChestCoin') then
+                    if (child and child:IsA('BasePart') and child.Name:find('Chest')) then
                         functions.pickupItem(child, {
                             isChestCoin = true;
                         });
@@ -1170,7 +1181,7 @@ do -- // Automation
                 end;
             end;
         end;
-    });
+    });    
 end;
 
 do -- // Opens dialogue stuff
