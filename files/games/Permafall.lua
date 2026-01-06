@@ -1447,7 +1447,11 @@ do -- // Setup ESP Data
             ['Name'] = 'Race Reroll',
         },
 
-         {
+        {
+            ['Name'] = 'Chest Food',
+        }
+
+        {
             ['Name'] = 'Blessing',
         },
     }
@@ -1615,6 +1619,8 @@ do -- // ESP Functions
             chestName = typeOfChest or 'unknown type';
         elseif (chestName == 'Chest2') then
             chestName = 'Gold';
+        elseif (chestName == 'ChestFood') then
+            chestName = 'Chest Food';
         elseif (chestName == 'ChestRR') then
             chestName = 'Race Reroll';
         elseif (chestName == 'ChestBlue') then
@@ -1647,7 +1653,7 @@ do -- // ESP Functions
         
         local connection;
         connection = chest:GetPropertyChangedSignal('Parent'):Connect(function()
-            if (not npc.Parent) then
+            if (not chest.Parent) then
                 chestObj:Destroy();
                 connection:Disconnect();
             end;
