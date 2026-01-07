@@ -655,7 +655,7 @@ do -- // Core Hook
                 mouseHit = playerMouse.Hit;
 
                 if (library.flags.autoAimSpells) then
-                    local target = Utility:getClosestCharacter(rayParams);
+                    local target = Utility:getClosestCharacter(workspace.Live:GetChildren(), rayParams);
                     target = target and target.Character;
 
                     if (target and target.Head) then
