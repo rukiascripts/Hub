@@ -59,10 +59,6 @@ local FindFirstChild = game.FindFirstChild;
 local FindFirstChildWhichIsA = game.FindFirstChildWhichIsA;
 local IsDescendantOf = game.IsDescendantOf;
 
-local rayParams = RaycastParams.new();
-rayParams.FilterDescendantsInstances = {workspace.Live};
-rayParams.FilterType = Enum.RaycastFilterType.Blacklist;
-
 local Map = workspace.Map;
 
 local Merchant = Map.Merchant;
@@ -71,8 +67,6 @@ local Traders = Map.Traders;
 local oldAmbient, oldBrightness;
 
 local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
-
-local DUNGEON_PLACE_ID = 89371625020632;
 
 do -- // Inventory Viewer (SMH)
     local inventoryLabels = {};
