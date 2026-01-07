@@ -1494,7 +1494,7 @@ do -- // Setup ESP Data
         },
 
          {
-            ['Name'] = 'Blue Orb';
+            ['Name'] = 'Shock Orb';
         },
 
         {
@@ -1680,7 +1680,8 @@ do -- // ESP Functions
             end;
         elseif (mob.Name == 'HITBOX_SIMULATION#') then
             if (FindFirstChild(mob, 'CaveDungeon') and FindFirstChild(mob, 'IsNPC') and FindFirstChild(mob, 'NoRagdoll')) then
-                editedMobName = 'Blue Orb';
+                editedMobName = 'Shock Orb';
+                mob = FindFirstChild(Thrown, 'ShockOrb') or mob;
             end;
         end;
 
