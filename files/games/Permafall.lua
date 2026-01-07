@@ -1883,7 +1883,7 @@ do -- // ESP Section
             sectionName = 'Mobs',
             type = 'childAdded',
             args = workspace.Live,
-            callback = onNewMobAdded,
+            callback = functions.onNewMobAdded,
             onLoaded = function(section)
                 section:AddToggle({
                     text = 'Show Health',
