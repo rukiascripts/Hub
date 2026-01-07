@@ -150,7 +150,7 @@ do -- // Functions
 
     function functions.goToGround()
         local params = RaycastParams.new();
-        params.FilterDescendantsInstances = {workspace.Live, workspace.NPCs};
+        params.FilterDescendantsInstances = {workspace.Mobs};
         params.FilterType = Enum.RaycastFilterType.Blacklist;
 
         local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
@@ -175,7 +175,7 @@ do -- // Functions
             if (not myRootPart) then return end;
 
             repeat
-                for _, entity in next, workspace.Live:GetChildren() do
+                for _, entity in next, workspace.Mobs:GetChildren() do
                     local rootPart = entity:FindFirstChild('HumanoidRootPart');
                     if (not rootPart or rootPart == myRootPart) then continue end;
 
@@ -313,7 +313,7 @@ do -- One Shot NPCs
     end;
 
     function NetworkOneShot:Update()
-        if (not self.hrp or not isnetworkowner(self.hrp) or not self.hrp.Parent or self.hrp.Parent.Parent ~= workspace.Live) then return end;
+        if (not self.hrp or not isnetworkowner(self.hrp) or not self.hrp.Parent or self.hrp.Parent.Parent ~= workspace.Mobs) then return end;
         self.char:PivotTo(CFrame.new(self.hrp.Position.X, workspace.FallenPartsDestroyHeight - 100000, self.hrp.Position.Z));
     end;
 
