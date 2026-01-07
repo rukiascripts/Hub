@@ -68,7 +68,7 @@ local oldAmbient, oldBrightness;
 
 local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
 
-
+local killBricks = {};
 
 do -- // Functions
     function functions.speedHack(toggle)
@@ -334,7 +334,7 @@ do -- One Shot NPCs
         table.clear(mobs);
     end;
 
-    Utility.listenToChildAdded(workspace.Live, function(obj)
+    Utility.listenToChildAdded(workspace.Mobs, function(obj)
         task.wait(0.2);
         if (obj == LocalPlayer.Character) then return; end
         NetworkOneShot.new(obj);
