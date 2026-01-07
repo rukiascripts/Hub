@@ -1697,14 +1697,14 @@ do -- // ESP Functions
                 __index = function(_, p)
                     if (p == 'Position') then
                         local mobRoot = FindFirstChild(mob, 'HumanoidRootPart');
-                        if (mobRoot) then
-                            return mobRoot.Position;
-                        elseif (editedMobName) then
-                            local newMob = FindFirstChild(Thrown, editedMobName);
+                        if (editedMobName) then
+                             local newMob = FindFirstChild(Thrown, editedMobName);
                             if (newMob) then
                                 local mobPrimary = newMob.PrimaryPart;
                                 return mobPrimary and mobPrimary.Position;
                             end;
+                        else
+                            return mobRoot and mobRoot.Position;
                         end;
                     end;
                 end,
