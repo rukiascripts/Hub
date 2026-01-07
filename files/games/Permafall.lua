@@ -1686,23 +1686,25 @@ do -- // ESP Functions
         end;
 
         local code = [[
-            local mob = ...;
+            local mob, editedMobName, Thrown = ...;
             local FindFirstChild = game.FindFirstChild;
-            local FindFirstChildWhichIsA = game.FindFirstChildWhichIsA;
 
             return setmetatable({
                 FindFirstChildWhichIsA = function(_, ...)
-                    return FindFirstChildWhichIsA(mob, ...);
+                    return mob:FindFirstChildWhichIsA(...);
                 end,
             }, {
                 __index = function(_, p)
                     if (p == 'Position') then
                         local mobRoot = FindFirstChild(mob, 'HumanoidRootPart');
                         if (mobRoot) then
-                            return mobRoot and mobRoot.Position;
-                        else
-                            local mobPrimary = mob.PrimaryPart;
-                            return mobPrimary and mobPrimary.Position;
+                            return mobRoot.Position;
+                        elseif (editedMobName) then
+                            local newMob = FindFirstChild(Thrown, editedMobName);
+                            if (newMob) then
+                                local mobPrimary = newMob.PrimaryPart;
+                                return mobPrimary and mobPrimary.Position;
+                            end;
                         end;
                     end;
                 end,
@@ -1710,7 +1712,7 @@ do -- // ESP Functions
         ]];
 
         local formattedName = formatMobName(editedMobName or mob.Name);
-        local mobEsp = espConstructor.new({code = code, vars = {mob}}, formattedName);
+        local mobEsp = espConstructor.new({code = code, vars = {mob, editedMobName, Thrown}}, formattedName);
 
         local connection;
         connection = mob:GetPropertyChangedSignal('Parent'):Connect(function()
