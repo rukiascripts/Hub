@@ -1681,12 +1681,11 @@ do -- // ESP Functions
         elseif (mob.Name == 'HITBOX_SIMULATION#') then
             if (FindFirstChild(mob, 'CaveDungeon') and FindFirstChild(mob, 'IsNPC') and FindFirstChild(mob, 'NoRagdoll')) then
                 editedMobName = 'Shock Orb';
-                mob = FindFirstChild(Thrown, 'ShockOrb') or mob;
             end;
         end;
 
         local code = [[
-            local mob = ...;
+            local mob, editedMobName, Thrown = ...;
             local FindFirstChild = game.FindFirstChild;
             local FindFirstChildWhichIsA = game.FindFirstChildWhichIsA;
 
@@ -1698,7 +1697,7 @@ do -- // ESP Functions
                 __index = function(_, p)
                     if (p == 'Position') then
                         local mobRoot = FindFirstChild(mob, 'HumanoidRootPart');
-                        if (editedMobName) then
+                        if (editedMobName == 'Shock Orb) then
                             local newMob = FindFirstChild(Thrown, editedMobName);
 
                             if (newMob) then
@@ -1714,7 +1713,7 @@ do -- // ESP Functions
         ]];
 
         local formattedName = formatMobName(editedMobName or mob.Name);
-        local mobEsp = espConstructor.new({code = code, vars = {mob}}, formattedName);
+        local mobEsp = espConstructor.new({code = code, vars = {mob, editedMobName, Thrown}}, formattedName);
 
         local connection;
         connection = mob:GetPropertyChangedSignal('Parent'):Connect(function()
