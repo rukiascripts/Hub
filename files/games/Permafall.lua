@@ -1673,6 +1673,8 @@ do -- // ESP Functions
         if (FindFirstChild(Players, mob.Name)) then return end;
 
         local editedMobName;
+        local displayObject = mob; -- Keep track of what to display
+        local healthObject = mob;  -- Keep track of where to get health from
 
         if (mob.Name == 'generate') then
             if (FindFirstChild(Thrown, 'Chest1')) then
@@ -1681,31 +1683,30 @@ do -- // ESP Functions
         elseif (mob.Name == 'HITBOX_SIMULATION#') then
             if (FindFirstChild(mob, 'CaveDungeon') and FindFirstChild(mob, 'IsNPC') and FindFirstChild(mob, 'NoRagdoll')) then
                 editedMobName = 'Shock Orb';
+                -- Change display object but keep original for health
+                displayObject = FindFirstChild(Thrown, 'ShockOrb') or mob;
             end;
         end;
 
         local code = [[
-            local mob, editedMobName, Thrown = ...;
+            local mob, displayObject = ...;
             local FindFirstChild = game.FindFirstChild;
             local FindFirstChildWhichIsA = game.FindFirstChildWhichIsA;
 
             return setmetatable({
                 FindFirstChildWhichIsA = function(_, ...)
+                    -- Use original mob for humanoid (health)
                     return FindFirstChildWhichIsA(mob, ...);
                 end,
             }, {
                 __index = function(_, p)
                     if (p == 'Position') then
-                        local mobRoot = FindFirstChild(mob, 'HumanoidRootPart');
-                        if (editedMobName == 'Shock Orb) then
-                            local newMob = FindFirstChild(Thrown, editedMobName);
-
-                            if (newMob) then
-                                local mobPrimary = newMob.PrimaryPart;
-                                return mobPrimary and mobPrimary.Position;
-                            end;
-                        elseif (mobRoot) then
+                        -- Use display object for position
+                        local mobRoot = FindFirstChild(displayObject, 'HumanoidRootPart');
+                        if (mobRoot) then
                             return mobRoot and mobRoot.Position;
+                        else
+                            return displayObject.PrimaryPart and displayObject.PrimaryPart.Position;
                         end;
                     end;
                 end,
@@ -1713,7 +1714,7 @@ do -- // ESP Functions
         ]];
 
         local formattedName = formatMobName(editedMobName or mob.Name);
-        local mobEsp = espConstructor.new({code = code, vars = {mob, editedMobName, Thrown}}, formattedName);
+        local mobEsp = espConstructor.new({code = code, vars = {healthObject, displayObject}}, formattedName);
 
         local connection;
         connection = mob:GetPropertyChangedSignal('Parent'):Connect(function()
@@ -1723,7 +1724,7 @@ do -- // ESP Functions
             end;
         end);
     end;
-
+    
     function functions.onNewChestAdded(chest, espConstructor)
         if (not chest.Name:find('Chest')) then return end;
         if (chest.Name == 'ChestSIlver') then return end;
