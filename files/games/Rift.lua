@@ -1,0 +1,609 @@
+local library = sharedRequire('UILibrary.lua');
+
+local AudioPlayer = sharedRequire('utils/AudioPlayer.lua');
+local makeESP = sharedRequire('utils/makeESP.lua');
+
+local Utility = sharedRequire('utils/Utility.lua');
+local Maid = sharedRequire('utils/Maid.lua');
+local AnalyticsAPI = sharedRequire('classes/AnalyticsAPI.lua');
+
+local Services = sharedRequire('utils/Services.lua');
+local createBaseESP = sharedRequire('utils/createBaseESP.lua');
+
+local EntityESP = sharedRequire('classes/EntityESP.lua');
+local ControlModule = sharedRequire('classes/ControlModule.lua');
+local ToastNotif = sharedRequire('classes/ToastNotif.lua');
+
+local prettyPrint = sharedRequire('utils/prettyPrint.lua');
+local BlockUtils = sharedRequire('utils/BlockUtils.lua');
+local TextLogger = sharedRequire('classes/TextLogger.lua');
+local fromHex = sharedRequire('utils/fromHex.lua');
+local toCamelCase = sharedRequire('utils/toCamelCase.lua');
+local Webhook = sharedRequire('utils/Webhook.lua');
+
+if (game.PlaceId == 119623598397995) then
+    ToastNotif.new({
+        text = 'Script will not run in the lobby!',
+        duration = 5
+    });
+
+    library:Unload();
+    return;
+end;
+
+local column1, column2 = unpack(library.columns);
+
+local functions = {};
+
+local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService, VirtualInputManager, ReplicatedFirst, TeleportService, ReplicatedStorage = Services:Get(
+    'Players', 
+    'RunService',
+    'UserInputService', 
+    'HttpService', 
+    'CollectionService', 
+    'MemStorageService', 
+    'Lighting', 
+    'TweenService', 
+    'VirtualInputManager',
+    'ReplicatedFirst',
+    'TeleportService',
+    'ReplicatedStorage'
+);
+
+local LocalPlayer = Players.LocalPlayer;
+local playerMouse = LocalPlayer:GetMouse();
+
+local maid = Maid.new();
+
+local localCheats = column1:AddSection('Local Cheats');
+local notifier = column1:AddSection('Notifier');
+local playerMods = column1:AddSection('Player Mods');
+local automation = column2:AddSection('Automation');
+local misc = column2:AddSection('Misc');
+local visuals = column2:AddSection('Visuals');
+local farms = column2:AddSection('Farms');
+local inventoryViewer = column2:AddSection('Inventory Viewer');
+
+local IsA = game.IsA;
+local FindFirstChild = game.FindFirstChild;
+local FindFirstChildWhichIsA = game.FindFirstChildWhichIsA;
+local IsDescendantOf = game.IsDescendantOf;
+
+local rayParams = RaycastParams.new();
+rayParams.FilterDescendantsInstances = {workspace.Live};
+rayParams.FilterType = Enum.RaycastFilterType.Blacklist;
+
+local Map = workspace.Map;
+
+local Merchant = Map.Merchant;
+local Traders = Map.Traders;
+
+local oldAmbient, oldBrightness;
+
+local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+
+local DUNGEON_PLACE_ID = 89371625020632;
+
+do -- // Inventory Viewer (SMH)
+    local inventoryLabels = {};
+    local itemColors = {};
+
+    itemColors[100] = Color3.new(0.76862699999999995, 1, 0);
+    itemColors[9] = Color3.new(1, 0.90000000000000002, 0.10000000000000001);
+    itemColors[10] = Color3.new(0, 1, 0);
+    itemColors[11] = Color3.new(0.90000000000000002, 0, 1);
+    itemColors[3] = Color3.new(0, 0.80000000000000004, 1);
+    itemColors[8] = Color3.new(0.17254900000000001, 0.80000000000000004, 0.64313699999999996);
+    itemColors[7] = Color3.new(0.2588, 0.6588, 0.3490); -- Regular Spell
+    itemColors[6] = Color3.new(1, 0, 0);
+    itemColors[4] = Color3.new(0.82745100000000005, 0.466667, 0.207843);
+    itemColors[0] = Color3.new(1, 1, 1);
+    itemColors[5] = Color3.new(0.33333299999999999, 0, 1);
+    itemColors[999] = Color3.new(0.792156, 0.792156, 0.792156);
+    itemColors[87] = Color3.new(0.235, 0.714, 0.961); -- God Spell
+
+    local function getToolType(tool)
+        if (tool:FindFirstChild("PrimaryWeapon"))then
+            return 0;
+        elseif (tool:FindFirstChild("Skill") or tool:FindFirstChild('Activator')) then
+            return 8;
+        elseif (tool:FindFirstChild("Droppable")) then
+            return 6;
+        elseif (tool:FindFirstChild("Spell")) then
+            if (tool:FindFirstChild('Godspell')) then
+                return 87;
+            end;
+            return 7;
+        elseif (tool:FindFirstChild("Trinket")) then
+            return 4;
+        elseif (tool:FindFirstChild("COWL")) then
+
+            return 100;	
+        elseif (tool:FindFirstChild("Active") or tool.Parent.Name == "Novachrono" or tool.Parent.Name == "Muto's Blood") then
+            return 5;
+        elseif (tool:FindFirstChild("Schematic")) then
+            return 8;
+        elseif (tool:FindFirstChild("Ingredient")) then
+            return 10;
+        elseif (tool:FindFirstChild("SpellIngredient")) then
+            return 11;
+        elseif (tool:FindFirstChild("Item")) then
+            return 9;
+        end
+
+        return 999;
+    end;
+
+    local function showPlayerInventory(player)
+        if (typeof(player) ~= 'Instance') then return end;
+
+        for _, v in next, inventoryLabels do
+            v.main:Destroy();
+        end;
+
+        inventoryLabels = {};
+
+        local playerItems = {};
+        local seen = {};
+        local seenJSON = {};
+
+        local function onBackpackChildAdded(tool)
+            debug.profilebegin('onBackpackChildAdded');
+            local toolName = tool:GetAttribute('DisplayName') or tool.Name:gsub('[^:]*:', ''):gsub('%$[^%$]*', '');
+            local toolType = getToolType(tool);
+            local weaponData = tool:FindFirstChild('WeaponData');
+
+            xpcall(function()
+                weaponData = seenJSON[weaponData] or HttpService:JSONDecode(weaponData.Value);
+            end, function()
+                weaponData = crypt.base64decode(weaponData.Value);
+                weaponData = weaponData:sub(1, #weaponData - 2);
+
+                weaponData = HttpService:JSONDecode(weaponData);
+            end);
+
+            if (typeof(weaponData) == 'table') then
+                table.foreach(weaponData, warn);
+                toolName = string.format('%s%s', toolName, (weaponData.Soulbound or weaponData.SoulBound) and ' [Soulbound]' or '');
+            end;
+
+            local exitingPlayerItem = seen[toolName];
+
+            if (exitingPlayerItem) then
+                exitingPlayerItem.quantity += 1;
+                return;
+            end;
+
+            local playerItem =  {
+                type = toolType,
+                toolName = toolName,
+                quantity = 1
+            };
+
+            table.insert(playerItems, playerItem);
+            seen[toolName] = playerItem;
+        end;
+
+        for _, tool in next, player.Backpack:GetChildren() do
+            task.spawn(onBackpackChildAdded, tool);
+        end;
+
+        table.sort(playerItems, function(a, b)
+            return a.type < b.type;
+        end);
+
+        for _, v in next, playerItems do
+            v.text = ('<font color="#%s">%s [x%d]</font>'):format(itemColors[v.type]:ToHex(), v.toolName, v.quantity);
+            table.insert(inventoryLabels, inventoryViewer:AddLabel(v.text));
+        end;
+    end;
+
+    inventoryViewer:AddList({
+        text = 'Player',
+        tip = 'Player to watch inventory for',
+        playerOnly = true,
+        skipflag = true,
+        callback = showPlayerInventory
+    });
+end
+
+do -- // Functions
+    function functions.speedHack(toggle)
+        if (not toggle) then
+            maid.speedHack = nil;
+            maid.speedHackBv = nil;
+
+            return;
+        end;
+
+        maid.speedHack = RunService.Heartbeat:Connect(function()
+            local playerData = Utility:getPlayerData();
+            local humanoid, rootPart = playerData.humanoid, playerData.primaryPart;
+            if (not humanoid or not rootPart) then return end;
+
+            if (library.flags.fly) then
+                maid.speedHackBv = nil;
+                return;
+            end;
+
+            maid.speedHackBv = maid.speedHackBv or Instance.new('BodyVelocity');
+            maid.speedHackBv.MaxForce = Vector3.new(100000, 0, 100000);
+
+            if (not CollectionService:HasTag(maid.speedHackBv, 'good')) then
+                CollectionService:AddTag(maid.speedHackBv, 'good');
+                CollectionService:AddTag(maid.speedHackBv, 'DONTDELETE');
+            end;
+
+            maid.speedHackBv.Parent = not library.flags.fly and rootPart or nil;
+            maid.speedHackBv.Velocity = (humanoid.MoveDirection.Magnitude ~= 0 and humanoid.MoveDirection or gethiddenproperty(humanoid, 'WalkDirection')) * library.flags.speedHackValue;
+        end);
+    end;
+
+
+    function functions.fly(toggle)
+        if (not toggle) then
+            maid.flyHack = nil;
+            maid.flyBv = nil;
+
+            return;
+        end;
+
+        maid.flyBv = Instance.new('BodyVelocity');
+        maid.flyBv.MaxForce = Vector3.new(math.huge, math.huge, math.huge);
+
+        maid.flyHack = RunService.Heartbeat:Connect(function()
+            local playerData = Utility:getPlayerData();
+            local rootPart, camera = playerData.rootPart, workspace.CurrentCamera;
+            if (not rootPart or not camera) then return end;
+
+            if (not CollectionService:HasTag(maid.flyBv, 'good')) then
+                CollectionService:AddTag(maid.flyBv, 'good');
+                CollectionService:AddTag(maid.flyBv, 'DONTDELETE');
+            end;
+
+            maid.flyBv.Parent = rootPart;
+            maid.flyBv.Velocity = camera.CFrame:VectorToWorldSpace(ControlModule:GetMoveVector() * library.flags.flyHackValue);
+        end);
+    end;
+
+
+    function functions.noKillBricks(toggle)
+        for i, v in next, killBricks do
+            v.part.Parent = not toggle and v.oldParent or nil;
+        end;
+    end;
+
+    function functions.infiniteJump(toggle)
+        if(not toggle) then return end;
+
+        repeat
+            local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+            if(rootPart and UserInputService:IsKeyDown(Enum.KeyCode.Space)) then
+                rootPart.Velocity = Vector3.new(rootPart.Velocity.X, library.flags.infiniteJumpHeight, rootPart.Velocity.Z);
+            end;
+            task.wait(0.1);
+        until not library.flags.infiniteJump;
+    end;
+
+    function functions.goToGround()
+        local params = RaycastParams.new();
+        params.FilterDescendantsInstances = {workspace.Live, workspace.NPCs};
+        params.FilterType = Enum.RaycastFilterType.Blacklist;
+
+        local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+
+        if (not myRootPart or not myRootPart.Parent) then return end;
+
+        local floor = workspace:Raycast(myRootPart.Position, Vector3.new(0, -1000, 0), params);
+        if(not floor or not floor.Instance) then return end;	
+
+        myRootPart.CFrame *= CFrame.new(0, -(myRootPart.Position.Y - floor.Position.Y) + 3, 0);
+        myRootPart.Velocity *= Vector3.new(1, 0, 1);
+    end;
+
+    library.OnKeyPress:Connect(function(input, gpe)
+        if (gpe or not library.options.attachToBack) then return end;
+
+        local key = library.options.attachToBack.key;
+        if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
+            local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+            local closest, closestDistance = nil, math.huge;
+
+            if (not myRootPart) then return end;
+
+            repeat
+                for _, entity in next, workspace.Live:GetChildren() do
+                    local rootPart = entity:FindFirstChild('HumanoidRootPart');
+                    if (not rootPart or rootPart == myRootPart) then continue end;
+
+                    local distance = (rootPart.Position - myRootPart.Position).magnitude;
+
+                    if (distance < 300 and distance < closestDistance) then
+                        closest, closestDistance = rootPart, distance;
+                    end;
+                end;
+
+                task.wait();
+            until closest or input.UserInputState == Enum.UserInputState.End;
+            if (input.UserInputState == Enum.UserInputState.End) then return end;
+
+            maid.attachToBack = RunService.Heartbeat:Connect(function()
+                local goalCF = closest.CFrame * CFrame.new(0, library.flags.attachToBackHeight, library.flags.attachToBackSpace);
+
+                local distance = (goalCF.Position - myRootPart.Position).Magnitude;
+                local tweenInfo = TweenInfo.new(distance / 100, Enum.EasingStyle.Linear);
+
+                local tween = TweenService:Create(myRootPart, tweenInfo, {
+                    CFrame = goalCF
+                });
+
+                tween:Play();
+
+                maid.attachToBackTween = function()
+                    tween:Cancel();
+                end;
+            end);
+        end;
+    end);
+
+    library.OnKeyRelease:Connect(function(input)
+        if (not library.options.attachToBack) then return end;
+        local key = library.options.attachToBack.key;
+
+        if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
+            maid.attachToBack = nil;
+            maid.attachToBackTween = nil;
+        end;
+    end);
+end;
+
+-- NoClip
+do
+    function functions.noClip(toggle)
+        if (not toggle) then
+            maid.noClip = nil;
+
+            local humanoid = Utility:getPlayerData().humanoid;
+            if (not humanoid) then return end;
+
+            humanoid:ChangeState('Physics');
+            task.wait();
+            humanoid:ChangeState('RunningNoPhysics');
+
+            return;
+        end;
+
+        maid.noClip = RunService.Stepped:Connect(function()
+            debug.profilebegin('noclip');
+
+            local myCharacterParts = Utility:getPlayerData().parts;
+            local isKnocked = LocalPlayer.Character:FindFirstChild('Knocked') or LocalPlayer.Character:FindFirstChild('Ragdolled') or LocalPlayer.Character:FindFirstChild('ActuallyRagdolled');
+            local disableNoClipWhenKnocked = library.flags.disableNoClipWhenKnocked;
+
+            for _, v in next, myCharacterParts do
+                if (disableNoClipWhenKnocked) then
+                    v.CanCollide = not not isKnocked;
+                else
+                    v.CanCollide = false;
+                end;
+            end;
+            debug.profileend();
+        end);
+    end;
+end;
+
+function functions.clickDestroy(toggle)
+    if (not toggle) then
+        maid.clickDestroy = nil;
+        return;
+    end;
+
+    maid.clickDestroy = UserInputService.InputBegan:Connect(function(input, gpe)
+        if (input.UserInputType ~= Enum.UserInputType.MouseButton1 or gpe) then return end;
+
+        local target = playerMouse.Target;
+        if (not target or target:IsA('Terrain')) then return end;
+
+        target:Destroy();
+    end)
+end;
+
+function functions.serverHop(bypass)
+    if(bypass or library:ShowConfirm('Are you sure you want to switch server?')) then
+        library:UpdateConfig();
+
+        BlockUtils:BlockRandomUser();
+        TeleportService:Teleport(89371625020632);
+    end;
+end;
+
+function functions.respawn(bypass)
+    if(bypass or library:ShowConfirm('Are you sure you want to respawn?')) then
+        LocalPlayer.Character.Humanoid.Health = 0;
+    end;
+end;
+
+ do -- One Shot NPCs
+		local mobs = {};
+
+		local NetworkOneShot = {};
+		NetworkOneShot.__index = NetworkOneShot;
+
+		function NetworkOneShot.new(mob)
+			local self = setmetatable({},NetworkOneShot);
+
+			self._maid = Maid.new();
+			self.char = mob;
+
+			self._maid:GiveTask(mob.Destroying:Connect(function()
+				self:Destroy();
+			end));
+
+			self._maid:GiveTask(Utility.listenToChildAdded(mob, function(obj)
+				if (obj.Name == 'HumanoidRootPart') then
+					self.hrp = obj;
+				end;
+			end));
+
+			mobs[mob] = self;
+			return self;
+		end;
+
+		function NetworkOneShot:Update()
+			if (not self.hrp or not isnetworkowner(self.hrp) or not self.hrp.Parent or self.hrp.Parent.Parent ~= workspace.Live) then return end;
+			self.char:PivotTo(CFrame.new(self.hrp.Position.X, workspace.FallenPartsDestroyHeight - 100000, self.hrp.Position.Z));
+		end;
+
+		function NetworkOneShot:Destroy()
+			self._maid:DoCleaning();
+
+			for i,v in next, mobs do
+				if (v ~= self) then continue; end
+				mobs[i] = nil;
+			end;
+		end;
+
+		function NetworkOneShot:ClearAll()
+			for _, v in next, mobs do
+				v:Destroy();
+			end;
+
+			table.clear(mobs);
+		end;
+
+		Utility.listenToChildAdded(workspace.Live, function(obj)
+			task.wait(0.2);
+			if (obj == LocalPlayer.Character) then return; end
+			NetworkOneShot.new(obj);
+		end);
+
+		function functions.networkOneShot(t)
+			if (not t) then
+				maid.networkOneShot = nil;
+				maid.networkOneShot2 = nil;
+				return;
+			end;
+
+			maid.networkOneShot2 = RunService.Heartbeat:Connect(function()
+				sethiddenproperty(LocalPlayer, 'MaxSimulationRadius', math.huge);
+				sethiddenproperty(LocalPlayer, 'SimulationRadius', math.huge);
+			end);
+
+			maid.networkOneShot = task.spawn(function()
+				while task.wait() do
+					for _, mob in next, mobs do
+						mob:Update();
+					end;
+				end;
+			end);
+		end;
+	end;
+end;
+
+do -- // Local Cheats
+	localCheats:AddDivider("Movement");
+
+	localCheats:AddToggle({
+		text = 'Fly',
+		callback = functions.fly
+	})
+    localCheats:AddSlider({
+		min = 16,
+		max = 250,
+		flag = 'Fly Hack Value',
+        textpos = 2
+	});
+
+	localCheats:AddToggle({
+		text = 'Speedhack',
+		callback = functions.speedHack
+	})
+    localCheats:AddSlider({
+		min = 16,
+		max = 250,
+		flag = 'Speed Hack Value',
+        textpos = 2
+	});
+
+	localCheats:AddToggle({
+		text = 'Infinite Jump',
+		callback = functions.infiniteJump
+	})
+    localCheats:AddSlider({
+		min = 50,
+		max = 250,
+		flag = 'Infinite Jump Height',
+        textpos = 2
+	});
+
+	localCheats:AddToggle({
+		text = 'No Clip',
+		callback = functions.noClip
+	});
+
+    localCheats:AddToggle({
+		text = 'Knocked Ownership',
+		tip = 'Allow you to fly/move while being knocked.',
+        callback = functions.knockedOwnership
+	})
+
+	localCheats:AddToggle({
+		text = 'Click Destroy',
+		tip = 'Everything you click on will be destroyed (client sided)',
+		callback = functions.clickDestroy
+	});
+
+	localCheats:AddBind({text = 'Go To Ground', callback = functions.goToGround, mode = 'hold', nomouse = true});
+
+	localCheats:AddDivider("Gameplay-Assist");
+
+	localCheats:AddDivider("Combat Tweaks");
+
+    localCheats:AddToggle({
+		text = 'One Shot Mobs',
+		tip = 'This feature randomly works sometimes and causes them to die, but it makes AP have issues',
+		callback = functions.networkOneShot
+	});
+
+	localCheats:AddBind({
+		text = 'Attach To Back',
+		tip = 'This attaches to the nearest entities back based on settings',
+		callback = functions.attachToBack,
+	});
+
+	localCheats:AddSlider({
+		text = 'Attach To Back Height',
+		value = 0,
+		min = -100,
+		max = 100,  
+		textpos = 2
+	});
+
+	localCheats:AddSlider({
+		text = 'Attach To Back Space',
+		value = 2,
+		min = -100,
+		max = 100,
+		textpos = 2
+	});
+
+	localCheats:AddButton({
+		text = 'Server Hop',
+		tip = 'Jumps to any other server, non region dependant',
+		callback = functions.serverHop
+	});
+
+    localCheats:AddButton({
+		text = 'Respawn',
+		tip = 'Kills the character prompting it to respawn',
+		callback = functions.respawn
+	});
+end;
+
+do --// Notifier
+	notifier:AddToggle({
+		text = 'Player Proximity Check',    
+		tip = 'Gives you a warning when a player is close to you',
+		callback = functions.playerProximityCheck
+	});
+end;
