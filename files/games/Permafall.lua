@@ -1702,8 +1702,8 @@ do -- // ESP Functions
                             local newMob = FindFirstChild(Thrown, editedMobName);
 
                             if (newMob) then
-                                local mobPrimary = mob.PrimaryPart;
-                                    return mobPrimary and mobPrimary.Position;
+                                local mobPrimary = newMob.PrimaryPart;
+                                return mobPrimary and mobPrimary.Position;
                             end;
                         elseif (mobRoot) then
                             return mobRoot and mobRoot.Position;
