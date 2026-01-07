@@ -423,81 +423,80 @@ function functions.respawn(bypass)
     end;
 end;
 
- do -- One Shot NPCs
-		local mobs = {};
+do -- One Shot NPCs
+    local mobs = {};
 
-		local NetworkOneShot = {};
-		NetworkOneShot.__index = NetworkOneShot;
+    local NetworkOneShot = {};
+    NetworkOneShot.__index = NetworkOneShot;
 
-		function NetworkOneShot.new(mob)
-			local self = setmetatable({},NetworkOneShot);
+    function NetworkOneShot.new(mob)
+        local self = setmetatable({},NetworkOneShot);
 
-			self._maid = Maid.new();
-			self.char = mob;
+        self._maid = Maid.new();
+        self.char = mob;
 
-			self._maid:GiveTask(mob.Destroying:Connect(function()
-				self:Destroy();
-			end));
+        self._maid:GiveTask(mob.Destroying:Connect(function()
+            self:Destroy();
+        end));
 
-			self._maid:GiveTask(Utility.listenToChildAdded(mob, function(obj)
-				if (obj.Name == 'HumanoidRootPart') then
-					self.hrp = obj;
-				end;
-			end));
+        self._maid:GiveTask(Utility.listenToChildAdded(mob, function(obj)
+            if (obj.Name == 'HumanoidRootPart') then
+                self.hrp = obj;
+            end;
+        end));
 
-			mobs[mob] = self;
-			return self;
-		end;
+        mobs[mob] = self;
+        return self;
+    end;
 
-		function NetworkOneShot:Update()
-			if (not self.hrp or not isnetworkowner(self.hrp) or not self.hrp.Parent or self.hrp.Parent.Parent ~= workspace.Live) then return end;
-			self.char:PivotTo(CFrame.new(self.hrp.Position.X, workspace.FallenPartsDestroyHeight - 100000, self.hrp.Position.Z));
-		end;
+    function NetworkOneShot:Update()
+        if (not self.hrp or not isnetworkowner(self.hrp) or not self.hrp.Parent or self.hrp.Parent.Parent ~= workspace.Live) then return end;
+        self.char:PivotTo(CFrame.new(self.hrp.Position.X, workspace.FallenPartsDestroyHeight - 100000, self.hrp.Position.Z));
+    end;
 
-		function NetworkOneShot:Destroy()
-			self._maid:DoCleaning();
+    function NetworkOneShot:Destroy()
+        self._maid:DoCleaning();
 
-			for i,v in next, mobs do
-				if (v ~= self) then continue; end
-				mobs[i] = nil;
-			end;
-		end;
+        for i,v in next, mobs do
+            if (v ~= self) then continue; end
+            mobs[i] = nil;
+        end;
+    end;
 
-		function NetworkOneShot:ClearAll()
-			for _, v in next, mobs do
-				v:Destroy();
-			end;
+    function NetworkOneShot:ClearAll()
+        for _, v in next, mobs do
+            v:Destroy();
+        end;
 
-			table.clear(mobs);
-		end;
+        table.clear(mobs);
+    end;
 
-		Utility.listenToChildAdded(workspace.Live, function(obj)
-			task.wait(0.2);
-			if (obj == LocalPlayer.Character) then return; end
-			NetworkOneShot.new(obj);
-		end);
+    Utility.listenToChildAdded(workspace.Live, function(obj)
+        task.wait(0.2);
+        if (obj == LocalPlayer.Character) then return; end
+        NetworkOneShot.new(obj);
+    end);
 
-		function functions.networkOneShot(t)
-			if (not t) then
-				maid.networkOneShot = nil;
-				maid.networkOneShot2 = nil;
-				return;
-			end;
+    function functions.networkOneShot(t)
+        if (not t) then
+            maid.networkOneShot = nil;
+            maid.networkOneShot2 = nil;
+            return;
+        end;
 
-			maid.networkOneShot2 = RunService.Heartbeat:Connect(function()
-				sethiddenproperty(LocalPlayer, 'MaxSimulationRadius', math.huge);
-				sethiddenproperty(LocalPlayer, 'SimulationRadius', math.huge);
-			end);
+        maid.networkOneShot2 = RunService.Heartbeat:Connect(function()
+            sethiddenproperty(LocalPlayer, 'MaxSimulationRadius', math.huge);
+            sethiddenproperty(LocalPlayer, 'SimulationRadius', math.huge);
+        end);
 
-			maid.networkOneShot = task.spawn(function()
-				while task.wait() do
-					for _, mob in next, mobs do
-						mob:Update();
-					end;
-				end;
-			end);
-		end;
-	end;
+        maid.networkOneShot = task.spawn(function()
+            while task.wait() do
+                for _, mob in next, mobs do
+                    mob:Update();
+                end;
+            end;
+        end);
+    end;
 end;
 
 do -- // Local Cheats
