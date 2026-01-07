@@ -21,16 +21,6 @@ local fromHex = sharedRequire('utils/fromHex.lua');
 local toCamelCase = sharedRequire('utils/toCamelCase.lua');
 local Webhook = sharedRequire('utils/Webhook.lua');
 
-if (game.PlaceId == 119623598397995) then
-    ToastNotif.new({
-        text = 'Script will not run in the lobby!',
-        duration = 5
-    });
-
-    library:Unload();
-    return;
-end;
-
 local column1, column2 = unpack(library.columns);
 
 local functions = {};
