@@ -1059,25 +1059,29 @@ do -- // Load All Buyables
 end;
 
 do -- // Automation Functions
-
     function functions.pickupItem(item, data)
         local isSilver = data.isSilver;
-        local isChestCoin = data.isChestCoin;
         local isChestLoot = data.isChestLoot;
 
         if (not item) then return end;
         
-        if (isChestCoin and item.Name ~= 'ChestCoin') then return end;
-        if (isChestLoot and not item.Name:find('Chest') and item.Name ~= 'GoldBar') then return end;
-        if (not isChestCoin and not isSilver and not isChestLoot and not item.Name:find('Dropped_')) then return end;
-        if (isSilver and item.Name ~= 'ChestSIlver' and not item.Name:find('Dropped_')) then return end;
-        
-        local hasSilver = item:GetAttribute('Silver') and item:GetAttribute('Silver') ~= 0;
+        if (isChestLoot) then
+            if (not item.Name:find('Chest') and item.Name ~= 'ChestGoldBar' and item.Name ~= 'ChestSilver') then return end;
 
-        if (not isChestCoin and not isChestLoot) then
-            if (not isSilver and hasSilver) then return end;
-            if (isSilver and not hasSilver) then return end;
-            if (isSilver and library.flags.safePickupSilver and item:GetAttribute('Silver') >= 2000) then return end;
+        elseif (isSilver) then
+            if (not item.Name:find('Dropped_')) then return end;
+
+            local hasSilver = item:GetAttribute('Silver') and item:GetAttribute('Silver') ~= 0;
+
+            if (not hasSilver) then return end;
+            if (library.flags.safePickupSilver and item:GetAttribute('Silver') >= 2000) then return end;
+
+        else
+            if (not item.Name:find('Dropped_')) then return end;
+
+            local hasSilver = item:GetAttribute('Silver') and item:GetAttribute('Silver') ~= 0;
+
+            if (hasSilver) then return end; 
         end;
 
         if (isChestLoot and item:IsA('BasePart')) then
@@ -1175,7 +1179,7 @@ do -- // Automation
                 for _, child in Thrown:GetChildren() do
                     if (child and child:IsA('BasePart') and child.Name:find('Chest')) then
                         functions.pickupItem(child, {
-                            isChestCoin = true;
+                            isChestLoot = true;
                         });
                     end;
                 end;
@@ -1724,7 +1728,7 @@ do -- // ESP Functions
             end;
         end);
     end;
-    
+
     function functions.onNewChestAdded(chest, espConstructor)
         if (not chest.Name:find('Chest')) then return end;
         if (chest.Name == 'ChestSIlver') then return end;
