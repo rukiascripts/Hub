@@ -287,6 +287,29 @@
             opacity: 0.12;
         }
 
+        /* Apply project hover styling to the whole Skills section */
+        #skills::after {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -30%;
+            width: 120%;
+            height: 120%;
+            background: radial-gradient(circle, rgba(0,180,216,0.12) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+
+        #skills:hover {
+            background: linear-gradient(135deg, rgba(4, 8, 20, 0.75) 0%, rgba(8, 12, 28, 0.75) 100%);
+            border-color: #0c3550;
+        }
+
+        #skills:hover::after {
+            opacity: 0.12;
+        }
+
         .project-card h3 {
             margin-top: 0;
             margin-bottom: 0.5rem;
