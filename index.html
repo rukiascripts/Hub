@@ -1,6 +1,357 @@
-<html>
-<title>Rukia's Hub</title>
-<button onclick="window.location.href = 'metadata.json';">
-    open metadata
-</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rukia - Roblox Developer Portfolio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        header {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2rem 0;
+            border-bottom: 2px solid #00d4ff;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #00d4ff;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #e0e0e0;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #00d4ff;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            margin: 4rem 0;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: #00d4ff;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+            color: #00d4ff;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            color: #00d4ff;
+            margin-top: 1rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%);
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #b0b0b0;
+        }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .skill-card {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #00d4ff;
+            transition: all 0.3s;
+        }
+
+        .skill-card:hover {
+            background: rgba(0, 212, 255, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .skill-card h3 {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .project-card {
+            background: rgba(0, 212, 255, 0.08);
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid #00d4ff;
+            transition: all 0.3s;
+        }
+
+        .project-card:hover {
+            background: rgba(0, 212, 255, 0.15);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .project-card h3 {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .project-tag {
+            display: inline-block;
+            background: #00d4ff;
+            color: #1a1a2e;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            font-weight: 600;
+        }
+
+        .contact-section {
+            text-align: center;
+        }
+
+        .contact-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .contact-links a {
+            display: inline-flex;
+            align-items: center;
+            background: #00d4ff;
+            color: #1a1a2e;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .contact-links a:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid rgba(0, 212, 255, 0.2);
+            margin-top: 4rem;
+            color: #808080;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                gap: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="#" class="logo">Rukia</a>
+            <ul class="nav-links">
+                <li><a href="#about">About</a></li>
+                <li><a href="#skills">Skills</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Rukia</h1>
+            <p>Roblox Developer & Designer</p>
+        </section>
+
+        <!-- About Section -->
+        <section id="about">
+            <h2>About Me</h2>
+            <p>
+                I'm a passionate Roblox developer with expertise in game design, scripting, and creating engaging experiences. 
+                With a focus on performance optimization and user experience, I develop high-quality games and tools for the Roblox platform.
+            </p>
+            <p>
+                My work spans across multiple game genres and systems, from combat mechanics to survival gameplay. 
+                I'm dedicated to delivering polished, creative experiences that engage and delight players.
+            </p>
+        </section>
+
+        <!-- Skills Section -->
+        <section id="skills">
+            <h2>Skills & Expertise</h2>
+            <div class="skills-grid">
+                <div class="skill-card">
+                    <h3>Lua Scripting</h3>
+                    <p>Advanced Lua programming with deep knowledge of Roblox APIs and optimization techniques.</p>
+                </div>
+                <div class="skill-card">
+                    <h3>Game Design</h3>
+                    <p>Creating engaging gameplay mechanics, level design, and player progression systems.</p>
+                </div>
+                <div class="skill-card">
+                    <h3>Performance Optimization</h3>
+                    <p>Optimizing code and assets for smooth gameplay across various devices.</p>
+                </div>
+                <div class="skill-card">
+                    <h3>Systems Architecture</h3>
+                    <p>Designing robust systems for combat, inventory, UI, and game mechanics.</p>
+                </div>
+                <div class="skill-card">
+                    <h3>User Interface</h3>
+                    <p>Creating intuitive and visually appealing UI/UX for Roblox games.</p>
+                </div>
+                <div class="skill-card">
+                    <h3>Debugging & Testing</h3>
+                    <p>Comprehensive testing and debugging to ensure quality and stability.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Projects Section -->
+        <section id="projects">
+            <h2>Projects</h2>
+            <div class="projects-grid">
+                <div class="project-card">
+                    <h3>Apeirophobia</h3>
+                    <p>Contributed to a psychological horror game with immersive atmosphere and challenging gameplay mechanics.</p>
+                    <span class="project-tag">Lua</span>
+                    <span class="project-tag">Horror</span>
+                </div>
+                <div class="project-card">
+                    <h3>Permafall</h3>
+                    <p>Developed game systems and mechanics for a fast-paced survival platformer with dynamic difficulty.</p>
+                    <span class="project-tag">Lua</span>
+                    <span class="project-tag">Platformer</span>
+                </div>
+                <div class="project-card">
+                    <h3>Rift</h3>
+                    <p>Created core gameplay features for an adventure game with exploration and puzzle-solving elements.</p>
+                    <span class="project-tag">Lua</span>
+                    <span class="project-tag">Adventure</span>
+                </div>
+                <div class="project-card">
+                    <h3>Rogue Lineage</h3>
+                    <p>Worked on systems and balance for a roguelike dungeon crawler with progression mechanics.</p>
+                    <span class="project-tag">Lua</span>
+                    <span class="project-tag">RPG</span>
+                </div>
+                <div class="project-card">
+                    <h3>Fighting Game</h3>
+                    <p>Developed combat systems and character mechanics for a competitive fighting game.</p>
+                    <span class="project-tag">Lua</span>
+                    <span class="project-tag">Combat</span>
+                </div>
+                <div class="project-card">
+                    <h3>Solo Blox Leveling Reborn</h3>
+                    <p>Created progression systems and gameplay mechanics for an engaging leveling experience.</p>
+                    <span class="project-tag">Lua</span>
+                    <span class="project-tag">RPG</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="contact-section">
+            <h2>Get In Touch</h2>
+            <p>Interested in collaborating or have questions? Feel free to reach out!</p>
+            <div class="contact-links">
+                <a href="mailto:your.email@example.com">Email</a>
+                <a href="https://discord.gg/yourserver" target="_blank">Discord</a>
+                <a href="https://twitter.com/yourhandle" target="_blank">Twitter</a>
+                <a href="https://github.com/yourprofile" target="_blank">GitHub</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Rukia. All rights reserved.</p>
+    </footer>
+</body>
 </html>
