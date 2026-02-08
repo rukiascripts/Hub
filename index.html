@@ -89,7 +89,15 @@
             margin-left: 250px;
             padding: 3rem 2rem;
             width: calc(100% - 250px);
-            min-height: 100vh;
+            min-height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        main > section {
+            width: 100%;
+            max-width: 900px;
         }
 
         section {
@@ -122,8 +130,7 @@
 
         section:hover {
             border-color: #0066ff;
-            box-shadow: 0 0 20px rgba(0, 102, 255, 0.2);
-            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0, 102, 255, 0.15);
         }
 
         @keyframes fadeInUp {
@@ -232,9 +239,9 @@
 
         .skill-card:hover {
             background: linear-gradient(135deg, rgba(0, 102, 255, 0.2) 0%, rgba(0, 180, 216, 0.15) 100%);
-            transform: translateY(-8px) scale(1.02);
+            transform: translateY(-3px);
             border-color: #0066ff;
-            box-shadow: 0 10px 30px rgba(0, 102, 255, 0.2);
+            box-shadow: 0 5px 15px rgba(0, 102, 255, 0.15);
         }
 
         .skill-card:hover::before {
@@ -277,8 +284,8 @@
 
         .project-card:hover {
             background: linear-gradient(135deg, rgba(0, 102, 255, 0.15) 0%, rgba(0, 180, 216, 0.1) 100%);
-            box-shadow: 0 15px 40px rgba(0, 102, 255, 0.25);
-            transform: translateY(-8px);
+            box-shadow: 0 8px 20px rgba(0, 102, 255, 0.15);
+            transform: translateY(-3px);
             border-color: #0066ff;
         }
 
@@ -348,8 +355,7 @@
         }
 
         .contact-links a:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 102, 255, 0.4);
+            box-shadow: 0 5px 15px rgba(0, 102, 255, 0.3);
         }
 
         .contact-links a:hover::before {
@@ -360,9 +366,11 @@
             text-align: center;
             padding: 2rem;
             border-top: 1px solid #1a3a5c;
-            margin-top: 2rem;
             color: #606060;
             margin-left: 250px;
+            width: calc(100% - 250px);
+            position: relative;
+            top: auto;
         }
 
         @media (max-width: 768px) {
@@ -389,6 +397,7 @@
 
             footer {
                 margin-left: 0;
+                width: 100%;
             }
 
             h1 {
