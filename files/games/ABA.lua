@@ -571,6 +571,12 @@ localCheats:AddBind({
 	nomouse = true,
 	callback = functions.lockOn
 });
+
+localCheats:AddToggle({
+	text = 'Lock On Check Team',
+	state = true
+});
+
 localCheats:AddSlider({
 	text = 'Lock On Max Distance',
 	value = 200,
@@ -578,10 +584,7 @@ localCheats:AddSlider({
 	max = 1000,
 	textpos = 2
 });
-localCheats:AddToggle({
-	text = 'Lock On Check Team',
-	state = true
-});
+
 localCheats:AddSlider({
 	text = 'Lock On Smoothness',
 	value = 1,
