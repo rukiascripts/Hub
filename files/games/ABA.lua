@@ -369,6 +369,7 @@ local function FindClosestToMouse(): Player?
 
 	for _, player: Player in Players:GetPlayers() do
 		if (player == LocalPlayer) then continue end;
+		if (library.flags.lockOnCheckTeam and Utility:isTeamMate(player)) then continue end;
 
 		local character: Model? = player.Character;
 		if (not character) then continue end;
@@ -561,9 +562,11 @@ localCheats:AddToggle({
 
 localCheats:AddBind({ text = 'Go To Ground', callback = functions.goToGround, mode = 'hold', nomouse = true });
 
-localCheats:AddToggle({
+localCheats:AddBind({
 	text = 'Lock On',
 	tip = 'toggles lock on to the closest player to your mouse',
+	mode = 'toggle',
+	nomouse = true,
 	callback = functions.lockOn
 });
 localCheats:AddSlider({
@@ -572,6 +575,10 @@ localCheats:AddSlider({
 	min = 10,
 	max = 1000,
 	textpos = 2
+});
+localCheats:AddToggle({
+	text = 'Lock On Check Team',
+	state = true
 });
 
 localCheats:AddDivider('Combat Tweaks');
