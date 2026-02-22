@@ -44,7 +44,7 @@ local column1, column2 = unpack(library.columns);
 local maid = Maid.new();
 
 local localCheats = column1:AddSection('Local Cheats');
-local automation = column1:AddSection('automation');
+local automation = column1:AddSection('Automation');
 
 local functions = {};
 
