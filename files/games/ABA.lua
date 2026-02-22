@@ -653,4 +653,50 @@ function Utility:renderOverload(data)
 		text = 'Show Mode Bar',
 		tip = 'renders a visual blue bar for mode charge next to the ESP box',
 	});
+
+	-- deidara mines get parented to workspace.Thrown as a unionoperation called 'Ball'
+	makeESP({
+		sectionName = 'Deidara Mines',
+		type = 'childAdded',
+		args = {workspace:WaitForChild('Thrown')},
+		callback = function(obj: Instance, espConstructor)
+			if (not obj:IsA('UnionOperation') or obj.Name ~= 'Ball') then return end;
+
+            while (obj.Transparency == 0) do
+                task.wait(0.1);
+            end;
+
+			local espObj = espConstructor.new(obj :: BasePart, 'Deidara Mine');
+            obj.Transparency = 0.5;
+
+			local connection: RBXScriptConnection;
+			connection = obj:GetPropertyChangedSignal('Parent'):Connect(function()
+				if (not obj.Parent) then
+					espObj:Destroy();
+					connection:Disconnect();
+				end;
+			end);
+		end,
+	});
+
+	-- raiden claymores get parented to workspace.ClearEatchMatch as meshparts
+	makeESP({
+		sectionName = 'Raiden Claymores',
+		type = 'childAdded',
+		args = {workspace:WaitForChild('ClearEatchMatch')},
+		callback = function(obj: Instance, espConstructor)
+			if (not obj:IsA('MeshPart')) then return end;
+
+			local espObj = espConstructor.new(obj :: BasePart, 'Claymore');
+            obj.Transparency = 0.5;
+
+			local connection: RBXScriptConnection;
+			connection = obj:GetPropertyChangedSignal('Parent'):Connect(function()
+				if (not obj.Parent) then
+					espObj:Destroy();
+					connection:Disconnect();
+				end;
+			end);
+		end,
+	});
 end;
