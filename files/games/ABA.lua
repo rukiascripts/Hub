@@ -564,6 +564,7 @@ localCheats:AddBind({ text = 'Go To Ground', callback = functions.goToGround, mo
 
 localCheats:AddBind({
 	text = 'Lock On',
+	flag = 'Lock On Bind',
 	tip = 'toggles lock on to the closest player to your mouse',
 	mode = 'toggle',
 	nomouse = true,
