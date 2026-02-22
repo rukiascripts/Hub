@@ -522,12 +522,10 @@ function Utility:renderOverload(data)
 	data.espSettings:AddToggle({
 		text = 'Show Mode',
 		tip = 'shows the mode/ultimate charge percentage on ESP text',
-		flag = 'showMode',
 	});
 
 	data.espSettings:AddToggle({
 		text = 'Show Mode Bar',
 		tip = 'renders a visual blue bar for mode charge next to the ESP box',
-		flag = 'showModeBar',
 	});
 end;
