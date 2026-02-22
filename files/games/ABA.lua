@@ -50,31 +50,19 @@ local _visuals = column2:AddSection('Visuals');
 
 local functions = {};
 
+local MAX_CHARGE: number = 325;
+
 --[[
-	reads the mode/ultimate charge from a players HUD bar.
-	returns 0-100, or 0 if the gui doesnt exist
+	reads the mode/ultimate charge from the Charge value under the player.
+	returns 0-100 as a rounded percent
 ]]
 local function GetModePercent(player: Player): number
-	local playerGui = player:FindFirstChild('PlayerGui');
-	if (not playerGui) then
+	local charge: DoubleConstrainedValue? = player:FindFirstChild('Charge') :: DoubleConstrainedValue?;
+	if (not charge) then
 		return 0;
 	end;
 
-	local hud = playerGui:FindFirstChild('HUD');
-	if (not hud) then
-        prettyPrint('ABA ESP: HUD not found for player', player.Name);
-        return 0;
-	end;
-
-	local ultimate = (hud :: Frame):FindFirstChild('Ultimate');
-	if (not ultimate) then
-        prettyPrint('ABA ESP: Ultimate frame not found for player', player.Name);
-		return 0;
-	end;
-
-	local bar = (ultimate :: Frame):FindFirstChild('Bar');
-
-	return math.floor((bar :: Frame).Size.X.Scale * 100);
+	return math.floor((charge :: DoubleConstrainedValue).Value / MAX_CHARGE * 100);
 end;
 
 function EntityESP:Plugin()
