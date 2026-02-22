@@ -36,6 +36,18 @@ local Players, RunService, UserInputService, HttpService, CollectionService, Mem
 	'ReplicatedStorage'
 );
 
+if (game.PlaceId == 2008032602) then
+     ToastNotif.new({
+        text = 'Script will not run in matchmaking!',
+        duration = 5
+    });
+
+    task.delay(0.005, function()
+        library:Unload();
+    end);
+    return;
+end;
+
 local LocalPlayer: Player = Players.LocalPlayer;
 local playerMouse = LocalPlayer:GetMouse();
 
