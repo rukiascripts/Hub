@@ -662,12 +662,14 @@ function Utility:renderOverload(data)
 		callback = function(obj: Instance, espConstructor)
 			if (not obj:IsA('UnionOperation') or obj.Name ~= 'Ball') then return end;
 
-            while (obj.Transparency == 0) do
-                task.wait(0.1);
-            end;
-
 			local espObj = espConstructor.new(obj :: BasePart, 'Deidara Mine');
-            obj.Transparency = 0.5;
+
+            task.spawn(function()
+                while (obj.Transparency == 0) do
+                    task.wait(0.1);
+                end;
+                obj.Transparency = 0.5;
+            end);
 
 			local connection: RBXScriptConnection;
 			connection = obj:GetPropertyChangedSignal('Parent'):Connect(function()
@@ -688,7 +690,13 @@ function Utility:renderOverload(data)
 			if (not obj:IsA('MeshPart')) then return end;
 
 			local espObj = espConstructor.new(obj :: BasePart, 'Claymore');
-            obj.Transparency = 0.5;
+            
+            task.spawn(function()
+                while (obj.Transparency == 0) do
+                    task.wait(0.1);
+                end;
+                obj.Transparency = 0.5;
+            end);
 
 			local connection: RBXScriptConnection;
 			connection = obj:GetPropertyChangedSignal('Parent'):Connect(function()
