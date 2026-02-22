@@ -44,25 +44,22 @@ local column1, column2 = unpack(library.columns);
 local maid = Maid.new();
 
 local localCheats = column1:AddSection('Local Cheats');
-local notifier = column1:AddSection('Notifier');
-local playerMods = column1:AddSection('Player Mods');
-local _visuals = column2:AddSection('Visuals');
+local automation = column1:AddSection('automation');
 
 local functions = {};
-
-local MAX_CHARGE: number = 325;
 
 --[[
 	reads the mode/ultimate charge from the Charge value under the player.
 	returns 0-100 as a rounded percent
 ]]
 local function GetModePercent(player: Player): number
-	local charge: DoubleConstrainedValue? = player:FindFirstChild('Charge') :: DoubleConstrainedValue?;
+	local charge: DoubleConstrainedValue = player:FindFirstChild('Charge') :: DoubleConstrainedValue;
 	if (not charge) then
 		return 0;
 	end;
 
-	return math.floor((charge :: DoubleConstrainedValue).Value / MAX_CHARGE * 100);
+	local maxValue: number = (charge :: DoubleConstrainedValue).MaxValue;
+	return math.floor((charge :: DoubleConstrainedValue).Value / maxValue * 100);
 end;
 
 function EntityESP:Plugin()
@@ -345,13 +342,7 @@ function functions.clickDestroy(toggle: boolean): ()
 	end);
 end;
 
-function functions.serverHop(bypass: boolean?): ()
-	if (bypass or library:ShowConfirm('Are you sure you want to switch server?')) then
-		library:UpdateConfig();
-		BlockUtils:BlockRandomUser();
-		TeleportService:Teleport(89371625020632);
-	end;
-end;
+
 
 function functions.respawn(bypass: boolean?): ()
 	if (bypass or library:ShowConfirm('Are you sure you want to respawn?')) then
@@ -485,24 +476,19 @@ localCheats:AddSlider({
 	textpos = 2
 });
 
-localCheats:AddToggle({
-	text = 'Nanami Auto Black Flash',
-	tip = 'auto clicks when the cutter crosses the goal on nanamis cut gui',
-	callback = functions.nanamiAutoBlackFlash
-});
 
 localCheats:AddDivider('Gameplay-Assist');
-
-localCheats:AddButton({
-	text = 'Server Hop',
-	tip = 'Jumps to any other server, non region dependant',
-	callback = functions.serverHop
-});
 
 localCheats:AddButton({
 	text = 'Respawn',
 	tip = 'Kills the character prompting it to respawn',
 	callback = functions.respawn
+});
+
+automation:AddToggle({
+	text = 'Nanami Auto Black Flash',
+	tip = 'auto clicks when the cutter crosses the goal on nanamis cut gui',
+	callback = functions.nanamiAutoBlackFlash
 });
 
 function Utility:renderOverload(data)
