@@ -34,6 +34,7 @@ local Services = sharedRequire('utils/Services.lua');
 	local toggleTracers;
 	local unlockTracers;
 	local showHealthBar;
+	local showModeBar;
 	local proximityArrows;
 	local maxProximityArrowDistance;
 
@@ -45,6 +46,9 @@ local Services = sharedRequire('utils/Services.lua');
 
 	local healthBarOffsetTopRight, healthBarOffsetBottomLeft;
 	local healthBarValueOffsetTopRight, healthBarValueOffsetBottomLeft;
+
+	local modeBarOffsetTopRight, modeBarOffsetBottomLeft;
+	local modeBarValueOffsetTopRight, modeBarValueOffsetBottomLeft;
 
 	local realGetRPProperty;
 
@@ -106,6 +110,18 @@ local Services = sharedRequire('utils/Services.lua');
 			self._healthBarValue.Thickness = 1;
 			self._healthBarValue.Filled = true;
 			self._healthBarValue.Color = Color3.fromRGB(0, 255, 0);
+
+			self._modeBar = Drawing.new('Quad');
+			self._modeBar.Visible = false;
+			self._modeBar.Thickness = 1;
+			self._modeBar.Filled = false;
+			self._modeBar.Color = Color3.fromRGB(255, 255, 255);
+
+			self._modeBarValue = Drawing.new('Quad');
+			self._modeBarValue.Visible = false;
+			self._modeBarValue.Thickness = 1;
+			self._modeBarValue.Filled = true;
+			self._modeBarValue.Color = Color3.fromRGB(70, 130, 230);
 
 			self._line = Drawing.new('Line');
 			self._line.Visible = false;
@@ -212,7 +228,7 @@ local Services = sharedRequire('utils/Services.lua');
 
 			self._visible = visibleOnScreen;
 
-			local label, box, line, healthBar, healthBarValue = self._label, self._box, self._line, self._healthBar, self._healthBarValue;
+			local label, box, line, healthBar, healthBarValue, modeBar, modeBarValue = self._label, self._box, self._line, self._healthBar, self._healthBarValue, self._modeBar, self._modeBarValue;
 			local pluginData = self:Plugin();
 
 			local text = '[' .. (pluginData.playerName or self._playerName) .. '] [' .. mathFloor(distance) .. ']\n[' .. mathFloor(health) .. '/' .. mathFloor(maxHealth) .. '] [' .. mathFloor(floatHealth) .. ' %]' .. (pluginData.text or '') .. ' [' .. userId .. ']';
@@ -333,6 +349,42 @@ local Services = sharedRequire('utils/Services.lua');
 				-- healthBarValue.Visible = false
 
 			end;
+
+			local modePercent = pluginData.modePercent;
+			if (showModeBar and modePercent) then
+				local modeBarFill = (1 - (modePercent / 100)) * 7.4;
+
+				local modeBarTopRight = worldToViewportPoint(camera, rootPartPosition + modeBarOffsetTopRight);
+				local modeBarBottomLeft = worldToViewportPoint(camera, rootPartPosition + modeBarOffsetBottomLeft);
+
+				local modeBarTopRightX, modeBarTopRightY = modeBarTopRight.X, modeBarTopRight.Y;
+				local modeBarBottomLeftX, modeBarBottomLeftY = modeBarBottomLeft.X, modeBarBottomLeft.Y;
+
+				local modeBarValueTopRight = worldToViewportPoint(camera, rootPartPosition + modeBarValueOffsetTopRight - self:ConvertVector(0, modeBarFill, 0));
+				local modeBarValueBottomLeft = worldToViewportPoint(camera, rootPartPosition - modeBarValueOffsetBottomLeft);
+
+				local modeBarValueTopRightX, modeBarValueTopRightY = modeBarValueTopRight.X, modeBarValueTopRight.Y;
+				local modeBarValueBottomLeftX, modeBarValueBottomLeftY = modeBarValueBottomLeft.X, modeBarValueBottomLeft.Y;
+
+				setrenderproperty(modeBar, 'Visible', visibleOnScreen);
+				setrenderproperty(modeBar, 'Color', espColor);
+
+				setrenderproperty(modeBar, 'PointA', Vector2New(modeBarTopRightX, modeBarTopRightY));
+				setrenderproperty(modeBar, 'PointB', Vector2New(modeBarBottomLeftX, modeBarTopRightY));
+				setrenderproperty(modeBar, 'PointC', Vector2New(modeBarBottomLeftX, modeBarBottomLeftY));
+				setrenderproperty(modeBar, 'PointD', Vector2New(modeBarTopRightX, modeBarBottomLeftY));
+
+				setrenderproperty(modeBarValue, 'Visible', visibleOnScreen);
+				setrenderproperty(modeBarValue, 'Color', Color3.fromRGB(70, 130, 230));
+
+				setrenderproperty(modeBarValue, 'PointA', Vector2New(modeBarValueTopRightX, modeBarValueTopRightY));
+				setrenderproperty(modeBarValue, 'PointB', Vector2New(modeBarValueBottomLeftX, modeBarValueTopRightY));
+				setrenderproperty(modeBarValue, 'PointC', Vector2New(modeBarValueBottomLeftX, modeBarValueBottomLeftY));
+				setrenderproperty(modeBarValue, 'PointD', Vector2New(modeBarValueTopRightX, modeBarValueBottomLeftY));
+			else
+				setrenderproperty(modeBar, 'Visible', false);
+				setrenderproperty(modeBarValue, 'Visible', false);
+			end;
 		end;
 
 		function EntityESP:Destroy()
@@ -353,6 +405,8 @@ local Services = sharedRequire('utils/Services.lua');
 			--destroyRP(self._healthBarValue);
 			--self._healthBarValue = nil;
 			self._healthBarValue:Destroy()
+			self._modeBar:Destroy()
+			self._modeBarValue:Destroy()
 			-- destroyRP(self._triangle);
 			-- self._triangle = nil;
 			self._triangle:Destroy()
@@ -374,6 +428,8 @@ local Services = sharedRequire('utils/Services.lua');
 
 			setrenderproperty(self._healthBar, 'Visible', false);
 			setrenderproperty(self._healthBarValue, 'Visible', false);
+			setrenderproperty(self._modeBar, 'Visible', false);
+			setrenderproperty(self._modeBarValue, 'Visible', false);
 
 
 			self._label.Visible = false
@@ -382,6 +438,8 @@ local Services = sharedRequire('utils/Services.lua');
 
 			self._healthBar.Visible = false
 			self._healthBarValue.Visible = false
+			self._modeBar.Visible = false
+			self._modeBarValue.Visible = false
 
 		end;
 
@@ -416,6 +474,7 @@ local Services = sharedRequire('utils/Services.lua');
 			toggleTracers = flags.toggleTracers;
 			unlockTracers = flags.unlockTracers;
 			showHealthBar = flags.showHealthBar;
+			showModeBar = flags.showModeBar;
 			maxProximityArrowDistance = flags.maxProximityArrowDistance;
 			proximityArrows = flags.proximityArrows;
 
@@ -435,6 +494,12 @@ local Services = sharedRequire('utils/Services.lua');
 
 			healthBarValueOffsetTopRight = EntityESP:ConvertVector(-3.05, 2.95, 0);
 			healthBarValueOffsetBottomLeft = EntityESP:ConvertVector(3.45, 4.45, 0);
+
+			modeBarOffsetTopRight = EntityESP:ConvertVector(3.5, 3, 0);
+			modeBarOffsetBottomLeft = EntityESP:ConvertVector(3, -4.5, 0);
+
+			modeBarValueOffsetTopRight = EntityESP:ConvertVector(3.45, 2.95, 0);
+			modeBarValueOffsetBottomLeft = EntityESP:ConvertVector(-3.05, 4.45, 0);
 		end;
 
 		updateESP();
