@@ -62,20 +62,19 @@ local function GetModePercent(player: Player): number
 
 	local hud = playerGui:FindFirstChild('HUD');
 	if (not hud) then
-		return 0;
+        prettyPrint('ABA ESP: HUD not found for player', player.Name);
+        return 0;
 	end;
 
-	local ultimate = (hud :: Instance):FindFirstChild('Ultimate');
+	local ultimate = (hud :: Frame):FindFirstChild('Ultimate');
 	if (not ultimate) then
+        prettyPrint('ABA ESP: Ultimate frame not found for player', player.Name);
 		return 0;
 	end;
 
-	local bar = (ultimate :: Instance):FindFirstChild('Bar');
-	if (not bar or not (bar :: Instance):IsA('GuiObject')) then
-		return 0;
-	end;
+	local bar = (ultimate :: Frame):FindFirstChild('Bar');
 
-	return math.floor((bar :: GuiObject).Size.X.Scale * 100);
+	return math.floor((bar :: Frame).Size.X.Scale * 100);
 end;
 
 function EntityESP:Plugin()
