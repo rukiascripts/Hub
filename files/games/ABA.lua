@@ -679,11 +679,11 @@ function Utility:renderOverload(data)
 		end,
 	});
 
-	-- raiden claymores get parented to workspace.ClearEatchMatch as meshparts
+	-- raiden claymores get parented to workspace.ClearEachMatch as meshparts
 	makeESP({
 		sectionName = 'Raiden Claymores',
 		type = 'childAdded',
-		args = {workspace:WaitForChild('ClearEatchMatch')},
+		args = {workspace:WaitForChild('ClearEachMatch')},
 		callback = function(obj: Instance, espConstructor)
 			if (not obj:IsA('MeshPart')) then return end;
 
