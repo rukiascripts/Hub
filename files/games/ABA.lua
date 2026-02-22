@@ -44,7 +44,7 @@ local column1, column2 = unpack(library.columns);
 local maid = Maid.new();
 
 local localCheats = column1:AddSection('Local Cheats');
-local automation = column1:AddSection('Automation');
+local automation = column2:AddSection('Automation');
 
 local functions = {};
 
@@ -344,6 +344,114 @@ end;
 
 
 
+local lockedTarget: Player? = nil;
+
+--[[
+	finds the closest player to the mouse cursor within the lock on range.
+	uses screen distance so it feels like mouse perspective
+]]
+local function FindClosestToMouse(): Player?
+	local camera: Camera? = workspace.CurrentCamera;
+	if (not camera) then
+		return nil;
+	end;
+
+	local myCharacter: Model? = LocalPlayer.Character;
+	local myHead: BasePart? = myCharacter and (myCharacter :: Model):FindFirstChild('Head') :: BasePart?;
+	if (not myHead) then
+		return nil;
+	end;
+
+	local mousePos: Vector2 = UserInputService:GetMouseLocation();
+	local maxDistance: number = library.flags.lockOnMaxDistance;
+	local closestPlayer: Player? = nil;
+	local closestScreenDist: number = math.huge;
+
+	for _, player: Player in Players:GetPlayers() do
+		if (player == LocalPlayer) then continue end;
+
+		local character: Model? = player.Character;
+		if (not character) then continue end;
+
+		local humanoid: Humanoid? = (character :: Model):FindFirstChildOfClass('Humanoid');
+		if (not humanoid or (humanoid :: Humanoid).Health <= 0) then continue end;
+
+		local head: BasePart? = (character :: Model):FindFirstChild('Head') :: BasePart?;
+		if (not head) then continue end;
+
+		local worldDist: number = ((myHead :: BasePart).Position - (head :: BasePart).Position).Magnitude;
+		if (worldDist > maxDistance) then continue end;
+
+		local screenPos: Vector3, visible: boolean = (camera :: Camera):WorldToViewportPoint((head :: BasePart).Position);
+		if (not visible) then continue end;
+
+		local screenDist: number = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude;
+		if (screenDist < closestScreenDist) then
+			closestScreenDist = screenDist;
+			closestPlayer = player;
+		end;
+	end;
+
+	return closestPlayer;
+end;
+
+function functions.lockOn(toggle: boolean): ()
+	if (not toggle) then
+		maid.lockOn = nil;
+		lockedTarget = nil;
+		return;
+	end;
+
+	lockedTarget = FindClosestToMouse();
+	if (not lockedTarget) then
+		library.flags.lockOn = false;
+		return;
+	end;
+
+	maid.lockOn = RunService.RenderStepped:Connect(function(): ()
+		if (not lockedTarget) then
+			maid.lockOn = nil;
+			return;
+		end;
+
+		local character: Model? = (lockedTarget :: Player).Character;
+		if (not character) then
+			maid.lockOn = nil;
+			lockedTarget = nil;
+			return;
+		end;
+
+		local humanoid: Humanoid? = (character :: Model):FindFirstChildOfClass('Humanoid');
+		if (not humanoid or (humanoid :: Humanoid).Health <= 0) then
+			maid.lockOn = nil;
+			lockedTarget = nil;
+			return;
+		end;
+
+		local head: BasePart? = (character :: Model):FindFirstChild('Head') :: BasePart?;
+		if (not head) then return end;
+
+		local camera: Camera? = workspace.CurrentCamera;
+		if (not camera) then return end;
+
+		local aimPart: string = library.flags.aimPart or 'Head';
+		local hitPos: Vector3 = (head :: BasePart).Position;
+
+		if (aimPart == 'Torso') then
+			hitPos -= Vector3.new(0, 1.5, 0);
+		elseif (aimPart == 'Leg') then
+			hitPos -= Vector3.new(0, 3, 0);
+		end;
+
+		local screenPos: Vector3, visible: boolean = (camera :: Camera):WorldToViewportPoint(hitPos);
+		if (not visible) then return end;
+
+		local mousePos: Vector2 = UserInputService:GetMouseLocation();
+		local delta: Vector2 = (Vector2.new(screenPos.X, screenPos.Y) - mousePos) / 10;
+		mousemoverel(delta.X, delta.Y);
+	end);
+end;
+
 function functions.respawn(bypass: boolean?): ()
 	if (bypass or library:ShowConfirm('Are you sure you want to respawn?')) then
 		LocalPlayer.Character.Humanoid.Health = 0;
@@ -452,6 +560,19 @@ localCheats:AddToggle({
 });
 
 localCheats:AddBind({ text = 'Go To Ground', callback = functions.goToGround, mode = 'hold', nomouse = true });
+
+localCheats:AddToggle({
+	text = 'Lock On',
+	tip = 'toggles lock on to the closest player to your mouse',
+	callback = functions.lockOn
+});
+localCheats:AddSlider({
+	text = 'Lock On Max Distance',
+	value = 200,
+	min = 10,
+	max = 1000,
+	textpos = 2
+});
 
 localCheats:AddDivider('Combat Tweaks');
 
