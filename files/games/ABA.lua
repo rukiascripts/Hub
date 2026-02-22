@@ -448,7 +448,8 @@ function functions.lockOn(toggle: boolean): ()
 		if (not visible) then return end;
 
 		local mousePos: Vector2 = UserInputService:GetMouseLocation();
-		local delta: Vector2 = (Vector2.new(screenPos.X, screenPos.Y) - mousePos) / 10;
+		local smoothness: number = library.flags.lockOnSmoothness or 1;
+		local delta: Vector2 = (Vector2.new(screenPos.X, screenPos.Y) - mousePos) / smoothness;
 		mousemoverel(delta.X, delta.Y);
 	end);
 end;
@@ -470,7 +471,7 @@ library.OnKeyPress:Connect(function(input, gpe): ()
 		if (not hrp) then return end;
 
 		repeat
-			for _, entity in workspace.Mobs:GetChildren() do
+			for _, entity in workspace.Live:GetChildren() do
 				local rootPart: BasePart? = entity:FindFirstChild('HumanoidRootPart');
 				if (not rootPart or rootPart == hrp) then continue end;
 
@@ -580,6 +581,13 @@ localCheats:AddSlider({
 localCheats:AddToggle({
 	text = 'Lock On Check Team',
 	state = true
+});
+localCheats:AddSlider({
+	text = 'Lock On Smoothness',
+	value = 1,
+	min = 1,
+	max = 20,
+	textpos = 2
 });
 
 localCheats:AddDivider('Combat Tweaks');
