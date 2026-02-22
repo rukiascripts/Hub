@@ -1,11 +1,3 @@
---!strict
---!optimize 2
-
---[[
-	@description handles cheats, movement hacks, visuals and gameplay assists for ABA.
-	@author jacob
-]]
-
 local library = sharedRequire('UILibrary.lua');
 
 local AudioPlayer = sharedRequire('utils/AudioPlayer.lua');
@@ -54,7 +46,7 @@ local maid = Maid.new();
 local localCheats = column1:AddSection('Local Cheats');
 local notifier = column1:AddSection('Notifier');
 local playerMods = column1:AddSection('Player Mods');
-local visuals = column2:AddSection('Visuals');
+local _visuals = column2:AddSection('Visuals');
 
 local functions = {};
 
@@ -526,14 +518,16 @@ localCheats:AddButton({
 	callback = functions.respawn
 });
 
-visuals:AddToggle({
-	text = 'Show Mode',
-	tip = 'shows the mode/ultimate charge bar on other players ESP',
-	flag = 'showMode',
-});
+function Utility:renderOverload(data)
+	data.espSettings:AddToggle({
+		text = 'Show Mode',
+		tip = 'shows the mode/ultimate charge percentage on ESP text',
+		flag = 'showMode',
+	});
 
-visuals:AddToggle({
-	text = 'Show Mode Bar',
-	tip = 'renders a visual bar for mode charge next to the ESP box',
-	flag = 'showModeBar',
-});
+	data.espSettings:AddToggle({
+		text = 'Show Mode Bar',
+		tip = 'renders a visual blue bar for mode charge next to the ESP box',
+		flag = 'showModeBar',
+	});
+end;
