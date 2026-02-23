@@ -112,8 +112,10 @@ local library = sharedRequire('UILibrary.lua');
 		end;
 
 		print('Waiting for actors');
-		repeat task.wait(); until readyCount >= NUM_ACTORS;
-		print('All actors have been loaded');
+		task.spawn(function()
+			repeat task.wait(); until readyCount >= NUM_ACTORS;
+			print('All actors have been loaded');
+		end);
 	else
 		local commId, commEvent = getgenv().syn.create_comm_channel();
 
@@ -160,6 +162,10 @@ local library = sharedRequire('UILibrary.lua');
 		local showESPFlag = BaseEsp.Flag;
 
 		function BaseEsp.new(instance, tag, color, isLazy)
+			if (readyCount < #actors) then
+				repeat task.wait(); until readyCount >= #actors;
+			end;
+
 			assert(instance, '#1 instance expected');
 			assert(tag, '#2 tag expected');
 
