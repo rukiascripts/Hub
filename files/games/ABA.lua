@@ -90,6 +90,63 @@ function EntityESP:Plugin()
 	};
 end;
 
+local ZOOM_BF_COOLDOWN: number = 0.15;
+local zoomBfActive: boolean = false;
+local zoomMaid = Maid.new();
+
+function functions.zoomAutoBlackFlash(toggle: boolean): ()
+	if (not toggle) then
+		zoomMaid:DoCleaning();
+		zoomBfActive = false;
+		return;
+	end;
+
+	local camera: Camera = workspace.CurrentCamera;
+	local defaultFov: number = 70;
+	local lastFov: number = camera.FieldOfView;
+	local zooming: boolean = false;
+	local hitMin: boolean = false;
+
+	zoomMaid.fovWatch = camera:GetPropertyChangedSignal('FieldOfView'):Connect(function(): ()
+		local fov: number = camera.FieldOfView;
+
+		-- detect zoom-in starting (FOV dropping significantly below default)
+		if (not zooming and fov < defaultFov - 5) then
+			zooming = true;
+			hitMin = false;
+		end;
+
+		-- detect the FOV bottomed out and is now rising
+		if (zooming and fov < lastFov) then
+			hitMin = false;
+		end;
+
+		if (zooming and not hitMin and fov > lastFov) then
+			hitMin = true;
+		end;
+
+		-- click when FOV is rising back and crosses the threshold
+		if (zooming and hitMin and not zoomBfActive and fov >= defaultFov - 3) then
+			zoomBfActive = true;
+			zooming = false;
+			hitMin = false;
+			mouse1click();
+
+			task.delay(ZOOM_BF_COOLDOWN, function(): ()
+				zoomBfActive = false;
+			end);
+		end;
+
+		-- reset if FOV returns to normal without triggering
+		if (fov >= defaultFov - 1) then
+			zooming = false;
+			hitMin = false;
+		end;
+
+		lastFov = fov;
+	end);
+end;
+
 local NANAMI_CLICK_COOLDOWN: number = 0.15;
 local nanamiTracking: { [Model]: boolean } = {};
 local nanamiMaid = Maid.new();
@@ -641,6 +698,12 @@ automation:AddToggle({
 	text = 'Nanami Auto Black Flash',
 	tip = 'auto clicks when the cutter crosses the goal on nanamis cut gui',
 	callback = functions.nanamiAutoBlackFlash
+});
+
+automation:AddToggle({
+	text = 'Auto Zoom QTE',
+	tip = 'auto clicks when the camera zoom-out returns to normal FOV',
+	callback = functions.zoomAutoBlackFlash
 });
 
 function Utility:renderOverload(data)
