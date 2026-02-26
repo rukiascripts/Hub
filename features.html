@@ -227,11 +227,12 @@
   .dropdown-body {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.35s ease;
+    transition: max-height 0.15s cubic-bezier(0, 1, 0, 1);
   }
 
   .dropdown.open .dropdown-body {
-    max-height: 1200px;
+    max-height: 5000px;
+    transition: max-height 0.4s ease-in;
   }
 
   .dropdown-content {
@@ -290,6 +291,63 @@
     background: rgba(255, 255, 255, 0.08);
   }
 
+  /* === SUB-SECTIONS (collapsible within dropdowns) === */
+  .sub-section {
+    margin-top: 6px;
+  }
+
+  .sub-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
+  }
+
+  .sub-section-header span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b8cff;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    white-space: nowrap;
+  }
+
+  .sub-section-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .sub-section-arrow {
+    font-size: 0.6rem;
+    color: #6b8cff;
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+  }
+
+  .sub-section.open .sub-section-arrow {
+    transform: rotate(180deg);
+  }
+
+  .sub-section-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.15s cubic-bezier(0, 1, 0, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 0;
+  }
+
+  .sub-section.open .sub-section-body {
+    max-height: 2000px;
+    padding-top: 10px;
+    transition: max-height 0.35s ease-in;
+  }
+
   /* === BANNER === */
   .banner {
     position: relative;
@@ -342,50 +400,80 @@
         </div>
         <div class="dropdown-body">
           <div class="dropdown-content">
-            <div class="section-divider"><span>ESP Settings</span></div>
-            <div class="feature-row"><span class="feature-name">Toggle ESP</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Max ESP Distance</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">ESP Font</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Text Size</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Toggle Tracers</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Toggle Boxes</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Show Health Bar</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Show Team</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">ESP Search</span><span class="status-dot green"></span></div>
 
-            <div class="section-divider"><span>ESP Customisation</span></div>
-            <div class="feature-row"><span class="feature-name">Rainbow Enemy Color</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Rainbow Ally Color</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Unlock Tracers</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Ally Color</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Enemy Color</span><span class="status-dot green"></span></div>
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>ESP Settings</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Toggle ESP</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Max ESP Distance</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">ESP Font</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Text Size</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Toggle Tracers</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Toggle Boxes</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Show Health Bar</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Show Team</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">ESP Search</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
 
-            <div class="section-divider"><span>Proximity Arrows</span></div>
-            <div class="feature-row"><span class="feature-name">Proximity Arrows</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Max Distance</span><span class="status-dot green"></span></div>
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>ESP Customisation</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Rainbow Enemy Color</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Rainbow Ally Color</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Unlock Tracers</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Ally Color</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Enemy Color</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
 
-            <div class="section-divider"><span>Aimbot Settings</span></div>
-            <div class="feature-row"><span class="feature-name">Enable</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Field Of View</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Aim Part</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Use Field Of View</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Visibility Check</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Check Team</span><span class="status-dot green"></span></div>
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Proximity Arrows</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Proximity Arrows</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Max Distance</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
 
-            <div class="section-divider"><span>Circle Settings</span></div>
-            <div class="feature-row"><span class="feature-name">Show Circle</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Rainbow Circle</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Fill Circle</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Circle Shape</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Circle Thickness</span><span class="status-dot green"></span></div>
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Aimbot Settings</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Enable</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Field Of View</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Aim Part</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Use Field Of View</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Visibility Check</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Check Team</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
 
-            <div class="section-divider"><span>Aimbot Whitelist</span></div>
-            <div class="feature-row"><span class="feature-name">Add Player</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Remove Player</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Whitelisted Players</span><span class="status-dot green"></span></div>
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Circle Settings</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Show Circle</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Rainbow Circle</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Fill Circle</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Circle Shape</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Circle Thickness</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
 
-            <div class="section-divider"><span>Advanced Whitelist</span></div>
-            <div class="feature-row"><span class="feature-name">Add Player By User Id</span><span class="status-dot green"></span></div>
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Aimbot Whitelist</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Add Player</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Remove Player</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Whitelisted Players</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Advanced Whitelist</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Add Player By User Id</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -398,37 +486,306 @@
         </div>
         <div class="dropdown-body">
           <div class="dropdown-content">
-            <div class="section-divider"><span>Movement</span></div>
-            <div class="feature-row"><span class="feature-name">Fly</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Speedhack</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Infinite Jump</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">No Clip</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Click Destroy</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Go To Ground</span><span class="status-dot green"></span></div>
 
-            <div class="section-divider"><span>Lock On</span></div>
-            <div class="feature-row"><span class="feature-name">Lock On</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Lock On Check Team</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Lock On Max Distance</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Lock On Smoothness</span><span class="status-dot green"></span></div>
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Movement</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Fly</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Speedhack</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Infinite Jump</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">No Clip</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Click Destroy</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Go To Ground</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
 
-            <div class="section-divider"><span>Combat Tweaks</span></div>
-            <div class="feature-row"><span class="feature-name">Attach To Back</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Attach To Back Height</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Attach To Back Space</span><span class="status-dot green"></span></div>
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Lock On</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Lock On</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Lock On Check Team</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Lock On Max Distance</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Lock On Smoothness</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
 
-            <div class="section-divider"><span>Gameplay-Assist</span></div>
-            <div class="feature-row"><span class="feature-name">Respawn</span><span class="status-dot green"></span></div>
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Combat Tweaks</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Attach To Back</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Attach To Back Height</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Attach To Back Space</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
 
-            <div class="section-divider"><span>Automation</span></div>
-            <div class="feature-row"><span class="feature-name">Nanami Auto Black Flash</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Auto Zoom QTE</span><span class="status-dot green"></span></div>
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Gameplay-Assist</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Respawn</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
 
-            <div class="section-divider"><span>ESP</span></div>
-            <div class="feature-row"><span class="feature-name">Show Mode</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Show Mode Bar</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Deidara Mines</span><span class="status-dot green"></span></div>
-            <div class="feature-row"><span class="feature-name">Raiden Claymores</span><span class="status-dot green"></span></div>
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Automation</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Nanami Auto Black Flash</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Auto Zoom QTE</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>ESP</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Show Mode</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Show Mode Bar</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Deidara Mines</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Raiden Claymores</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Rogue Lineage -->
+      <div class="dropdown">
+        <div class="dropdown-header" onclick="this.parentElement.classList.toggle('open')">
+          <span class="dropdown-title">Rogue Lineage</span>
+          <span class="dropdown-arrow">&#9660;</span>
+        </div>
+        <div class="dropdown-body">
+          <div class="dropdown-content">
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Main</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Artifact Notifier</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Illusionist Notifier</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Silent Aim</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Spell Stack</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Spell Stack Keybind</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">AA Gun Counter</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Days Farm</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Satan</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Attach To Back</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Respawn</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Wipe</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Location</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Set Location (RISKY)</span><span class="status-dot yellow"></span></div>
+                <div class="feature-row"><span class="feature-name">Knock Yourself</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Knocked Ownership</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Temp Lock (Hide Trinkets)</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Allow Food</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Server Hop</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Movement</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Mana Adjust</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Speed Hack</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Fly</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Infinite Jump</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Spell Stacking</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">No Stun</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Auto Panic</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Enable</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Misc</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Climb Speed</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Spectate Player</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Inf Mana (Client Side)</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Use Alt Manager To Block</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Max Zoom</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Streamer Mode</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Click Destroy</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Instant Log</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Go To Ground</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Pull To Ground</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Removals</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Remove Kill Bricks</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Anti Hystericus</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Anti Fire</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">No Mental Injuries</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">No Fall Damage</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">No Injuries</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Automation</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Bag Auto Pickup</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Auto Pickup</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Auto Pickup Ingredients</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Auto Bard</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Auto Potion</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Auto Craft</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Auto Click</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Auto Smelt</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Auto Sell</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Spells</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Anti Backfire</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Spell Adjust</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Auto Cast</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Better Mori – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Contrarium – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Gelidus – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Telorum – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Viribus – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Hoppa – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Velo – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Pondus – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Verdien – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Armis – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Celeritas – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Hystericus – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Trickstus – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Percutiens – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Sagitta Sol – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Nocere – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Manus Dei – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Floresco – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Fons Vitae – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Ignis – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Fimbulvetr – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Perflora – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Gate – Use Snap</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Snarvindur – Use Snap</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>NoClip</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Xray</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Enable</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Disable On Water</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Visuals</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">No Fog</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Fullbright</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Disable Ambient Color</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Damage Indicator</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Bots</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Scroom Bot</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Scroom Bot Grip Mode</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Gacha Bot</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Blacksmith Bot</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Auto Sell</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Automatically Rejoin</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Skip Illusionist Server</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Custom Bots</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Dont Pickup Phoenix Down</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Dont Pickup Scrolls</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Player Range Check</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Add Point</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Clear Points</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Remove Last Point</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Preview Bot</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Cancel Preview</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Save Bot</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Load Bot</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Start Bot</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Mana Viewer</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Enable</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Show Mana Helper</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Show Cast Zone</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Show Overlay</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Overlay Scale</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Overlay Offset</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>ESP</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Mobs</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">NPC</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Bags</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Ingredients</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
+            <div class="sub-section" onclick="this.classList.toggle('open')">
+              <div class="sub-section-header"><span>Trinkets</span><span class="sub-section-arrow">&#9660;</span></div>
+              <div class="sub-section-body">
+                <div class="feature-row"><span class="feature-name">Enable</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Max Distance</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Show Distance</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Goblet</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Ring</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Old Ring</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Emerald</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Ruby</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Sapphire</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Diamond</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Rift Gem</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Fairfrozen</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Ninja Scroll</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Old Amulet</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Amulet</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Idol Of The Forgotten</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Opal</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Candy</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Ya'alda</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Phoenix Down</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Ice Essence</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">White King's Amulet</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Lannis Amulet</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Night Stone</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Philosopher's Stone</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Spider Cloak</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Howler Friend</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Scroom Key</span><span class="status-dot green"></span></div>
+                <div class="feature-row"><span class="feature-name">Mysterious Artifact</span><span class="status-dot green"></span></div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
