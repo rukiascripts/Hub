@@ -581,7 +581,7 @@ local function ToggleAutoFocus(toggle: boolean): ()
 				);
 			end;
 		end;
-		task.wait(0.5);
+		task.wait(0.25);
 	until not library.flags.toggleAutoFocus;
 end;
 
@@ -673,10 +673,10 @@ autoFarm:AddSlider({ text = 'Koutarou Priority', value = 2, min = 0, max = 3 });
 autoFarm:AddSlider({ text = 'Nishiki Priority', min = 0, max = 3 });
 
 autoFocus:AddToggle({ text = 'Toggle Auto Focus', callback = ToggleAutoFocus });
-autoFocus:AddSlider({ text = 'Physical', min = 1, max = 10 });
-autoFocus:AddSlider({ text = 'Kagune', min = 1, max = 10 });
-autoFocus:AddSlider({ text = 'Durability', min = 1, max = 10 });
-autoFocus:AddSlider({ text = 'Speed', min = 1, max = 10 });
+autoFocus:AddSlider({ text = 'Physical', min = 0, max = 10 });
+autoFocus:AddSlider({ text = 'Kagune', min = 0, max = 10 });
+autoFocus:AddSlider({ text = 'Durability', min = 0, max = 10 });
+autoFocus:AddSlider({ text = 'Speed', min = 0, max = 10 });
 
 autoTrainer:AddToggle({ text = 'Enable', flag = 'Toggle Auto Trainer', callback = ToggleAutoTrainer });
 
