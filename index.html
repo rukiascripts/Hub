@@ -238,7 +238,260 @@
     <p class="subtitle">Rukia Hub is a premium script hub. For your favorite games and even more, with weekly updates and fast loading times for only 10€ you'll have a premium experience.</p>
 
     <div class="image-frame">
-      <img src="preview.png" alt="Rukia Hub Preview" style="width:100%; display:block;">
+      <img src="<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rukia Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  /* Blue glow strips on left and right sides (Aztup-style) */
+  body::before {
+    content: '';
+    position: fixed;
+    left: 0;
+    top: 80%;
+    transform: translateY(-50%);
+    width: 200px;
+    height: 30vh;
+    background: #296cb9;
+    filter: blur(150px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    right: 0;
+    top: 20%;
+    transform: translateY(-50%);
+    width: 200px;
+    height: 30vh;
+    background: #296cb9;
+    filter: blur(150px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* === NAV === */
+  nav {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+  }
+
+  .nav-logo {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #fff;
+    text-decoration: none;
+  }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .nav-link {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-link:hover { color: #fff; }
+
+  .btn-signin {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 7px 18px;
+    background: #295bb9;
+    border: 1px solid #295bb9;
+    border-radius: 4px;
+    transition: background 0.2s;
+    letter-spacing: 1px;
+  }
+  .btn-signin:hover { background: #1c4fad; }
+
+  /* Disabled states */
+  .nav-link.disabled,
+  .btn-signin.disabled,
+  .buy-btn.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  /* === MAIN === */
+  .main {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 50px 24px 50px;
+    animation: slideUp 0.5s ease-out;
+  }
+
+  .main h1 {
+    font-size: 2.6rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #6b8cff, #a0b4ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .main .subtitle {
+    max-width: 560px;
+    text-align: center;
+    color: #ccc;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    letter-spacing: 0.5px;
+    margin-bottom: 36px;
+  }
+
+  /* === IMAGE PLACEHOLDER === */
+  .image-frame {
+    width: 100%;
+    max-width: 680px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    margin-bottom: 40px;
+  }
+
+  .image-placeholder {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4a5568;
+    font-size: 0.85rem;
+  }
+
+  /* === BUY NOW BUTTON === */
+  .buy-btn {
+    display: inline-block;
+    padding: 12px 40px;
+    background: #295bb9;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+  .buy-btn:hover { background: #1c4fad; }
+
+  /* === DISCORD LINK === */
+  .discord-link {
+    color: #c9d1d9;
+    text-decoration: none;
+    font-size: 1.05rem;
+    font-weight: 600;
+    transition: color 0.2s;
+  }
+  .discord-link:hover { color: #fff; }
+
+  /* === RED BANNER === */
+  .banner {
+    position: relative;
+    z-index: 10;
+    background: #da3633;
+    color: #fff;
+    text-align: center;
+    padding: 12px 24px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    width: 100%;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 600px) {
+    nav { padding: 14px 18px; }
+    .main { padding: 30px 18px 40px; }
+    .main h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+  <nav>
+    <a href="#" class="nav-logo">Rukia Hub</a>
+    <div class="nav-right">
+      <a href="features.html" class="nav-link">Features</a>
+      <a href="#" class="nav-link disabled">Sign Up</a>
+      <a href="#" class="btn-signin disabled">Sign In</a>
+    </div>
+  </nav>
+
+  <div class="main">
+    <h1>Rukia Hub</h1>
+    <p class="subtitle">Rukia Hub is a premium script hub. For your favorite games and even more, with weekly updates and fast loading times for only 10€ you'll have a premium experience.</p>
+
+    <div class="image-frame">
+      <img src="https://github.com/rukiascripts/Hub/blob/main/preview.png?raw=true" alt="Rukia Hub Preview" style="width:100%; display:block;">
+    </div>
+
+    <a href="#" class="buy-btn disabled">Buy Now</a>
+    <a href="#" class="discord-link">Join our Discord</a>
+  </div>
+
+  <div class="banner">
+    Our sales are currently disabled. Thank you for your understanding.
+  </div>
+
+</body>
+</html>
+" alt="Rukia Hub Preview" style="width:100%; display:block;">
     </div>
 
     <a href="#" class="buy-btn disabled">Buy Now</a>
