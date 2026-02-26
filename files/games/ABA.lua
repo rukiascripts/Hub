@@ -641,6 +641,12 @@ localCheats:AddBind({
 	callback = functions.lockOn
 });
 
+localCheats:AddList({
+	text = 'Aim Part',
+	values = {'Head', 'Torso'},
+	value = 'Head'
+});
+
 localCheats:AddToggle({
 	text = 'Lock On Check Team',
 	state = true
