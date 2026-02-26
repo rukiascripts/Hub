@@ -504,7 +504,7 @@ function functions.lockOn(toggle: boolean): ()
 		local camera: Camera? = workspace.CurrentCamera;
 		if (not camera) then return end;
 
-		local aimPart: string = library.flags.aimPart or 'Head';
+		local aimPart: string = library.flags.lockOnAimPart or 'Head';
 		local hitPos: Vector3 = (head :: BasePart).Position;
 
 		if (aimPart == 'Torso') then
@@ -642,7 +642,7 @@ localCheats:AddBind({
 });
 
 localCheats:AddList({
-	text = 'Aim Part',
+	text = 'Lock On Aim Part',
 	values = {'Head', 'Torso'},
 	value = 'Head'
 });
