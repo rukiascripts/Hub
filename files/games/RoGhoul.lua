@@ -581,7 +581,7 @@ local function ToggleAutoFocus(toggle: boolean): ()
 				);
 			end;
 		end;
-		task.wait(0.25);
+		task.wait(0.5);
 	until not library.flags.toggleAutoFocus;
 end;
 
