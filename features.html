@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rukia Hub - Features</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    left: 0;
+    top: 80%;
+    transform: translateY(-50%);
+    width: 200px;
+    height: 30vh;
+    background: #296cb9;
+    filter: blur(150px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    right: 0;
+    top: 20%;
+    transform: translateY(-50%);
+    width: 200px;
+    height: 30vh;
+    background: #296cb9;
+    filter: blur(150px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* === NAV === */
+  nav {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+  }
+
+  .nav-logo {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #fff;
+    text-decoration: none;
+  }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .nav-link {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-link:hover { color: #fff; }
+
+  .btn-signin {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 7px 18px;
+    background: #295bb9;
+    border: 1px solid #295bb9;
+    border-radius: 4px;
+    transition: background 0.2s;
+    letter-spacing: 1px;
+  }
+  .btn-signin:hover { background: #1c4fad; }
+
+  .nav-link.disabled,
+  .btn-signin.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  /* === MAIN === */
+  .main {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 50px 24px 50px;
+    animation: slideUp 0.5s ease-out;
+  }
+
+  .main h1 {
+    font-size: 2.6rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #6b8cff, #a0b4ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .main .subtitle {
+    max-width: 560px;
+    text-align: center;
+    color: #ccc;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    letter-spacing: 0.5px;
+    margin-bottom: 36px;
+  }
+
+  /* === LEGEND === */
+  .legend {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: #aaa;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-dot.green { background: #3fb950; box-shadow: 0 0 6px rgba(63, 185, 80, 0.5); }
+  .legend-dot.yellow { background: #d29922; box-shadow: 0 0 6px rgba(210, 153, 34, 0.5); }
+  .legend-dot.red { background: #f85149; box-shadow: 0 0 6px rgba(248, 81, 73, 0.5); }
+
+  /* === DROPDOWN SYSTEM === */
+  .dropdown-list {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .dropdown {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .dropdown:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .dropdown-header:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .dropdown-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .dropdown-arrow {
+    font-size: 0.75rem;
+    color: #888;
+    transition: transform 0.3s ease;
+  }
+
+  .dropdown.open .dropdown-arrow {
+    transform: rotate(180deg);
+  }
+
+  .dropdown-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+
+  .dropdown.open .dropdown-body {
+    max-height: 1200px;
+  }
+
+  .dropdown-content {
+    padding: 0 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .feature-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+  }
+
+  .feature-name {
+    font-size: 0.85rem;
+    color: #ccc;
+    font-weight: 500;
+  }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-dot.green { background: #3fb950; box-shadow: 0 0 6px rgba(63, 185, 80, 0.5); }
+  .status-dot.yellow { background: #d29922; box-shadow: 0 0 6px rgba(210, 153, 34, 0.5); }
+  .status-dot.red { background: #f85149; box-shadow: 0 0 6px rgba(248, 81, 73, 0.5); }
+
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  .section-divider span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b8cff;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    white-space: nowrap;
+  }
+
+  .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  /* === BANNER === */
+  .banner {
+    position: relative;
+    z-index: 10;
+    background: #da3633;
+    color: #fff;
+    text-align: center;
+    padding: 12px 24px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    width: 100%;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 600px) {
+    nav { padding: 14px 18px; }
+    .main { padding: 30px 18px 40px; }
+    .main h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+  <nav>
+    <a href="index.html" class="nav-logo">Rukia Hub</a>
+    <div class="nav-right">
+      <a href="features.html" class="nav-link">Features</a>
+      <a href="#" class="nav-link disabled">Sign Up</a>
+      <a href="#" class="btn-signin disabled">Sign In</a>
+    </div>
+  </nav>
+
+  <div class="main">
+    <h1>Features</h1>
+    <p class="subtitle">Explore the features available for each game supported by Rukia Hub. We're always expanding our library with weekly updates.</p>
+
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot green"></span> Working</div>
+      <div class="legend-item"><span class="legend-dot yellow"></span> Use Caution</div>
+      <div class="legend-item"><span class="legend-dot red"></span> Not Working</div>
+    </div>
+
+    <div class="dropdown-list">
+
+      <!-- Universal -->
+      <div class="dropdown">
+        <div class="dropdown-header" onclick="this.parentElement.classList.toggle('open')">
+          <span class="dropdown-title">Universal <span style="font-size:0.75rem;font-weight:400;color:#888;">— loads on every game</span></span>
+          <span class="dropdown-arrow">&#9660;</span>
+        </div>
+        <div class="dropdown-body">
+          <div class="dropdown-content">
+            <div class="section-divider"><span>ESP Settings</span></div>
+            <div class="feature-row"><span class="feature-name">Toggle ESP</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Max ESP Distance</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">ESP Font</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Text Size</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Toggle Tracers</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Toggle Boxes</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Show Health Bar</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Show Team</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">ESP Search</span><span class="status-dot green"></span></div>
+
+            <div class="section-divider"><span>ESP Customisation</span></div>
+            <div class="feature-row"><span class="feature-name">Rainbow Enemy Color</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Rainbow Ally Color</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Unlock Tracers</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Ally Color</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Enemy Color</span><span class="status-dot green"></span></div>
+
+            <div class="section-divider"><span>Proximity Arrows</span></div>
+            <div class="feature-row"><span class="feature-name">Proximity Arrows</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Max Distance</span><span class="status-dot green"></span></div>
+
+            <div class="section-divider"><span>Aimbot Settings</span></div>
+            <div class="feature-row"><span class="feature-name">Enable</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Field Of View</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Aim Part</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Use Field Of View</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Visibility Check</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Check Team</span><span class="status-dot green"></span></div>
+
+            <div class="section-divider"><span>Circle Settings</span></div>
+            <div class="feature-row"><span class="feature-name">Show Circle</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Rainbow Circle</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Fill Circle</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Circle Shape</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Circle Thickness</span><span class="status-dot green"></span></div>
+
+            <div class="section-divider"><span>Aimbot Whitelist</span></div>
+            <div class="feature-row"><span class="feature-name">Add Player</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Remove Player</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Whitelisted Players</span><span class="status-dot green"></span></div>
+
+            <div class="section-divider"><span>Advanced Whitelist</span></div>
+            <div class="feature-row"><span class="feature-name">Add Player By User Id</span><span class="status-dot green"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game 1 -->
+      <div class="dropdown">
+        <div class="dropdown-header" onclick="this.parentElement.classList.toggle('open')">
+          <span class="dropdown-title">ABA</span>
+          <span class="dropdown-arrow">&#9660;</span>
+        </div>
+        <div class="dropdown-body">
+          <div class="dropdown-content">
+            <div class="section-divider"><span>Movement</span></div>
+            <div class="feature-row"><span class="feature-name">Fly</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Speedhack</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Infinite Jump</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">No Clip</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Click Destroy</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Go To Ground</span><span class="status-dot green"></span></div>
+
+            <div class="section-divider"><span>Lock On</span></div>
+            <div class="feature-row"><span class="feature-name">Lock On</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Lock On Check Team</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Lock On Max Distance</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Lock On Smoothness</span><span class="status-dot green"></span></div>
+
+            <div class="section-divider"><span>Combat Tweaks</span></div>
+            <div class="feature-row"><span class="feature-name">Attach To Back</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Attach To Back Height</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Attach To Back Space</span><span class="status-dot green"></span></div>
+
+            <div class="section-divider"><span>Gameplay-Assist</span></div>
+            <div class="feature-row"><span class="feature-name">Respawn</span><span class="status-dot green"></span></div>
+
+            <div class="section-divider"><span>Automation</span></div>
+            <div class="feature-row"><span class="feature-name">Nanami Auto Black Flash</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Auto Zoom QTE</span><span class="status-dot green"></span></div>
+
+            <div class="section-divider"><span>ESP</span></div>
+            <div class="feature-row"><span class="feature-name">Show Mode</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Show Mode Bar</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Deidara Mines</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Raiden Claymores</span><span class="status-dot green"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game 2 -->
+      <div class="dropdown">
+        <div class="dropdown-header" onclick="this.parentElement.classList.toggle('open')">
+          <span class="dropdown-title">Fisch</span>
+          <span class="dropdown-arrow">&#9660;</span>
+        </div>
+        <div class="dropdown-body">
+          <div class="dropdown-content">
+            <div class="feature-row"><span class="feature-name">Auto Fish</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Auto Sell</span><span class="status-dot green"></span></div>
+            <div class="feature-row"><span class="feature-name">Instant Catch</span><span class="status-dot yellow"></span></div>
+            <div class="feature-row"><span class="feature-name">Teleport to Spots</span><span class="status-dot yellow"></span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="banner">
+    Our sales are currently disabled. Thank you for your understanding.
+  </div>
+
+</body>
+</html>
