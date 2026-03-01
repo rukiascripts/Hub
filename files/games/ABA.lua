@@ -21,7 +21,7 @@ local fromHex = sharedRequire('utils/fromHex.lua');
 local toCamelCase = sharedRequire('utils/toCamelCase.lua');
 local Webhook = sharedRequire('utils/Webhook.lua');
 
-local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService, VirtualInputManager, ReplicatedFirst, TeleportService, ReplicatedStorage = Services:Get(
+local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService, VirtualInputManager, ReplicatedFirst, TeleportService, ReplicatedStorage, Stats = Services:Get(
 	'Players',
 	'RunService',
 	'UserInputService',
@@ -33,7 +33,8 @@ local Players, RunService, UserInputService, HttpService, CollectionService, Mem
 	'VirtualInputManager',
 	'ReplicatedFirst',
 	'TeleportService',
-	'ReplicatedStorage'
+	'ReplicatedStorage',
+	'Stats'
 );
 
 if (game.PlaceId == 2008032602) then
@@ -529,6 +530,163 @@ function functions.respawn(bypass: boolean?): ()
 	end;
 end;
 
+local BLOCK_KEY: Enum.KeyCode = Enum.KeyCode.F;
+
+-- populate with animation logger, format: ['animId'] = delay in seconds before blocking
+local M1_ANIM_IDS: {[string]: number} = {
+
+};
+
+local isAutoBlocking: boolean = false;
+local autoParryEntityConns: {RBXScriptConnection} = {};
+
+local function blockInput(): ()
+	VirtualInputManager:SendKeyEvent(true, BLOCK_KEY, false, game);
+end;
+
+local function unblockInput(): ()
+	VirtualInputManager:SendKeyEvent(false, BLOCK_KEY, false, game);
+end;
+
+--[[
+	calculates the ping-adjusted wait time for blocking.
+	subtracts a percentage of the player's ping from the raw delay
+]]
+local function calculateParryDelay(rawDelay: number): number
+	if (library.flags.autoParryUseCustomDelay) then
+		return rawDelay + library.flags.autoParryCustomDelay / 1000;
+	end;
+
+	local playerPing: number = Stats.PerformanceStats.Ping:GetValue() / 1000;
+	return rawDelay - (playerPing * (library.flags.autoParryPingCompensation / 100));
+end;
+
+--[[
+	does the actual block: waits the adjusted delay, presses F, holds for
+	the configured duration, then releases
+]]
+local function executeParry(rawDelay: number): ()
+	if (isAutoBlocking) then return end;
+	isAutoBlocking = true;
+
+	local adjustedDelay: number = calculateParryDelay(rawDelay);
+	if (adjustedDelay > 0) then
+		task.wait(adjustedDelay);
+	end;
+
+	blockInput();
+	task.wait(library.flags.autoParryBlockDuration / 1000);
+	unblockInput();
+
+	isAutoBlocking = false;
+end;
+
+--[[
+	hooks a single character in workspace.Live, listens for animations
+	and triggers parry when an M1 anim plays within range
+]]
+local function hookCharacterForParry(character: Model): ()
+	if (not character or character == LocalPlayer.Character) then return end;
+
+	local humanoid = character:FindFirstChildOfClass('Humanoid') or character:WaitForChild('Humanoid', 5) :: Humanoid;
+	if (not humanoid) then return end;
+
+	local player: Player? = Players:GetPlayerFromCharacter(character);
+
+	local conn: RBXScriptConnection = (humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
+		if (isAutoBlocking) then return end;
+
+		-- team check
+		if (player and library.flags.autoParryCheckTeam and Utility:isTeamMate(player :: Player)) then return end;
+
+		-- lock-on requirement check
+		if (library.flags.autoParryRequireLockOn and (not lockedTarget or lockedTarget ~= player)) then return end;
+
+		-- distance check
+		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
+		local theirRoot = character:FindFirstChild('HumanoidRootPart') :: BasePart;
+		if (not myRoot or not theirRoot) then return end;
+
+		local distance: number = ((myRoot :: BasePart).Position - (theirRoot :: BasePart).Position).Magnitude;
+		if (distance > library.flags.autoParryRadius) then return end;
+
+		-- anim id check
+		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or '';
+		local delay: number? = M1_ANIM_IDS[animId];
+		if (not delay) then return end;
+
+		task.spawn(executeParry, delay :: number);
+	end);
+
+	table.insert(autoParryEntityConns, conn);
+end;
+
+function functions.autoParry(toggle: boolean): ()
+	if (not toggle) then
+		maid.autoParry = nil;
+		for _, conn in autoParryEntityConns do
+			conn:Disconnect();
+		end;
+		table.clear(autoParryEntityConns);
+		isAutoBlocking = false;
+		return;
+	end;
+
+	local liveFolder = workspace:WaitForChild('Live');
+
+	for _, character in liveFolder:GetChildren() do
+		task.spawn(hookCharacterForParry, character :: any);
+	end;
+
+	maid.autoParry = liveFolder.ChildAdded:Connect(function(character: Instance): ()
+		task.spawn(hookCharacterForParry, character :: any);
+	end);
+end;
+
+--[[
+	debug logger that prints every animation played by nearby characters.
+	use this to find M1 anim ids to put in M1_ANIM_IDS
+]]
+local animLoggerConns: {RBXScriptConnection} = {};
+
+local function hookCharacterForLogging(character: Model): ()
+	if (not character or character == LocalPlayer.Character) then return end;
+
+	local humanoid = character:FindFirstChildOfClass('Humanoid') or character:WaitForChild('Humanoid', 5) :: Humanoid;
+	if (not humanoid) then return end;
+
+	local charName: string = character.Name;
+
+	local conn: RBXScriptConnection = (humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
+		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId) or 'unknown';
+		local numericId: string = animId:match('%d+') or animId;
+		print(`[Anim Logger] {charName} played {numericId} (Priority: {animationTrack.Priority.Name}, Weight: {animationTrack.WeightCurrent})`);
+	end);
+
+	table.insert(animLoggerConns, conn);
+end;
+
+function functions.animLogger(toggle: boolean): ()
+	if (not toggle) then
+		maid.animLogger = nil;
+		for _, conn in animLoggerConns do
+			conn:Disconnect();
+		end;
+		table.clear(animLoggerConns);
+		return;
+	end;
+
+	local liveFolder = workspace:WaitForChild('Live');
+
+	for _, character in liveFolder:GetChildren() do
+		task.spawn(hookCharacterForLogging, character :: any);
+	end;
+
+	maid.animLogger = liveFolder.ChildAdded:Connect(function(character: Instance): ()
+		task.spawn(hookCharacterForLogging, character :: any);
+	end);
+end;
+
 library.OnKeyPress:Connect(function(input, gpe): ()
 	if (gpe or not library.options.attachToBack) then return end;
 
@@ -700,6 +858,68 @@ localCheats:AddButton({
 	callback = functions.respawn
 });
 
+localCheats:AddDivider('Auto Parry');
+
+localCheats:AddToggle({
+	text = 'Auto Parry',
+	tip = 'blocks when nearby enemies play M1 animations',
+	callback = functions.autoParry
+});
+
+localCheats:AddToggle({
+	text = 'Auto Parry Check Team',
+	tip = 'skip teammates when auto parrying',
+	state = true
+});
+
+localCheats:AddToggle({
+	text = 'Auto Parry Require Lock On',
+	tip = 'only parry the player you have locked on to',
+	state = false
+});
+
+localCheats:AddSlider({
+	text = 'Auto Parry Radius',
+	tip = 'max distance to auto parry',
+	value = 15,
+	min = 5,
+	max = 50,
+	textpos = 2
+});
+
+localCheats:AddSlider({
+	text = 'Auto Parry Block Duration',
+	tip = 'how long to hold block in ms',
+	value = 150,
+	min = 50,
+	max = 500,
+	textpos = 2
+});
+
+localCheats:AddSlider({
+	text = 'Auto Parry Ping Compensation',
+	tip = 'percentage of ping to subtract from delay',
+	value = 50,
+	min = 0,
+	max = 100,
+	textpos = 2
+});
+
+localCheats:AddToggle({
+	text = 'Auto Parry Use Custom Delay',
+	tip = 'use a fixed offset instead of ping-based compensation',
+	state = false
+});
+
+localCheats:AddSlider({
+	text = 'Auto Parry Custom Delay',
+	tip = 'fixed delay offset in ms (added to raw timing)',
+	value = 0,
+	min = -200,
+	max = 200,
+	textpos = 2
+});
+
 automation:AddToggle({
 	text = 'Nanami Auto Black Flash',
 	tip = 'auto clicks when the cutter crosses the goal on nanamis cut gui',
@@ -710,6 +930,12 @@ automation:AddToggle({
 	text = 'Auto Zoom QTE',
 	tip = 'auto clicks when the camera zoom-out returns to normal FOV',
 	callback = functions.zoomAutoBlackFlash
+});
+
+automation:AddToggle({
+	text = 'Animation Logger',
+	tip = 'logs all animations played by nearby characters to console for finding M1 anim IDs',
+	callback = functions.animLogger
 });
 
 function Utility:renderOverload(data)
