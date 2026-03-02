@@ -258,13 +258,68 @@ do -- // One Shot Mobs
 end;
 
 do -- // Farming Helpers
-	--- positions rootPart above/below target facing toward them
-	local function positionAtTarget(rootPart, targetHrp, heightOffset)
+	local ATTACK_KEYS = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four};
+
+	--- welds rootPart to hover above/below target, facing toward them
+	local function weldToTarget(rootPart, targetHrp, heightOffset)
+		local anchorPart = maid.farmAnchor;
+
+		if (not anchorPart) then
+			anchorPart = Instance.new('Part');
+			anchorPart.Name = 'FarmAnchor';
+			anchorPart.Size = Vector3.new(1, 1, 1);
+			anchorPart.Transparency = 1;
+			anchorPart.CanCollide = false;
+			anchorPart.Anchored = true;
+			anchorPart.Parent = workspace;
+			maid.farmAnchor = anchorPart;
+
+			local weld = Instance.new('Weld');
+			weld.Part0 = anchorPart;
+			weld.Part1 = rootPart;
+			weld.Parent = anchorPart;
+			maid.farmWeld = weld;
+		end;
+
 		local targetPos = targetHrp.Position;
 		local offsetPos = targetPos + Vector3.new(0, heightOffset, 0);
-
 		local lookDir = (targetPos - offsetPos).Unit;
-		rootPart.CFrame = CFrame.lookAt(offsetPos, offsetPos + lookDir);
+
+		anchorPart.CFrame = CFrame.lookAt(offsetPos, offsetPos + lookDir);
+	end;
+
+	--- cleans up the farm anchor and weld
+	local function cleanupAnchor()
+		maid.farmWeld = nil;
+		maid.farmAnchor = nil;
+	end;
+
+	--- checks if a skill key is on cooldown
+	local function isOnCooldown(keyName)
+		local character = LocalPlayer.Character;
+		if (not character) then return true end;
+
+		local cooldowns = character:FindFirstChild('Cooldowns');
+		if (not cooldowns) then return false end;
+
+		for _, cd in cooldowns:GetChildren() do
+			if (cd.Name:find(keyName)) then return true end;
+		end;
+
+		return false;
+	end;
+
+	--- presses attack keys that aren't on cooldown
+	local function attackWithKeys()
+		local keyNames = {'Divergent Fist', 'Energy Burst', 'Manji Kick', 'Phantom Burst'};
+
+		for i, keyCode in ATTACK_KEYS do
+			if (not isOnCooldown(keyNames[i])) then
+				VirtualInputManager:SendKeyEvent(true, keyCode, false, game);
+				task.wait(0.05);
+				VirtualInputManager:SendKeyEvent(false, keyCode, false, game);
+			end;
+		end;
 	end;
 
 	--- finds a live NPC model inside an Info folder under npcSpawns
@@ -307,6 +362,13 @@ do -- // Farming Helpers
 		return nil;
 	end;
 
+	--- gets the CFrame of an instance whether it's a BasePart or Model
+	local function getCFrame(instance)
+		if (instance:IsA('BasePart')) then return instance.CFrame end;
+		if (instance:IsA('Model')) then return instance:GetPivot() end;
+		return nil;
+	end;
+
 	--- collects drops from a specific Drops folder
 	local function collectDropsFrom(dropsFolder, rootPart)
 		if (not dropsFolder or not rootPart) then return end;
@@ -317,7 +379,10 @@ do -- // Farming Helpers
 			local dropParent = drop.Parent;
 			if (not dropParent) then continue end;
 
-			rootPart.CFrame = dropParent.CFrame;
+			local cf = getCFrame(dropParent);
+			if (not cf) then continue end;
+
+			rootPart.CFrame = cf;
 			fireproximityprompt(drop);
 			dropsCollected += 1;
 			task.wait(DROPS_PICKUP_DELAY);
@@ -327,6 +392,7 @@ do -- // Farming Helpers
 	function functions.autoFarmNPCs(toggle)
 		if (not toggle) then
 			maid.autoFarmNPCs = nil;
+			cleanupAnchor();
 			return;
 		end;
 
@@ -336,6 +402,7 @@ do -- // Farming Helpers
 
 				-- bosses take priority when both are enabled
 				if (library.flags.autoFarmBosses and findBoss()) then
+					cleanupAnchor();
 					task.wait(0.5);
 					continue;
 				end;
@@ -344,14 +411,20 @@ do -- // Farming Helpers
 				if (not rootPart) then continue end;
 
 				local mob, hrp, humanoid = findNPC();
-				if (not mob or not hrp) then continue end;
+				if (not mob or not hrp) then
+					cleanupAnchor();
+					continue;
+				end;
 
 				local heightOffset = library.flags.farmHeightOffset;
 
 				repeat
-					positionAtTarget(rootPart, hrp, heightOffset);
+					weldToTarget(rootPart, hrp, heightOffset);
+					attackWithKeys();
 					task.wait(FARM_TICK_DELAY);
 				until not humanoid or humanoid.Health <= 0 or not library.flags.autoFarmNPCs or not hrp.Parent;
+
+				cleanupAnchor();
 
 				if (humanoid and humanoid.Health <= 0) then
 					killCount += 1;
@@ -364,12 +437,15 @@ do -- // Farming Helpers
 					end;
 				end;
 			end;
+
+			cleanupAnchor();
 		end);
 	end;
 
 	function functions.autoFarmBosses(toggle)
 		if (not toggle) then
 			maid.autoFarmBosses = nil;
+			cleanupAnchor();
 			return;
 		end;
 
@@ -382,12 +458,14 @@ do -- // Farming Helpers
 
 				local selectedZone = library.flags.bossZone;
 				if (not selectedZone or selectedZone == 'None') then
+					cleanupAnchor();
 					task.wait(1);
 					continue;
 				end;
 
 				local mob, hrp, humanoid = findBoss();
 				if (not mob or not hrp) then
+					cleanupAnchor();
 					task.wait(1);
 					continue;
 				end;
@@ -395,9 +473,12 @@ do -- // Farming Helpers
 				local heightOffset = library.flags.farmHeightOffset;
 
 				repeat
-					positionAtTarget(rootPart, hrp, heightOffset);
+					weldToTarget(rootPart, hrp, heightOffset);
+					attackWithKeys();
 					task.wait(FARM_TICK_DELAY);
 				until not humanoid or humanoid.Health <= 0 or not library.flags.autoFarmBosses or not hrp.Parent;
+
+				cleanupAnchor();
 
 				if (humanoid and humanoid.Health <= 0) then
 					bossKillCount += 1;
@@ -410,6 +491,8 @@ do -- // Farming Helpers
 					end;
 				end;
 			end;
+
+			cleanupAnchor();
 		end);
 	end;
 
@@ -433,7 +516,10 @@ do -- // Farming Helpers
 					local dropParent = child.Parent;
 					if (not dropParent) then continue end;
 
-					rootPart.CFrame = dropParent.CFrame;
+					local cf = getCFrame(dropParent);
+					if (not cf) then continue end;
+
+					rootPart.CFrame = cf;
 					fireproximityprompt(child);
 					dropsCollected += 1;
 					task.wait(DROPS_PICKUP_DELAY);
