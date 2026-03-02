@@ -914,13 +914,13 @@ autoParrySection:AddToggle({
 });
 
 autoParrySection:AddToggle({
-	text = 'Auto Parry Require Lock On',
+	text = 'Auto Parry Lock On',
 	tip = 'only parry the player you have locked on to',
 	state = false
 });
 
 autoParrySection:AddSlider({
-	text = 'Auto Parry Radius',
+	text = 'Radius',
 	tip = 'max distance to auto parry',
 	value = 15,
 	min = 5,
@@ -929,7 +929,7 @@ autoParrySection:AddSlider({
 });
 
 autoParrySection:AddSlider({
-	text = 'Auto Parry Block Duration',
+	text = 'Block Duration',
 	tip = 'how long to hold block in ms',
 	value = 150,
 	min = 50,
@@ -938,7 +938,7 @@ autoParrySection:AddSlider({
 });
 
 autoParrySection:AddSlider({
-	text = 'Auto Parry Ping Compensation',
+	text = 'Ping Compensation',
 	tip = 'percentage of ping to subtract from delay',
 	value = 100,
 	min = 0,
@@ -947,7 +947,7 @@ autoParrySection:AddSlider({
 });
 
 autoParrySection:AddToggle({
-	text = 'Auto Parry Use Custom Delay',
+	text = 'Auto Parry Custom Delay',
 	tip = 'use a fixed offset instead of ping-based compensation',
 	state = false
 });
