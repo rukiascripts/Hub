@@ -57,6 +57,7 @@ local column1, column2 = unpack(library.columns);
 local maid = Maid.new();
 
 local localCheats = column1:AddSection('Local Cheats');
+local autoParrySection = column2:AddSection('Auto Parry');
 local automation = column2:AddSection('Automation');
 
 local functions = {};
@@ -174,6 +175,7 @@ local function WatchCutter(character: Model, cutter: GuiObject, goal: GuiObject,
 		local goalX: number = goal.AbsolutePosition.X;
 
 		if (lastX and (lastX :: number) <= goalX and cutterX > goalX) then
+			task.wait(math.random() * 0.04);
 			mouse1click();
 
 			if (connection) then
@@ -205,7 +207,7 @@ local function TryAttach(character: Model, gui: BillboardGui): ()
 
 	local mainBar: Frame? = gui:FindFirstChild('MainBar') :: Frame?;
 	if (not mainBar) then
-		local child: Instance = gui:WaitForChild('MainBar', 1);
+		local child: Instance? = gui:WaitForChild('MainBar', 1);
 		if (not child) then
 			return;
 		end;
@@ -216,7 +218,7 @@ local function TryAttach(character: Model, gui: BillboardGui): ()
 	local goal: GuiObject? = (mainBar :: Frame):FindFirstChild('Goal') :: GuiObject?;
 
 	if (not cutter) then
-		local c: Instance = (mainBar :: Frame):WaitForChild('Cutter', 1);
+		local c: Instance? = (mainBar :: Frame):WaitForChild('Cutter', 1);
 		if (not c) then
 			return;
 		end;
@@ -224,7 +226,7 @@ local function TryAttach(character: Model, gui: BillboardGui): ()
 	end;
 
 	if (not goal) then
-		local g: Instance = (mainBar :: Frame):WaitForChild('Goal', 1);
+		local g: Instance? = (mainBar :: Frame):WaitForChild('Goal', 1);
 		if (not g) then
 			return;
 		end;
@@ -345,9 +347,9 @@ function functions.infiniteJump(toggle: boolean): ()
 	if (not toggle) then return end;
 
 	repeat
-		local rootPart: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+		local rootPart: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
 		if (rootPart and UserInputService:IsKeyDown(Enum.KeyCode.Space)) then
-			(rootPart :: BasePart).Velocity = Vector3.new((rootPart :: BasePart).Velocity.X, library.flags.infiniteJumpHeight, (rootPart :: BasePart).Velocity.Z);
+			(rootPart :: any).Velocity = Vector3.new((rootPart :: any).Velocity.X, library.flags.infiniteJumpHeight, (rootPart :: any).Velocity.Z);
 		end;
 		task.wait(0.1);
 	until not library.flags.infiniteJump;
@@ -355,17 +357,17 @@ end;
 
 function functions.goToGround(): ()
 	local params: RaycastParams = RaycastParams.new();
-	params.FilterDescendantsInstances = {workspace.Mobs};
-	params.FilterType = Enum.RaycastFilterType.Blacklist;
+	params.FilterDescendantsInstances = {(workspace :: any).Mobs};
+	params.FilterType = Enum.RaycastFilterType.Exclude;
 
-	local hrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+	local hrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
 	if (not hrp or not (hrp :: BasePart).Parent) then return end;
 
 	local floor: RaycastResult? = workspace:Raycast((hrp :: BasePart).Position, Vector3.new(0, -1000, 0), params);
 	if (not floor or not (floor :: RaycastResult).Instance) then return end;
 
 	(hrp :: BasePart).CFrame *= CFrame.new(0, -((hrp :: BasePart).Position.Y - (floor :: RaycastResult).Position.Y) + 3, 0);
-	(hrp :: BasePart).Velocity *= Vector3.new(1, 0, 1);
+	(hrp :: any).Velocity *= Vector3.new(1, 0, 1);
 end;
 
 function functions.noClip(toggle: boolean): ()
@@ -383,7 +385,8 @@ function functions.noClip(toggle: boolean): ()
 
 	maid.noClip = RunService.Stepped:Connect(function(): ()
 		local myCharacterParts = Utility:getPlayerData().parts;
-		local isKnocked = LocalPlayer.Character:FindFirstChild('Knocked') or LocalPlayer.Character:FindFirstChild('Ragdolled') or LocalPlayer.Character:FindFirstChild('ActuallyRagdolled');
+		local character = LocalPlayer.Character :: Model;
+		local isKnocked = character:FindFirstChild('Knocked') or character:FindFirstChild('Ragdolled') or character:FindFirstChild('ActuallyRagdolled');
 		local disableNoClipWhenKnocked: boolean = library.flags.disableNoClipWhenKnocked;
 
 		for _, v in myCharacterParts do
@@ -526,15 +529,21 @@ end;
 
 function functions.respawn(bypass: boolean?): ()
 	if (bypass or library:ShowConfirm('Are you sure you want to respawn?')) then
-		LocalPlayer.Character.Humanoid.Health = 0;
+		(LocalPlayer.Character :: any).Humanoid.Health = 0;
 	end;
 end;
 
 local BLOCK_KEY: Enum.KeyCode = Enum.KeyCode.F;
 
--- populate with animation logger, format: ['animId'] = delay in seconds before blocking
+-- m1 anim ids collected from anim logger, delay in seconds before blocking
 local M1_ANIM_IDS: {[string]: number} = {
-
+	['1461128166'] = 0.2,
+	['1461128859'] = 0.2,
+	['1461136273'] = 0.2,
+	['1461136875'] = 0.2,
+	['1461137417'] = 0.2,
+	['1461145506'] = 0.2,
+	['1461252313'] = 0.2,
 };
 
 local isAutoBlocking: boolean = false;
@@ -561,21 +570,26 @@ local function calculateParryDelay(rawDelay: number): number
 	return rawDelay - (playerPing * (library.flags.autoParryPingCompensation / 100));
 end;
 
+-- adds random jitter so timing doesnt look robotic
+local function humanize(base: number, variance: number): number
+	return base + (math.random() * 2 - 1) * variance;
+end;
+
 --[[
-	does the actual block: waits the adjusted delay, presses F, holds for
-	the configured duration, then releases
+	does the actual block: waits the adjusted delay with some jitter,
+	presses F, holds for a slightly randomized duration, then releases
 ]]
 local function executeParry(rawDelay: number): ()
 	if (isAutoBlocking) then return end;
 	isAutoBlocking = true;
 
-	local adjustedDelay: number = calculateParryDelay(rawDelay);
+	local adjustedDelay: number = humanize(calculateParryDelay(rawDelay), 0.03);
 	if (adjustedDelay > 0) then
 		task.wait(adjustedDelay);
 	end;
 
 	blockInput();
-	task.wait(library.flags.autoParryBlockDuration / 1000);
+	task.wait(humanize(library.flags.autoParryBlockDuration / 1000, 0.02));
 	unblockInput();
 
 	isAutoBlocking = false;
@@ -643,48 +657,81 @@ function functions.autoParry(toggle: boolean): ()
 	end);
 end;
 
---[[
-	debug logger that prints every animation played by nearby characters.
-	use this to find M1 anim ids to put in M1_ANIM_IDS
-]]
-local animLoggerConns: {RBXScriptConnection} = {};
+local animLoggerWindow = TextLogger.new({
+	title = 'Animation Logger',
+	buttons = {'Copy Animation Id', 'Add To Ignore List', 'Delete Log', 'Clear All'}
+});
 
-local function hookCharacterForLogging(character: Model): ()
-	if (not character or character == LocalPlayer.Character) then return end;
+animLoggerWindow.ignoreList = {};
 
-	local humanoid = character:FindFirstChildOfClass('Humanoid') or character:WaitForChild('Humanoid', 5) :: Humanoid;
-	if (not humanoid) then return end;
-
-	local charName: string = character.Name;
-
-	local conn: RBXScriptConnection = (humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
-		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId) or 'unknown';
-		local numericId: string = animId:match('%d+') or animId;
-		print(`[Anim Logger] {charName} played {numericId} (Priority: {animationTrack.Priority.Name}, Weight: {animationTrack.WeightCurrent})`);
-	end);
-
-	table.insert(animLoggerConns, conn);
-end;
+local animLoggerMaid = Maid.new();
 
 function functions.animLogger(toggle: boolean): ()
+	animLoggerWindow:SetVisible(toggle);
+
 	if (not toggle) then
-		maid.animLogger = nil;
-		for _, conn in animLoggerConns do
-			conn:Disconnect();
-		end;
-		table.clear(animLoggerConns);
+		animLoggerMaid:DoCleaning();
 		return;
 	end;
 
 	local liveFolder = workspace:WaitForChild('Live');
 
-	for _, character in liveFolder:GetChildren() do
-		task.spawn(hookCharacterForLogging, character :: any);
+	local function onEntityAdded(entity: Instance): ()
+		if (entity == LocalPlayer.Character) then return end;
+
+		local rootPart = entity:WaitForChild('HumanoidRootPart', 10);
+		if (not rootPart) then return end;
+
+		local humanoid = entity:WaitForChild('Humanoid', 10);
+		if (not humanoid) then return end;
+
+		local entityMaid = Maid.new();
+
+		entityMaid:GiveTask((entity :: any).Destroying:Connect(function(): ()
+			entityMaid:DoCleaning();
+		end));
+
+		entityMaid:GiveTask((humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
+			local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or 'unknown';
+
+			if (table.find(animLoggerWindow.ignoreList, animId)) then return end;
+
+			local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
+			if (myRoot and (myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude > (library.flags.animLoggerMaxRange or 100) then
+				return;
+			end;
+
+			animLoggerWindow:AddText({
+				text = `Animation <font color='#2ecc71'>{animId}</font> played from <font color='#3498db'>{entity.Name}</font>`,
+				animationId = animId,
+			});
+		end));
+
+		animLoggerMaid:GiveTask(function(): ()
+			entityMaid:DoCleaning();
+		end);
 	end;
 
-	maid.animLogger = liveFolder.ChildAdded:Connect(function(character: Instance): ()
-		task.spawn(hookCharacterForLogging, character :: any);
-	end);
+	animLoggerMaid:GiveTask(liveFolder.ChildAdded:Connect(onEntityAdded));
+
+	for _, entity in liveFolder:GetChildren() do
+		task.spawn(onEntityAdded, entity);
+	end;
+
+	animLoggerMaid:GiveTask(animLoggerWindow.OnClick:Connect(function(actionName, context)
+		if (actionName == 'Add To Ignore List' and not table.find(animLoggerWindow.ignoreList, context.animationId)) then
+			table.insert(animLoggerWindow.ignoreList, context.animationId);
+		elseif (actionName == 'Delete Log') then
+			context:Destroy();
+		elseif (actionName == 'Copy Animation Id') then
+			setclipboard(context.animationId);
+		elseif (actionName == 'Clear All') then
+			for _, v in animLoggerWindow.allLogs do
+				v.label:Destroy();
+			end;
+			table.clear(animLoggerWindow.allLogs);
+		end;
+	end));
 end;
 
 library.OnKeyPress:Connect(function(input, gpe): ()
@@ -692,14 +739,14 @@ library.OnKeyPress:Connect(function(input, gpe): ()
 
 	local key = library.options.attachToBack.key;
 	if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
-		local hrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+		local hrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
 		local closest, closestDistance = nil, math.huge;
 
 		if (not hrp) then return end;
 
 		repeat
-			for _, entity in workspace.Live:GetChildren() do
-				local rootPart: BasePart? = entity:FindFirstChild('HumanoidRootPart');
+			for _, entity in (workspace :: any).Live:GetChildren() do
+				local rootPart: BasePart? = entity:FindFirstChild('HumanoidRootPart') :: BasePart?;
 				if (not rootPart or rootPart == hrp) then continue end;
 
 				local distance: number = ((rootPart :: BasePart).Position - (hrp :: BasePart).Position).Magnitude;
@@ -858,27 +905,25 @@ localCheats:AddButton({
 	callback = functions.respawn
 });
 
-localCheats:AddDivider('Auto Parry');
-
-localCheats:AddToggle({
+autoParrySection:AddToggle({
 	text = 'Auto Parry',
 	tip = 'blocks when nearby enemies play M1 animations',
 	callback = functions.autoParry
 });
 
-localCheats:AddToggle({
+autoParrySection:AddToggle({
 	text = 'Auto Parry Check Team',
 	tip = 'skip teammates when auto parrying',
 	state = true
 });
 
-localCheats:AddToggle({
+autoParrySection:AddToggle({
 	text = 'Auto Parry Require Lock On',
 	tip = 'only parry the player you have locked on to',
 	state = false
 });
 
-localCheats:AddSlider({
+autoParrySection:AddSlider({
 	text = 'Auto Parry Radius',
 	tip = 'max distance to auto parry',
 	value = 15,
@@ -887,7 +932,7 @@ localCheats:AddSlider({
 	textpos = 2
 });
 
-localCheats:AddSlider({
+autoParrySection:AddSlider({
 	text = 'Auto Parry Block Duration',
 	tip = 'how long to hold block in ms',
 	value = 150,
@@ -896,7 +941,7 @@ localCheats:AddSlider({
 	textpos = 2
 });
 
-localCheats:AddSlider({
+autoParrySection:AddSlider({
 	text = 'Auto Parry Ping Compensation',
 	tip = 'percentage of ping to subtract from delay',
 	value = 50,
@@ -905,18 +950,33 @@ localCheats:AddSlider({
 	textpos = 2
 });
 
-localCheats:AddToggle({
+autoParrySection:AddToggle({
 	text = 'Auto Parry Use Custom Delay',
 	tip = 'use a fixed offset instead of ping-based compensation',
 	state = false
 });
 
-localCheats:AddSlider({
+autoParrySection:AddSlider({
 	text = 'Auto Parry Custom Delay',
 	tip = 'fixed delay offset in ms (added to raw timing)',
 	value = 0,
 	min = -200,
 	max = 200,
+	textpos = 2
+});
+
+autoParrySection:AddToggle({
+	text = 'Animation Logger',
+	tip = 'opens a gui logger with copy/ignore buttons for finding M1 anim IDs',
+	callback = functions.animLogger
+});
+
+autoParrySection:AddSlider({
+	text = 'Anim Logger Max Range',
+	tip = 'only log animations from entities within this distance',
+	value = 100,
+	min = 10,
+	max = 500,
 	textpos = 2
 });
 
@@ -930,12 +990,6 @@ automation:AddToggle({
 	text = 'Auto Zoom QTE',
 	tip = 'auto clicks when the camera zoom-out returns to normal FOV',
 	callback = functions.zoomAutoBlackFlash
-});
-
-automation:AddToggle({
-	text = 'Animation Logger',
-	tip = 'logs all animations played by nearby characters to console for finding M1 anim IDs',
-	callback = functions.animLogger
 });
 
 function Utility:renderOverload(data)
