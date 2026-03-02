@@ -543,9 +543,13 @@ local M1_ANIM_IDS: {[string]: number} = {
 	['1461136273'] = 0, -- m1 3 fist
 	['1461145506'] = 0, -- m1 4 fist (non-uptilt version)
 	['1461136875'] = 0, -- m1 4 fist (uptilt version)
-	-- final m1 ground no space ['1461137417'] = 0,
-	-- final m1 ground with space ['1461252313'] = 0,
-	-- final m1 air no space ['1451127258'] = 0,
+
+	-- sword animations
+
+	['1470422387'] = 0, -- m1 1
+	['1470439852'] = 0, -- m1 2
+	['1470449816'] = 0, -- m1 3
+	['1470447472'] = 0, -- m1 4
 };
 
 local isAutoBlocking: boolean = false;
