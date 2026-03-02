@@ -16,8 +16,8 @@
 		local self = setmetatable({}, Signal)
 
 		self._bindableEvent = Instance.new("BindableEvent")
-		self._argData = nil
-		self._argCount = nil -- Prevent edge case of :Fire("A", nil) --> "A" instead of "A", nil
+		self._argMap = {}
+		self._fireId = 0
 
 		return self
 	end
@@ -31,10 +31,11 @@
 	-- @param ... Variable arguments to pass to handler
 	-- @treturn nil
 function Signal:Fire(...)
-    self._argData = {...}
-    self._argCount = select("#", ...)
+    local id = self._fireId + 1
+    self._fireId = id
+    self._argMap[id] = {n = select("#", ...), ...}
 
-    self._bindableEvent:Fire()
+    self._bindableEvent:Fire(id)
 end
 
 	--- Connect a new handler to the event. Returns a connection object that can be disconnected.
@@ -50,7 +51,11 @@ function Signal:Connect(handler)
     end
 
     return self._bindableEvent.Event:Connect(function()
-        handler(unpack(self._argData, 1, self._argCount))
+        local id = self._fireId
+        local args = self._argMap[id]
+        if (not args) then return end
+        self._argMap[id] = nil
+        handler(unpack(args, 1, args.n))
     end)
 end
 
@@ -59,7 +64,11 @@ end
 	-- @treturn ... Variable arguments from connection
 function Signal:Wait()
     self._bindableEvent.Event:Wait()
-    return unpack(self._argData, 1, self._argCount)
+    local id = self._fireId
+    local args = self._argMap[id]
+    if (not args) then return end
+    self._argMap[id] = nil
+    return unpack(args, 1, args.n)
 end
 
 
@@ -71,8 +80,8 @@ end
 			self._bindableEvent = nil
 		end
 
-		self._argData = nil
-		self._argCount = nil
+		self._argMap = nil
+		self._fireId = nil
 	end
 
 return Signal
