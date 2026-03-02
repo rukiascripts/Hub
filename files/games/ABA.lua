@@ -536,14 +536,14 @@ local BLOCK_KEY: Enum.KeyCode = Enum.KeyCode.F;
 
 -- m1 anim ids collected from anim logger, delay in seconds before blocking
 local M1_ANIM_IDS: {[string]: number} = {
-	['1461128166'] = 0.2, -- m1 1 fist
-	['1461128859'] = 0.2, -- m1 2 fist
-	['1461136273'] = 0.2, -- m1 3 fist
-	['1461145506'] = 0.2, -- m1 4 fist (non-uptilt version)
-	['1461136875'] = 0.2, -- m1 4 fist (uptilt version)
-	-- final m1 ground no space ['1461137417'] = 0.2,
-	-- final m1 ground with space ['1461252313'] = 0.2, 
-	-- final m1 air no space ['1451127258'] = 0.2,
+	['1461128166'] = 0, -- m1 1 fist
+	['1461128859'] = 0, -- m1 2 fist
+	['1461136273'] = 0, -- m1 3 fist
+	['1461145506'] = 0, -- m1 4 fist (non-uptilt version)
+	['1461136875'] = 0, -- m1 4 fist (uptilt version)
+	-- final m1 ground no space ['1461137417'] = 0,
+	-- final m1 ground with space ['1461252313'] = 0,
+	-- final m1 air no space ['1451127258'] = 0,
 };
 
 local isAutoBlocking: boolean = false;
@@ -940,7 +940,7 @@ autoParrySection:AddSlider({
 autoParrySection:AddSlider({
 	text = 'Auto Parry Ping Compensation',
 	tip = 'percentage of ping to subtract from delay',
-	value = 50,
+	value = 100,
 	min = 0,
 	max = 100,
 	textpos = 2
