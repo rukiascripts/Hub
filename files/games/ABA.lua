@@ -37,16 +37,18 @@ local Players, RunService, UserInputService, HttpService, CollectionService, Mem
 	'Stats'
 );
 
-if (game.PlaceId == 2008032602) then
-     ToastNotif.new({
-        text = 'Script will not run in matchmaking!',
-        duration = 5
-    });
+local BLOCKED_PLACES: {[number]: string} = {
+	[2008032602] = 'Script will not run in matchmaking!',
+	[5411459567] = 'Script will not run in AFK World!',
+};
 
-    task.delay(0.005, function()
-        library:Unload();
-    end);
-    return;
+local blockedMessage: string? = BLOCKED_PLACES[game.PlaceId];
+if (blockedMessage) then
+	ToastNotif.new({ text = blockedMessage :: string, duration = 5 });
+	task.delay(0.005, function(): ()
+		library:Unload();
+	end);
+	return;
 end;
 
 local LocalPlayer: Player = Players.LocalPlayer;
