@@ -61,6 +61,7 @@ local maid = Maid.new();
 local localCheats = column1:AddSection('Local Cheats');
 local autoParrySection = column2:AddSection('Auto Parry');
 local automation = column2:AddSection('Automation');
+local gameplayAssist = column2:AddSection('Gameplay-Assist');
 
 local functions = {};
 
@@ -565,6 +566,7 @@ local M1_ANIM_IDS: {[string]: number} = {
 	['1470439852'] = 0, -- m1 2
 	['1470449816'] = 0, -- m1 3
 	['1470447472'] = 0, -- m1 4
+	['1470472673'] = 0, -- m1 4 (uptilt version)
 
 	-- kirito
 
@@ -665,6 +667,38 @@ local M1_ANIM_IDS: {[string]: number} = {
 	['14272246471'] = 0, -- m1 2
 	['14272266117'] = 0, -- m1 3
 	['14272296104'] = 0, -- m1 4
+
+	-- usopp
+
+	['8328283823'] = 0, -- m1 1
+
+	-- jotaro (stand m1s shared with fist/shanks)
+
+	-- kisame (all m1s shared with sword)
+
+	-- raiden (m1 4 uptilt shared with fist)
+
+	['128980851549763'] = 0, -- m1 1
+	['122609664088954'] = 0, -- m1 2
+	['75267484294449'] = 0, -- m1 3
+
+	-- killer b
+
+	['14436312737'] = 0, -- m1 1
+	['14437145085'] = 0, -- m1 2
+	['14437148019'] = 0, -- m1 3
+	['14437150122'] = 0, -- m1 4
+
+	-- sinon
+
+	['10598162443'] = 0, -- m1 1 / m1 4 (uptilt version)
+	['10599060714'] = 0, -- m1 2
+	['10599128601'] = 0, -- m1 3
+	['10599110274'] = 0, -- m1 4
+
+	-- nanami (shared m1 3-4 with sword)
+	
+	['92901308072582'] = 0, -- m1 1
 };
 
 local isAutoBlocking: boolean = false;
@@ -754,9 +788,57 @@ local function hookCharacterForParry(character: Model): ()
 	end);
 end;
 
+local function hookStandForParry(stand: Model): ()
+	-- skip own stand
+	if (stand.Name == LocalPlayer.Name) then return end;
+
+	local humanoid: Humanoid? = (stand:FindFirstChildOfClass('Humanoid') or stand:WaitForChild('Humanoid', 5)) :: any;
+	if (not humanoid) then return end;
+
+	local rootPart: BasePart? = stand:FindFirstChild('HumanoidRootPart') :: BasePart?;
+	if (not rootPart) then return end;
+
+	local entityMaid = Maid.new();
+
+	entityMaid:GiveTask((stand :: any).Destroying:Connect(function(): ()
+		entityMaid:DoCleaning();
+	end));
+
+	local standOwner: Player? = Players:FindFirstChild(stand.Name) :: any;
+
+	entityMaid:GiveTask((humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
+		if (isAutoBlocking) then return end;
+
+		-- team check
+		if (standOwner and library.flags.autoParryCheckTeam and Utility:isTeamMate(standOwner :: Player)) then return end;
+
+		-- lock-on requirement check (match stand name to locked player name)
+		if (library.flags.autoParryLockOn and (not lockedTarget or (lockedTarget :: Player).Name ~= stand.Name)) then return end;
+
+		-- distance check
+		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
+		if (not myRoot) then return end;
+
+		local distance: number = ((myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude;
+		if (distance > library.flags.radius) then return end;
+
+		-- anim id check
+		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or '';
+		local delay: number? = M1_ANIM_IDS[animId];
+		if (not delay) then return end;
+
+		task.spawn(executeParry, delay :: number);
+	end));
+
+	autoParryMaid:GiveTask(function(): ()
+		entityMaid:DoCleaning();
+	end);
+end;
+
 function functions.autoParry(toggle: boolean): ()
 	if (not toggle) then
 		maid.autoParry = nil;
+		maid.autoParryStands = nil;
 		autoParryMaid:DoCleaning();
 		isAutoBlocking = false;
 		return;
@@ -771,6 +853,17 @@ function functions.autoParry(toggle: boolean): ()
 	maid.autoParry = liveFolder.ChildAdded:Connect(function(character: Instance): ()
 		task.spawn(hookCharacterForParry, character :: any);
 	end);
+
+	local standsFolder = workspace:FindFirstChild('Stands');
+	if (standsFolder) then
+		for _, stand in standsFolder:GetChildren() do
+			task.spawn(hookStandForParry, stand :: any);
+		end;
+
+		maid.autoParryStands = standsFolder.ChildAdded:Connect(function(stand: Instance): ()
+			task.spawn(hookStandForParry, stand :: any);
+		end);
+	end;
 end;
 
 local animLoggerWindow = TextLogger.new({
@@ -1059,18 +1152,10 @@ localCheats:AddSlider({
 });
 
 
-localCheats:AddDivider('Gameplay-Assist');
-
-localCheats:AddToggle({
+gameplayAssist:AddToggle({
 	text = 'Anti Blind',
 	tip = 'stops krillin and misaka blind',
 	callback = functions.antiBlind
-});
-
-localCheats:AddButton({
-	text = 'Respawn',
-	tip = 'Kills the character prompting it to respawn',
-	callback = functions.respawn
 });
 
 autoParrySection:AddToggle({
