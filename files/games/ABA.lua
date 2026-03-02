@@ -534,15 +534,30 @@ function functions.respawn(bypass: boolean?): ()
 	end;
 end;
 
+function functions.antiBlind(toggle: boolean): ()
+	if (not toggle) then
+		maid.antiBlind = nil;
+		return;
+	end;
+
+	maid.antiBlind = (LocalPlayer :: any).PlayerGui.ChildAdded:Connect(function(child: Instance): ()
+		if (child.Name == 'Flare') then
+			(child :: ScreenGui).Enabled = false;
+		end;
+	end);
+end;
+
 local BLOCK_KEY: Enum.KeyCode = Enum.KeyCode.F;
 
 -- m1 anim ids collected from anim logger, delay in seconds before blocking
 local M1_ANIM_IDS: {[string]: number} = {
-	['1461128166'] = 0, -- m1 1 fist
-	['1461128859'] = 0, -- m1 2 fist
-	['1461136273'] = 0, -- m1 3 fist
-	['1461145506'] = 0, -- m1 4 fist (non-uptilt version)
-	['1461136875'] = 0, -- m1 4 fist (uptilt version)
+	-- fist
+
+	['1461128166'] = 0, -- m1 1
+	['1461128859'] = 0, -- m1 2
+	['1461136273'] = 0, -- m1 3
+	['1461145506'] = 0, -- m1 4 (non-uptilt version)
+	['1461136875'] = 0, -- m1 4 (uptilt version)
 
 	-- sword animations
 
@@ -550,6 +565,106 @@ local M1_ANIM_IDS: {[string]: number} = {
 	['1470439852'] = 0, -- m1 2
 	['1470449816'] = 0, -- m1 3
 	['1470447472'] = 0, -- m1 4
+
+	-- kirito
+
+	['8319862463'] = 0, -- m1 1
+	['8320258247'] = 0, -- m1 2
+	['8321532463'] = 0, -- m1 3
+	['8321564926'] = 0, -- m1 4
+
+	-- whitebeard
+
+	['2653288957'] = 0, -- m1 1
+	['2653292053'] = 0, -- m1 2
+	['2653295985'] = 0, -- m1 3
+	['2653299927'] = 0, -- m1 4
+
+	-- asuna
+
+	['9068688717'] = 0, -- m1 1
+	['9068689970'] = 0, -- m1 2
+	['9068691739'] = 0, -- m1 3
+	['9068693092'] = 0, -- m1 4
+
+	-- alucard
+
+	['129856070992547'] = 0, -- m1 1
+	['106548325298957'] = 0, -- m1 2
+	['108198644371262'] = 0, -- m1 3
+	['139353659760475'] = 0, -- m1 4
+
+	-- spear
+
+	['6765035204'] = 0, -- m1 1
+	['6765057406'] = 0, -- m1 2
+
+	-- gogeta
+
+	['17306012933'] = 0, -- m1 1
+	['17306015782'] = 0, -- m1 2
+	['17306019069'] = 0, -- m1 3
+	['17306052984'] = 0, -- m1 4
+
+	-- law
+
+	['1947173251'] = 0, -- m1 1
+	['1947196236'] = 0, -- m1 2
+	['1947219719'] = 0, -- m1 3
+	['1947230024'] = 0, -- m1 4
+
+	-- shanks (mode) (m1 1 & m1 3 shared with fist)
+
+	['180426354'] = 0, -- m1 2
+	['180435571'] = 0, -- m1 4
+
+	-- mash kyrelight
+
+	['9941010371'] = 0, -- m1 1
+	['9941073313'] = 0, -- m1 2
+	['9941176251'] = 0, -- m1 3
+	['9941247556'] = 0, -- m1 4
+
+	-- iskandar (m1 3 & m1 4 shared with sword)
+
+	['7413861926'] = 0, -- m1 1
+	['7413904138'] = 0, -- m1 2
+
+	-- lancer (all m1s shared with spear/shanks/sword)
+
+	-- gaara (other m1s shared with shanks)
+
+	['3263871265'] = 0, -- m1 1
+	['3263870104'] = 0, -- m1 2
+	['180435792'] = 0, -- m1 3
+
+	-- shirou (enhanced projection / raw projection)
+
+	['1730596371'] = 0, -- m1 1
+	['1730606513'] = 0, -- m1 2
+	['1730618971'] = 0, -- m1 3
+	['1730629532'] = 0, -- m1 4
+
+	-- sanji/boa (leg animations)
+
+	['1885667765'] = 0, -- m1 1
+	['1885679702'] = 0, -- m1 2
+	['1885690040'] = 0, -- m1 3
+	['1885693880'] = 0, -- m1 4
+
+	-- hol horse
+
+	['82359465822698'] = 0, -- m1 1
+	['122595882915968'] = 0, -- m1 2
+	['130515957991251'] = 0, -- m1 3
+	['71698176452644'] = 0, -- m1 4
+
+	-- tatsumaki
+
+	['14272212914'] = 0, -- m1 1
+	['14272246471'] = 0, -- m1 2
+	['14272266117'] = 0, -- m1 3
+	['14272296104'] = 0, -- m1 4
 };
 
 local isAutoBlocking: boolean = false;
@@ -713,28 +828,73 @@ function functions.animLogger(toggle: boolean): ()
 		end);
 	end;
 
+	local function onStandAdded(stand: Instance): ()
+		local humanoid = stand:WaitForChild('Humanoid', 10);
+		if (not humanoid) then return end;
+
+		local rootPart = stand:FindFirstChild('HumanoidRootPart') or stand:WaitForChild('HumanoidRootPart', 10);
+		if (not rootPart) then return end;
+
+		local entityMaid = Maid.new();
+
+		entityMaid:GiveTask((stand :: any).Destroying:Connect(function(): ()
+			entityMaid:DoCleaning();
+		end));
+
+		entityMaid:GiveTask((humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
+			local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or 'unknown';
+
+			if (table.find(animLoggerWindow.ignoreList, animId)) then return end;
+
+			local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
+			if (myRoot and (myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude > (library.flags.animLoggerMaxRange or 100) then
+				return;
+			end;
+
+			animLoggerWindow:AddText({
+				text = `Animation <font color='#2ecc71'>{animId}</font> played from <font color='#e74c3c'>{stand.Name}</font> <font color='#9b59b6'>[STAND]</font>`,
+				animationId = animId,
+			});
+		end));
+
+		animLoggerMaid:GiveTask(function(): ()
+			entityMaid:DoCleaning();
+		end);
+	end;
+
+	local standsFolder = workspace:FindFirstChild('Stands');
+
 	animLoggerMaid:GiveTask(liveFolder.ChildAdded:Connect(onEntityAdded));
 
 	for _, entity in liveFolder:GetChildren() do
 		task.spawn(onEntityAdded, entity);
 	end;
 
-	animLoggerMaid:GiveTask(animLoggerWindow.OnClick:Connect(function(actionName, context)
-		if (actionName == 'Add To Ignore List' and not table.find(animLoggerWindow.ignoreList, context.animationId)) then
-			table.insert(animLoggerWindow.ignoreList, context.animationId);
-		elseif (actionName == 'Delete Log') then
-			context:Destroy();
-		elseif (actionName == 'Copy Animation Id') then
-			setclipboard(context.animationId);
-		elseif (actionName == 'Clear All') then
-			for _, v in animLoggerWindow.logs do
-				v.label:Destroy();
-			end;
-			table.clear(animLoggerWindow.logs);
-			table.clear(animLoggerWindow.allLogs);
+	if (standsFolder) then
+		animLoggerMaid:GiveTask(standsFolder.ChildAdded:Connect(onStandAdded));
+
+		for _, stand in standsFolder:GetChildren() do
+			task.spawn(onStandAdded, stand);
 		end;
-	end));
+	end;
+
 end;
+
+animLoggerWindow.OnClick:Connect(function(actionName, context)
+	if (actionName == 'Add To Ignore List' and not table.find(animLoggerWindow.ignoreList, context.animationId)) then
+		table.insert(animLoggerWindow.ignoreList, context.animationId);
+	elseif (actionName == 'Delete Log') then
+		context:Destroy();
+	elseif (actionName == 'Copy Animation Id') then
+		setclipboard(context.animationId);
+	elseif (actionName == 'Clear All') then
+		for _, v in animLoggerWindow.logs do
+			v.label:Destroy();
+		end;
+		table.clear(animLoggerWindow.logs);
+		table.clear(animLoggerWindow.allLogs);
+	end;
+end);
 
 library.OnKeyPress:Connect(function(input, gpe): ()
 	if (gpe or not library.options.attachToBack) then return end;
@@ -900,6 +1060,12 @@ localCheats:AddSlider({
 
 
 localCheats:AddDivider('Gameplay-Assist');
+
+localCheats:AddToggle({
+	text = 'Anti Blind',
+	tip = 'stops krillin and misaka blind',
+	callback = functions.antiBlind
+});
 
 localCheats:AddButton({
 	text = 'Respawn',
