@@ -67,13 +67,12 @@ local functions = {};
 	returns 0-100 as a rounded percent
 ]]
 local function GetModePercent(player: Player): number
-	local charge: DoubleConstrainedValue = player:FindFirstChild('Charge') :: DoubleConstrainedValue;
+	local charge: DoubleConstrainedValue? = player:FindFirstChild('Charge') :: DoubleConstrainedValue?;
 	if (not charge) then
 		return 0;
 	end;
 
-	local maxValue: number = (charge :: DoubleConstrainedValue).MaxValue;
-	return math.floor((charge :: DoubleConstrainedValue).Value / maxValue * 100);
+	return math.floor((charge :: DoubleConstrainedValue).Value / (charge :: DoubleConstrainedValue).MaxValue * 100);
 end;
 
 function EntityESP:Plugin()
@@ -547,7 +546,7 @@ local M1_ANIM_IDS: {[string]: number} = {
 };
 
 local isAutoBlocking: boolean = false;
-local autoParryEntityConns: {RBXScriptConnection} = {};
+local autoParryMaid = Maid.new();
 
 local function blockInput(): ()
 	VirtualInputManager:SendKeyEvent(true, BLOCK_KEY, false, game);
@@ -593,12 +592,17 @@ end;
 local function hookCharacterForParry(character: Model): ()
 	if (not character or character == LocalPlayer.Character) then return end;
 
-	local humanoid = character:FindFirstChildOfClass('Humanoid') or character:WaitForChild('Humanoid', 5) :: Humanoid;
+	local humanoid: Humanoid? = (character:FindFirstChildOfClass('Humanoid') or character:WaitForChild('Humanoid', 5)) :: any;
 	if (not humanoid) then return end;
 
 	local player: Player? = Players:GetPlayerFromCharacter(character);
+	local entityMaid = Maid.new();
 
-	local conn: RBXScriptConnection = (humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
+	entityMaid:GiveTask((character :: any).Destroying:Connect(function(): ()
+		entityMaid:DoCleaning();
+	end));
+
+	entityMaid:GiveTask((humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
 		if (isAutoBlocking) then return end;
 
 		-- team check
@@ -621,18 +625,17 @@ local function hookCharacterForParry(character: Model): ()
 		if (not delay) then return end;
 
 		task.spawn(executeParry, delay :: number);
-	end);
+	end));
 
-	table.insert(autoParryEntityConns, conn);
+	autoParryMaid:GiveTask(function(): ()
+		entityMaid:DoCleaning();
+	end);
 end;
 
 function functions.autoParry(toggle: boolean): ()
 	if (not toggle) then
 		maid.autoParry = nil;
-		for _, conn in autoParryEntityConns do
-			conn:Disconnect();
-		end;
-		table.clear(autoParryEntityConns);
+		autoParryMaid:DoCleaning();
 		isAutoBlocking = false;
 		return;
 	end;
@@ -1004,12 +1007,17 @@ function Utility:renderOverload(data)
 
 			local espObj = espConstructor.new(obj :: BasePart, 'Deidara Mine');
 
-            task.spawn(function()
-                while (obj.Transparency == 0) do
-                    task.wait(0.1);
-                end;
-                obj.Transparency = 0.5;
-            end);
+			if (obj.Transparency ~= 0) then
+				obj.Transparency = 0.5;
+			else
+				local transparencyConn: RBXScriptConnection;
+				transparencyConn = obj:GetPropertyChangedSignal('Transparency'):Connect(function(): ()
+					if (obj.Transparency ~= 0) then
+						obj.Transparency = 0.5;
+						transparencyConn:Disconnect();
+					end;
+				end);
+			end;
 
 			local connection: RBXScriptConnection;
 			connection = obj:GetPropertyChangedSignal('Parent'):Connect(function()
@@ -1030,13 +1038,18 @@ function Utility:renderOverload(data)
 			if (not obj:IsA('MeshPart')) then return end;
 
 			local espObj = espConstructor.new(obj :: BasePart, 'Claymore');
-            
-            task.spawn(function()
-                while (obj.Transparency == 0) do
-                    task.wait(0.1);
-                end;
-                obj.Transparency = 0.5;
-            end);
+
+			if (obj.Transparency ~= 0) then
+				obj.Transparency = 0.5;
+			else
+				local transparencyConn: RBXScriptConnection;
+				transparencyConn = obj:GetPropertyChangedSignal('Transparency'):Connect(function(): ()
+					if (obj.Transparency ~= 0) then
+						obj.Transparency = 0.5;
+						transparencyConn:Disconnect();
+					end;
+				end);
+			end;
 
 			local connection: RBXScriptConnection;
 			connection = obj:GetPropertyChangedSignal('Parent'):Connect(function()
