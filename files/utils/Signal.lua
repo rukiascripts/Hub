@@ -31,11 +31,10 @@
 	-- @param ... Variable arguments to pass to handler
 	-- @treturn nil
 function Signal:Fire(...)
-    local args = {...}
-    local count = select("#", ...)
+    self._argData = {...}
+    self._argCount = select("#", ...)
 
-    -- Fire the BindableEvent with the captured args
-    self._bindableEvent:Fire(args, count)
+    self._bindableEvent:Fire()
 end
 
 	--- Connect a new handler to the event. Returns a connection object that can be disconnected.
@@ -50,8 +49,8 @@ function Signal:Connect(handler)
         error(("connect(%s)"):format(typeof(handler)), 2) 
     end
 
-    return self._bindableEvent.Event:Connect(function(args, count)
-        handler(unpack(args, 1, count))
+    return self._bindableEvent.Event:Connect(function()
+        handler(unpack(self._argData, 1, self._argCount))
     end)
 end
 
@@ -59,8 +58,8 @@ end
 	--- Wait for fire to be called, and return the arguments it was given.
 	-- @treturn ... Variable arguments from connection
 function Signal:Wait()
-    local args, count = self._bindableEvent.Event:Wait()
-    return unpack(args, 1, count)
+    self._bindableEvent.Event:Wait()
+    return unpack(self._argData, 1, self._argCount)
 end
 
 
