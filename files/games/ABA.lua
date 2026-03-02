@@ -948,9 +948,8 @@ function functions.animLogger(toggle: boolean): ()
 end;
 
 animLoggerWindow.OnClick:Connect(function(actionName, context)
-	print(actionName);
-	print(context);
-	print(context.animationId);
+	print(`actionName={actionName} animationId={context.animationId}`);
+
 	if (actionName == 'Add To Ignore List' and not animLoggerWindow.ignoreList[context.animationId]) then
 		animLoggerWindow.ignoreList[context.animationId] = true;
 	elseif (actionName == 'Delete Log') then
