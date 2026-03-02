@@ -570,26 +570,17 @@ local function calculateParryDelay(rawDelay: number): number
 	return rawDelay - (playerPing * (library.flags.autoParryPingCompensation / 100));
 end;
 
--- adds random jitter so timing doesnt look robotic
-local function humanize(base: number, variance: number): number
-	return base + (math.random() * 2 - 1) * variance;
-end;
-
---[[
-	does the actual block: waits the adjusted delay with some jitter,
-	presses F, holds for a slightly randomized duration, then releases
-]]
 local function executeParry(rawDelay: number): ()
 	if (isAutoBlocking) then return end;
 	isAutoBlocking = true;
 
-	local adjustedDelay: number = humanize(calculateParryDelay(rawDelay), 0.03);
+	local adjustedDelay: number = calculateParryDelay(rawDelay);
 	if (adjustedDelay > 0) then
 		task.wait(adjustedDelay);
 	end;
 
 	blockInput();
-	task.wait(humanize(library.flags.autoParryBlockDuration / 1000, 0.02));
+	task.wait(library.flags.autoParryBlockDuration / 1000);
 	unblockInput();
 
 	isAutoBlocking = false;
