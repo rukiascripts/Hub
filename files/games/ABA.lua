@@ -162,13 +162,11 @@ local function WatchCutter(character: Model, cutter: GuiObject, goal: GuiObject,
 	nanamiTracking[character] = true;
 
 	local lastX: number? = nil;
-	local connection: RBXScriptConnection? = nil;
+	local connection: RBXScriptConnection;
 
 	connection = RunService.RenderStepped:Connect(function(): ()
 		if (not gui.Parent or not cutter.Parent or not goal.Parent) then
-			if (connection) then
-				(connection :: RBXScriptConnection):Disconnect();
-			end;
+			connection:Disconnect();
 			nanamiTracking[character] = nil;
 			return;
 		end;
@@ -392,11 +390,7 @@ function functions.noClip(toggle: boolean): ()
 		local disableNoClipWhenKnocked: boolean = library.flags.disableNoClipWhenKnocked;
 
 		for _, v in myCharacterParts do
-			if (disableNoClipWhenKnocked) then
-				v.CanCollide = not not isKnocked;
-			else
-				v.CanCollide = false;
-			end;
+			v.CanCollide = disableNoClipWhenKnocked and isKnocked ~= nil;
 		end;
 	end);
 end;
@@ -875,6 +869,34 @@ animLoggerWindow.ignoreList = {};
 
 local animLoggerMaid = Maid.new();
 
+local function hookAnimLogger(entity: Instance, rootPart: Instance, humanoid: Instance, label: string): ()
+	local entityMaid = Maid.new();
+
+	entityMaid:GiveTask((entity :: any).Destroying:Connect(function(): ()
+		entityMaid:DoCleaning();
+	end));
+
+	entityMaid:GiveTask((humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
+		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or 'unknown';
+
+		if (animLoggerWindow.ignoreList[animId]) then return end;
+
+		local myRoot: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
+		if (myRoot and ((myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude > (library.flags.animLoggerMaxRange or 100)) then
+			return;
+		end;
+
+		animLoggerWindow:AddText({
+			text = `Animation <font color='#2ecc71'>{animId}</font> played from {label}`,
+			animationId = animId,
+		});
+	end));
+
+	animLoggerMaid:GiveTask(function(): ()
+		entityMaid:DoCleaning();
+	end);
+end;
+
 function functions.animLogger(toggle: boolean): ()
 	animLoggerWindow:SetVisible(toggle);
 
@@ -888,71 +910,23 @@ function functions.animLogger(toggle: boolean): ()
 	local function onEntityAdded(entity: Instance): ()
 		if (entity == LocalPlayer.Character) then return end;
 
-		local rootPart = entity:WaitForChild('HumanoidRootPart', 10);
+		local rootPart: Instance? = entity:WaitForChild('HumanoidRootPart', 10);
 		if (not rootPart) then return end;
 
-		local humanoid = entity:WaitForChild('Humanoid', 10);
+		local humanoid: Instance? = entity:WaitForChild('Humanoid', 10);
 		if (not humanoid) then return end;
 
-		local entityMaid = Maid.new();
-
-		entityMaid:GiveTask((entity :: any).Destroying:Connect(function(): ()
-			entityMaid:DoCleaning();
-		end));
-
-		entityMaid:GiveTask((humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
-			local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or 'unknown';
-
-			if (table.find(animLoggerWindow.ignoreList, animId)) then return end;
-
-			local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
-			if (myRoot and (myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude > (library.flags.animLoggerMaxRange or 100) then
-				return;
-			end;
-
-			animLoggerWindow:AddText({
-				text = `Animation <font color='#2ecc71'>{animId}</font> played from <font color='#3498db'>{entity.Name}</font>`,
-				animationId = animId,
-			});
-		end));
-
-		animLoggerMaid:GiveTask(function(): ()
-			entityMaid:DoCleaning();
-		end);
+		hookAnimLogger(entity, rootPart :: Instance, humanoid :: Instance, `<font color='#3498db'>{entity.Name}</font>`);
 	end;
 
 	local function onStandAdded(stand: Instance): ()
-		local humanoid = stand:WaitForChild('Humanoid', 10);
+		local humanoid: Instance? = stand:WaitForChild('Humanoid', 10);
 		if (not humanoid) then return end;
 
-		local rootPart = stand:FindFirstChild('HumanoidRootPart') or stand:WaitForChild('HumanoidRootPart', 10);
+		local rootPart: Instance? = stand:FindFirstChild('HumanoidRootPart') or stand:WaitForChild('HumanoidRootPart', 10);
 		if (not rootPart) then return end;
 
-		local entityMaid = Maid.new();
-
-		entityMaid:GiveTask((stand :: any).Destroying:Connect(function(): ()
-			entityMaid:DoCleaning();
-		end));
-
-		entityMaid:GiveTask((humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
-			local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or 'unknown';
-
-			if (table.find(animLoggerWindow.ignoreList, animId)) then return end;
-
-			local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
-			if (myRoot and (myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude > (library.flags.animLoggerMaxRange or 100) then
-				return;
-			end;
-
-			animLoggerWindow:AddText({
-				text = `Animation <font color='#2ecc71'>{animId}</font> played from <font color='#e74c3c'>{stand.Name}</font> <font color='#9b59b6'>[STAND]</font>`,
-				animationId = animId,
-			});
-		end));
-
-		animLoggerMaid:GiveTask(function(): ()
-			entityMaid:DoCleaning();
-		end);
+		hookAnimLogger(stand, rootPart :: Instance, humanoid :: Instance, `<font color='#e74c3c'>{stand.Name}</font> <font color='#9b59b6'>[STAND]</font>`);
 	end;
 
 	local standsFolder = workspace:FindFirstChild('Stands');
@@ -974,8 +948,11 @@ function functions.animLogger(toggle: boolean): ()
 end;
 
 animLoggerWindow.OnClick:Connect(function(actionName, context)
-	if (actionName == 'Add To Ignore List' and not table.find(animLoggerWindow.ignoreList, context.animationId)) then
-		table.insert(animLoggerWindow.ignoreList, context.animationId);
+	print(actionName);
+	print(context);
+	print(context.animationId);
+	if (actionName == 'Add To Ignore List' and not animLoggerWindow.ignoreList[context.animationId]) then
+		animLoggerWindow.ignoreList[context.animationId] = true;
 	elseif (actionName == 'Delete Log') then
 		context:Destroy();
 	elseif (actionName == 'Copy Animation Id') then
@@ -1015,13 +992,16 @@ library.OnKeyPress:Connect(function(input, gpe): ()
 		until closest or input.UserInputState == Enum.UserInputState.End;
 		if (input.UserInputState == Enum.UserInputState.End) then return end;
 
+		local lastGoalPos: Vector3? = nil;
+
 		maid.attachToBack = RunService.Heartbeat:Connect(function(): ()
 			local goalCF: CFrame = closest.CFrame * CFrame.new(0, library.flags.attachToBackHeight, library.flags.attachToBackSpace);
 
-			local distance: number = (goalCF.Position - (hrp :: BasePart).Position).Magnitude;
-			local tweenInfo: TweenInfo = TweenInfo.new(distance / 100, Enum.EasingStyle.Linear);
+			if (lastGoalPos and (goalCF.Position - lastGoalPos :: Vector3).Magnitude < 0.5) then return end;
+			lastGoalPos = goalCF.Position;
 
-			local tween = TweenService:Create(hrp, tweenInfo, {
+			local distance: number = (goalCF.Position - (hrp :: BasePart).Position).Magnitude;
+			local tween: Tween = TweenService:Create(hrp, TweenInfo.new(distance / 100, Enum.EasingStyle.Linear), {
 				CFrame = goalCF
 			});
 
@@ -1257,6 +1237,30 @@ function Utility:renderOverload(data)
 		tip = 'renders a visual blue bar for mode charge next to the ESP box',
 	});
 
+	local function makeHiddenESP(obj: BasePart, espConstructor: any, label: string): ()
+		local espObj = espConstructor.new(obj, label);
+
+		if (obj.Transparency ~= 0) then
+			obj.Transparency = 0.5;
+		else
+			local transparencyConn: RBXScriptConnection;
+			transparencyConn = obj:GetPropertyChangedSignal('Transparency'):Connect(function(): ()
+				if (obj.Transparency ~= 0) then
+					obj.Transparency = 0.5;
+					transparencyConn:Disconnect();
+				end;
+			end);
+		end;
+
+		local parentConn: RBXScriptConnection;
+		parentConn = obj:GetPropertyChangedSignal('Parent'):Connect(function(): ()
+			if (not obj.Parent) then
+				espObj:Destroy();
+				parentConn:Disconnect();
+			end;
+		end);
+	end;
+
 	-- deidara mines get parented to workspace.Thrown as a unionoperation called 'Ball'
 	makeESP({
 		sectionName = 'Deidara Mines',
@@ -1264,28 +1268,7 @@ function Utility:renderOverload(data)
 		args = {workspace:WaitForChild('Thrown')},
 		callback = function(obj: Instance, espConstructor)
 			if (not obj:IsA('UnionOperation') or obj.Name ~= 'Ball') then return end;
-
-			local espObj = espConstructor.new(obj :: BasePart, 'Deidara Mine');
-
-			if (obj.Transparency ~= 0) then
-				obj.Transparency = 0.5;
-			else
-				local transparencyConn: RBXScriptConnection;
-				transparencyConn = obj:GetPropertyChangedSignal('Transparency'):Connect(function(): ()
-					if (obj.Transparency ~= 0) then
-						obj.Transparency = 0.5;
-						transparencyConn:Disconnect();
-					end;
-				end);
-			end;
-
-			local connection: RBXScriptConnection;
-			connection = obj:GetPropertyChangedSignal('Parent'):Connect(function()
-				if (not obj.Parent) then
-					espObj:Destroy();
-					connection:Disconnect();
-				end;
-			end);
+			makeHiddenESP(obj :: BasePart, espConstructor, 'Deidara Mine');
 		end,
 	});
 
@@ -1296,28 +1279,7 @@ function Utility:renderOverload(data)
 		args = {workspace:WaitForChild('ClearEachMatch')},
 		callback = function(obj: Instance, espConstructor)
 			if (not obj:IsA('MeshPart')) then return end;
-
-			local espObj = espConstructor.new(obj :: BasePart, 'Claymore');
-
-			if (obj.Transparency ~= 0) then
-				obj.Transparency = 0.5;
-			else
-				local transparencyConn: RBXScriptConnection;
-				transparencyConn = obj:GetPropertyChangedSignal('Transparency'):Connect(function(): ()
-					if (obj.Transparency ~= 0) then
-						obj.Transparency = 0.5;
-						transparencyConn:Disconnect();
-					end;
-				end);
-			end;
-
-			local connection: RBXScriptConnection;
-			connection = obj:GetPropertyChangedSignal('Parent'):Connect(function()
-				if (not obj.Parent) then
-					espObj:Destroy();
-					connection:Disconnect();
-				end;
-			end);
+			makeHiddenESP(obj :: BasePart, espConstructor, 'Claymore');
 		end,
 	});
 end;
