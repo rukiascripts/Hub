@@ -564,12 +564,12 @@ end;
 	subtracts a percentage of the player's ping from the raw delay
 ]]
 local function calculateParryDelay(rawDelay: number): number
-	if (library.flags.autoParryUseCustomDelay) then
-		return rawDelay + library.flags.autoParryCustomDelay / 1000;
+	if (library.flags.autoParryCustomDelay) then
+		return rawDelay + library.flags.autoParryCustomDelayValue / 1000;
 	end;
 
 	local playerPing: number = Stats.PerformanceStats.Ping:GetValue() / 1000;
-	return rawDelay - (playerPing * (library.flags.autoParryPingCompensation / 100));
+	return rawDelay - (playerPing * (library.flags.pingCompensation / 100));
 end;
 
 local function executeParry(rawDelay: number): ()
@@ -582,7 +582,7 @@ local function executeParry(rawDelay: number): ()
 	end;
 
 	blockInput();
-	task.wait(library.flags.autoParryBlockDuration / 1000);
+	task.wait(library.flags.blockDuration / 1000);
 	unblockInput();
 
 	isAutoBlocking = false;
@@ -612,7 +612,7 @@ local function hookCharacterForParry(character: Model): ()
 		if (player and library.flags.autoParryCheckTeam and Utility:isTeamMate(player :: Player)) then return end;
 
 		-- lock-on requirement check
-		if (library.flags.autoParryRequireLockOn and (not lockedTarget or lockedTarget ~= player)) then return end;
+		if (library.flags.autoParryLockOn and (not lockedTarget or lockedTarget ~= player)) then return end;
 
 		-- distance check
 		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
@@ -620,7 +620,7 @@ local function hookCharacterForParry(character: Model): ()
 		if (not myRoot or not theirRoot) then return end;
 
 		local distance: number = ((myRoot :: BasePart).Position - (theirRoot :: BasePart).Position).Magnitude;
-		if (distance > library.flags.autoParryRadius) then return end;
+		if (distance > library.flags.radius) then return end;
 
 		-- anim id check
 		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or '';
@@ -956,6 +956,7 @@ autoParrySection:AddToggle({
 
 autoParrySection:AddSlider({
 	text = 'Auto Parry Custom Delay',
+	flag = 'Auto Parry Custom Delay Value',
 	tip = 'fixed delay offset in ms (added to raw timing)',
 	value = 0,
 	min = -200,
