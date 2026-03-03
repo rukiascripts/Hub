@@ -293,17 +293,55 @@ do -- // Farming Helpers
 		maid.farmBg = nil;
 	end;
 
-	--- sends a key press for skills that are toggled on
-	local function attackWithKeys()
-		local skillDelay = library.flags.skillDelay or 0.1;
+	local SKILL_DELAY_FLAGS = {'skill1Delay', 'skill2Delay', 'skill3Delay', 'skill4Delay'};
 
+	--- gets sorted skill tools from backpack + character
+	local function getSkillTools()
+		local backpack = LocalPlayer:FindFirstChild('Backpack');
+		local character = LocalPlayer.Character;
+		if (not backpack) then return {} end;
+
+		local tools = {};
+
+		for _, tool in backpack:GetChildren() do
+			if (tool:IsA('Tool')) then
+				table.insert(tools, tool);
+			end;
+		end;
+
+		if (character) then
+			for _, tool in character:GetChildren() do
+				if (tool:IsA('Tool')) then
+					table.insert(tools, tool);
+				end;
+			end;
+		end;
+
+		table.sort(tools, function(a, b)
+			return a.Name < b.Name;
+		end);
+
+		return tools;
+	end;
+
+	--- checks if the Nth skill tool is on cooldown (not in backpack or character)
+	local function isSkillReady(slotIndex)
+		local tools = getSkillTools();
+		return tools[slotIndex] ~= nil;
+	end;
+
+	--- sends a key press for skills that are toggled on and ready
+	local function attackWithKeys()
 		for i, keyCode in ATTACK_KEYS do
 			if (not library.flags[SKILL_FLAGS[i]]) then continue end;
+			if (not isSkillReady(i)) then continue end;
+
+			local delay = library.flags[SKILL_DELAY_FLAGS[i]] or 0.1;
 
 			VirtualInputManager:SendKeyEvent(true, keyCode, false, game);
 			task.wait(0.05);
 			VirtualInputManager:SendKeyEvent(false, keyCode, false, game);
-			task.wait(skillDelay);
+			task.wait(delay);
 		end;
 	end;
 
@@ -416,10 +454,8 @@ do -- // Farming Helpers
 					continue;
 				end;
 
-				local heightOffset = library.flags.farmHeightOffset;
-
 				repeat
-					moveToTarget(rootPart, hrp, heightOffset);
+					moveToTarget(rootPart, hrp, library.flags.farmHeightOffset);
 					attackWithKeys();
 					task.wait(FARM_TICK_DELAY);
 				until not humanoid or humanoid.Health <= 0 or not library.flags.autoFarmNPCs or not hrp.Parent;
@@ -470,10 +506,8 @@ do -- // Farming Helpers
 					continue;
 				end;
 
-				local heightOffset = library.flags.farmHeightOffset;
-
 				repeat
-					moveToTarget(rootPart, hrp, heightOffset);
+					moveToTarget(rootPart, hrp, library.flags.farmHeightOffset);
 					attackWithKeys();
 					task.wait(FARM_TICK_DELAY);
 				until not humanoid or humanoid.Health <= 0 or not library.flags.autoFarmBosses or not hrp.Parent;
@@ -670,14 +704,41 @@ do -- // Boss Zone List
 		flag = 'Use Skill 1'
 	});
 
+	automation:AddSlider({
+		text = 'Skill 1 Delay',
+		flag = 'Skill 1 Delay',
+		min = 0,
+		max = 5,
+		value = 0.1,
+		textpos = 2
+	});
+
 	automation:AddToggle({
 		text = 'Use Skill 2',
 		flag = 'Use Skill 2'
 	});
 
+	automation:AddSlider({
+		text = 'Skill 2 Delay',
+		flag = 'Skill 2 Delay',
+		min = 0,
+		max = 5,
+		value = 0.1,
+		textpos = 2
+	});
+
 	automation:AddToggle({
 		text = 'Use Skill 3',
 		flag = 'Use Skill 3'
+	});
+
+	automation:AddSlider({
+		text = 'Skill 3 Delay',
+		flag = 'Skill 3 Delay',
+		min = 0,
+		max = 5,
+		value = 0.1,
+		textpos = 2
 	});
 
 	automation:AddToggle({
@@ -686,11 +747,10 @@ do -- // Boss Zone List
 	});
 
 	automation:AddSlider({
-		text = 'Skill Delay',
-		flag = 'Skill Delay',
-		tip = 'Delay between skill uses (seconds)',
+		text = 'Skill 4 Delay',
+		flag = 'Skill 4 Delay',
 		min = 0,
-		max = 2,
+		max = 5,
 		value = 0.1,
 		textpos = 2
 	});
