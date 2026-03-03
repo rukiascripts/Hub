@@ -383,6 +383,14 @@ do -- // Farming Helpers
 					continue;
 				end;
 
+				-- pre-stream the boss area before moving to avoid "Gameplay Paused"
+				local bossPos = hrp.Position;
+				if (not lastStreamPos or (bossPos - lastStreamPos).Magnitude > 10) then
+					lastStreamPos = bossPos;
+					LocalPlayer:RequestStreamAroundAsync(bossPos);
+					task.wait(0.5);
+				end;
+
 				repeat
 					moveToTarget(rootPart, hrp, library.flags.farmHeightOffset);
 					attackWithKeys();
