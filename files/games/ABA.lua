@@ -726,27 +726,8 @@ local function isSneaking(): boolean
 	return character:FindFirstChild('SneakAttack') ~= nil;
 end;
 
-local manualBlocking: boolean = false;
-
-UserInputService.InputBegan:Connect(function(input: InputObject, gpe: boolean): ()
-	if (gpe) then return end;
-	if (input.KeyCode == BLOCK_KEY) then
-		manualBlocking = true;
-	end;
-end);
-
-local function isManuallyBlocking(): boolean
-	return manualBlocking;
-end;
-
-UserInputService.InputEnded:Connect(function(input: InputObject): ()
-	if (input.KeyCode == BLOCK_KEY) then
-		manualBlocking = false;
-	end;
-end);
-
 local function executeParry(rawDelay: number): ()
-	if (isAutoBlocking or isManuallyBlocking() or isSneaking()) then
+	if (isAutoBlocking or isSneaking()) then
 		return;
 	end;
 
@@ -758,7 +739,7 @@ local function executeParry(rawDelay: number): ()
 	end;
 
 	-- re-check before pressing
-	if (isManuallyBlocking() or isSneaking()) then
+	if (isSneaking()) then
 		isAutoBlocking = false;
 		return;
 	end;
@@ -766,12 +747,8 @@ local function executeParry(rawDelay: number): ()
 	blockInput();
 
 	task.wait(library.flags.blockDuration / 1000);
-
-	-- only release if user is NOT manually holding
-	if (not isManuallyBlocking()) then
-		unblockInput();
-	end;
-
+	unblockInput();
+	
 	isAutoBlocking = false;
 end;
 
