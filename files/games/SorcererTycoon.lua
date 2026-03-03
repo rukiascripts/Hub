@@ -170,102 +170,17 @@ do -- // Attach To Back
 	end;
 end;
 
-do -- // One Shot Mobs
-	local mobs = {};
-
-	local NetworkOneShot = {};
-	NetworkOneShot.__index = NetworkOneShot;
-
-	function NetworkOneShot.new(mob)
-		local self = setmetatable({}, NetworkOneShot);
-
-		self._maid = Maid.new();
-		self.char = mob;
-
-		self._maid:GiveTask(mob.Destroying:Connect(function()
-			self:Destroy();
-		end));
-
-		self._maid:GiveTask(Utility.listenToChildAdded(mob, function(obj)
-			if (obj.Name == 'HumanoidRootPart') then
-				self.hrp = obj;
-			end;
-		end));
-
-		mobs[mob] = self;
-		return self;
-	end;
-
-	function NetworkOneShot:Update()
-		if (not self.hrp or not isnetworkowner(self.hrp) or not self.hrp.Parent or not self.hrp:IsDescendantOf(map)) then return end;
-		self.char:PivotTo(CFrame.new(self.hrp.Position.X, workspace.FallenPartsDestroyHeight - 100000, self.hrp.Position.Z));
-	end;
-
-	function NetworkOneShot:Destroy()
-		self._maid:DoCleaning();
-
-		for i, v in next, mobs do
-			if (v ~= self) then continue end;
-			mobs[i] = nil;
-		end;
-	end;
-
-	function NetworkOneShot:ClearAll()
-		for _, v in next, mobs do
-			v:Destroy();
-		end;
-
-		table.clear(mobs);
-	end;
-
-	map.DescendantAdded:Connect(function(obj)
-		if (obj.Name ~= 'Humanoid') then return end;
-
-		local mob = obj.Parent;
-		task.wait(0.2);
-		if (not mob or mob == LocalPlayer.Character or mobs[mob]) then return end;
-		NetworkOneShot.new(mob);
-	end);
-
-	for _, obj in map:GetDescendants() do
-		if (obj.Name ~= 'Humanoid') then continue end;
-
-		local mob = obj.Parent;
-		if (not mob or mob == LocalPlayer.Character or mobs[mob]) then continue end;
-		NetworkOneShot.new(mob);
-	end;
-
-	function functions.networkOneShot(toggle)
-		if (not toggle) then
-			maid.networkOneShot = nil;
-			maid.networkOneShotSim = nil;
-			return;
-		end;
-
-		maid.networkOneShotSim = RunService.Heartbeat:Connect(function()
-			sethiddenproperty(LocalPlayer, 'MaxSimulationRadius', math.huge);
-			sethiddenproperty(LocalPlayer, 'SimulationRadius', math.huge);
-		end);
-
-		maid.networkOneShot = task.spawn(function()
-			while task.wait() do
-				for _, mob in next, mobs do
-					mob:Update();
-				end;
-			end;
-		end);
-	end;
-end;
-
 do -- // Farming Helpers
 	local ATTACK_KEYS = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four};
 	local SKILL_FLAGS = {'useSkill1', 'useSkill2', 'useSkill3', 'useSkill4'};
 
-	--- positions rootPart above/below target, facing toward them using BodyPosition + BodyGyro
+	--- positions rootPart above/below target, facing toward them on the Y axis only
 	local function moveToTarget(rootPart, targetHrp, heightOffset)
 		local targetPos = targetHrp.Position;
 		local offsetPos = targetPos + Vector3.new(0, heightOffset, 0);
-		local lookDir = (targetPos - offsetPos).Unit;
+
+		-- face toward target horizontally (keep character upright)
+		local flatLook = Vector3.new(targetPos.X, offsetPos.Y, targetPos.Z);
 
 		if (not maid.farmBp) then
 			local bp = Instance.new('BodyPosition');
@@ -284,7 +199,7 @@ do -- // Farming Helpers
 		end;
 
 		maid.farmBp.Position = offsetPos;
-		maid.farmBg.CFrame = CFrame.lookAt(offsetPos, offsetPos + lookDir);
+		maid.farmBg.CFrame = CFrame.lookAt(offsetPos, flatLook);
 	end;
 
 	--- cleans up farm body movers
@@ -429,31 +344,26 @@ do -- // Farming Helpers
 	function functions.autoFarmNPCs(toggle)
 		if (not toggle) then
 			maid.autoFarmNPCs = nil;
+			maid.autoFarmNPCsLoop = nil;
 			cleanupMovers();
 			return;
 		end;
 
-		maid.autoFarmNPCs = task.spawn(function()
-			while task.wait(FARM_TICK_DELAY) do
-				if (not library.flags.autoFarmNPCs) then break end;
+		maid.autoFarmNPCsLoop = RunService.Heartbeat:Connect(function()
+			-- guard: skip if already processing a target
+			if (maid.autoFarmNPCs) then return end;
 
-				-- bosses take priority when both are enabled and a zone is selected
-				local bossZone = library.flags.bossZone;
-				if (library.flags.autoFarmBosses and bossZone and bossZone ~= 'None' and findBoss()) then
-					cleanupMovers();
-					task.wait(0.5);
-					continue;
-				end;
+			-- bosses take priority when both are enabled and a zone is selected
+			local bossZone = library.flags.bossZone;
+			if (library.flags.autoFarmBosses and bossZone and bossZone ~= 'None' and findBoss()) then return end;
 
-				local rootPart = Utility:getPlayerData().rootPart;
-				if (not rootPart) then continue end;
+			local rootPart = Utility:getPlayerData().rootPart;
+			if (not rootPart) then return end;
 
-				local mob, hrp, humanoid = findNPC();
-				if (not mob or not hrp) then
-					cleanupMovers();
-					continue;
-				end;
+			local mob, hrp, humanoid = findNPC();
+			if (not mob or not hrp) then return end;
 
+			maid.autoFarmNPCs = task.spawn(function()
 				repeat
 					moveToTarget(rootPart, hrp, library.flags.farmHeightOffset);
 					attackWithKeys();
@@ -472,40 +382,34 @@ do -- // Farming Helpers
 						end;
 					end;
 				end;
-			end;
 
-			cleanupMovers();
+				maid.autoFarmNPCs = nil;
+			end);
 		end);
 	end;
 
 	function functions.autoFarmBosses(toggle)
 		if (not toggle) then
 			maid.autoFarmBosses = nil;
+			maid.autoFarmBossesLoop = nil;
 			cleanupMovers();
 			return;
 		end;
 
-		maid.autoFarmBosses = task.spawn(function()
-			while task.wait(FARM_TICK_DELAY) do
-				if (not library.flags.autoFarmBosses) then break end;
+		maid.autoFarmBossesLoop = RunService.Heartbeat:Connect(function()
+			-- guard: skip if already processing a target
+			if (maid.autoFarmBosses) then return end;
 
-				local rootPart = Utility:getPlayerData().rootPart;
-				if (not rootPart) then continue end;
+			local rootPart = Utility:getPlayerData().rootPart;
+			if (not rootPart) then return end;
 
-				local selectedZone = library.flags.bossZone;
-				if (not selectedZone or selectedZone == 'None') then
-					cleanupMovers();
-					task.wait(1);
-					continue;
-				end;
+			local selectedZone = library.flags.bossZone;
+			if (not selectedZone or selectedZone == 'None') then return end;
 
-				local mob, hrp, humanoid = findBoss();
-				if (not mob or not hrp) then
-					cleanupMovers();
-					task.wait(1);
-					continue;
-				end;
+			local mob, hrp, humanoid = findBoss();
+			if (not mob or not hrp) then return end;
 
+			maid.autoFarmBosses = task.spawn(function()
 				repeat
 					moveToTarget(rootPart, hrp, library.flags.farmHeightOffset);
 					attackWithKeys();
@@ -524,9 +428,9 @@ do -- // Farming Helpers
 						end;
 					end;
 				end;
-			end;
 
-			cleanupMovers();
+				maid.autoFarmBosses = nil;
+			end);
 		end);
 	end;
 
@@ -665,14 +569,6 @@ do -- // Boss Zone List
 		min = -100,
 		max = 100,
 		textpos = 2
-	});
-
-	automation:AddDivider('Kill Method');
-
-	automation:AddToggle({
-		text = 'Network One Shot',
-		tip = 'Kills mobs by sending them below the death barrier',
-		callback = functions.networkOneShot
 	});
 
 	automation:AddDivider('NPC Farm');
