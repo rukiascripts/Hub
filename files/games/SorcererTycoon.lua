@@ -381,6 +381,8 @@ do -- // Farming Helpers
 
 			local cf = getCFrame(dropParent);
 			if (not cf) then continue end;
+			
+			if (drop.Parent.Name ~= 'Yen' and drop.Parent.Name ~= 'CursedEnergy') then continue end;
 
 			rootPart.CFrame = cf;
 			fireproximityprompt(drop);
