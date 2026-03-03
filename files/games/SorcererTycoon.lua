@@ -174,10 +174,22 @@ do -- // Farming Helpers
 	local ATTACK_KEYS = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four};
 	local SKILL_FLAGS = {'useSkill1', 'useSkill2', 'useSkill3', 'useSkill4'};
 
+	local lastStreamPos = nil;
+	local STREAM_THRESHOLD = 50;
+
+	--- requests streaming around a position if far enough from last request
+	local function ensureStreamed(position)
+		if (lastStreamPos and (position - lastStreamPos).Magnitude < STREAM_THRESHOLD) then return end;
+		lastStreamPos = position;
+		LocalPlayer:RequestStreamAroundAsync(position);
+	end;
+
 	--- positions rootPart above/below target, facing toward them on the Y axis only
 	local function moveToTarget(rootPart, targetHrp, heightOffset)
 		local targetPos = targetHrp.Position;
 		local offsetPos = targetPos + Vector3.new(0, heightOffset, 0);
+
+		ensureStreamed(targetPos);
 
 		-- face toward target horizontally (keep character upright)
 		local flatLook = Vector3.new(targetPos.X, offsetPos.Y, targetPos.Z);
