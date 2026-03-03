@@ -59,19 +59,21 @@ function Signal:Connect(handler)
     local handlers = self._handlers
     table.insert(handlers, handler)
 
-    return {
-        Connected = true,
-        Disconnect = function(conn)
-            conn.Connected = false
-            local index = table.find(handlers, handler)
-            if (index) then
-                table.remove(handlers, index)
-            end
-        end,
-        Destroy = function(conn)
-            conn:Disconnect()
+    local conn = {}
+    conn.Connected = true
+
+    function conn:Disconnect()
+        self.Connected = false
+        local index = table.find(handlers, handler)
+        if (index) then
+            table.remove(handlers, index)
         end
-    }
+    end
+
+    conn.Remove = conn.Disconnect
+    conn.Destroy = conn.Disconnect
+
+    return conn
 end
 
 
