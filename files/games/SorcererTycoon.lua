@@ -259,66 +259,51 @@ end;
 
 do -- // Farming Helpers
 	local ATTACK_KEYS = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four};
+	local SKILL_FLAGS = {'useSkill1', 'useSkill2', 'useSkill3', 'useSkill4'};
 
-	--- welds rootPart to hover above/below target, facing toward them
-	local function weldToTarget(rootPart, targetHrp, heightOffset)
-		local anchorPart = maid.farmAnchor;
-
-		if (not anchorPart) then
-			anchorPart = Instance.new('Part');
-			anchorPart.Name = 'FarmAnchor';
-			anchorPart.Size = Vector3.new(1, 1, 1);
-			anchorPart.Transparency = 1;
-			anchorPart.CanCollide = false;
-			anchorPart.Anchored = true;
-			anchorPart.Parent = workspace;
-			maid.farmAnchor = anchorPart;
-
-			local weld = Instance.new('Weld');
-			weld.Part0 = anchorPart;
-			weld.Part1 = rootPart;
-			weld.Parent = anchorPart;
-			maid.farmWeld = weld;
-		end;
-
+	--- positions rootPart above/below target, facing toward them using BodyPosition + BodyGyro
+	local function moveToTarget(rootPart, targetHrp, heightOffset)
 		local targetPos = targetHrp.Position;
 		local offsetPos = targetPos + Vector3.new(0, heightOffset, 0);
 		local lookDir = (targetPos - offsetPos).Unit;
 
-		anchorPart.CFrame = CFrame.lookAt(offsetPos, offsetPos + lookDir);
-	end;
+		if (not maid.farmBp) then
+			local bp = Instance.new('BodyPosition');
+			bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge);
+			bp.D = 100;
+			bp.P = 10000;
+			bp.Parent = rootPart;
+			maid.farmBp = bp;
 
-	--- cleans up the farm anchor and weld
-	local function cleanupAnchor()
-		maid.farmWeld = nil;
-		maid.farmAnchor = nil;
-	end;
-
-	--- checks if a skill key is on cooldown
-	local function isOnCooldown(keyName)
-		local character = LocalPlayer.Character;
-		if (not character) then return true end;
-
-		local cooldowns = character:FindFirstChild('Cooldowns');
-		if (not cooldowns) then return false end;
-
-		for _, cd in cooldowns:GetChildren() do
-			if (cd.Name:find(keyName)) then return true end;
+			local bg = Instance.new('BodyGyro');
+			bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge);
+			bg.D = 50;
+			bg.P = 5000;
+			bg.Parent = rootPart;
+			maid.farmBg = bg;
 		end;
 
-		return false;
+		maid.farmBp.Position = offsetPos;
+		maid.farmBg.CFrame = CFrame.lookAt(offsetPos, offsetPos + lookDir);
 	end;
 
-	--- presses attack keys that aren't on cooldown
+	--- cleans up farm body movers
+	local function cleanupMovers()
+		maid.farmBp = nil;
+		maid.farmBg = nil;
+	end;
+
+	--- sends a key press for skills that are toggled on
 	local function attackWithKeys()
-		local keyNames = {'Divergent Fist', 'Energy Burst', 'Manji Kick', 'Phantom Burst'};
+		local skillDelay = library.flags.skillDelay or 0.1;
 
 		for i, keyCode in ATTACK_KEYS do
-			if (not isOnCooldown(keyNames[i])) then
-				VirtualInputManager:SendKeyEvent(true, keyCode, false, game);
-				task.wait(0.05);
-				VirtualInputManager:SendKeyEvent(false, keyCode, false, game);
-			end;
+			if (not library.flags[SKILL_FLAGS[i]]) then continue end;
+
+			VirtualInputManager:SendKeyEvent(true, keyCode, false, game);
+			task.wait(0.05);
+			VirtualInputManager:SendKeyEvent(false, keyCode, false, game);
+			task.wait(skillDelay);
 		end;
 	end;
 
@@ -369,6 +354,18 @@ do -- // Farming Helpers
 		return nil;
 	end;
 
+	--- checks if an instance is inside a Drops folder
+	local function isInsideDropsFolder(instance)
+		local current = instance.Parent;
+
+		while (current and current ~= map) do
+			if (current.Name == 'Drops') then return true end;
+			current = current.Parent;
+		end;
+
+		return false;
+	end;
+
 	--- collects drops from a specific Drops folder
 	local function collectDropsFrom(dropsFolder, rootPart)
 		if (not dropsFolder or not rootPart) then return end;
@@ -394,7 +391,7 @@ do -- // Farming Helpers
 	function functions.autoFarmNPCs(toggle)
 		if (not toggle) then
 			maid.autoFarmNPCs = nil;
-			cleanupAnchor();
+			cleanupMovers();
 			return;
 		end;
 
@@ -402,9 +399,10 @@ do -- // Farming Helpers
 			while task.wait(FARM_TICK_DELAY) do
 				if (not library.flags.autoFarmNPCs) then break end;
 
-				-- bosses take priority when both are enabled
-				if (library.flags.autoFarmBosses and findBoss()) then
-					cleanupAnchor();
+				-- bosses take priority when both are enabled and a zone is selected
+				local bossZone = library.flags.bossZone;
+				if (library.flags.autoFarmBosses and bossZone and bossZone ~= 'None' and findBoss()) then
+					cleanupMovers();
 					task.wait(0.5);
 					continue;
 				end;
@@ -414,19 +412,19 @@ do -- // Farming Helpers
 
 				local mob, hrp, humanoid = findNPC();
 				if (not mob or not hrp) then
-					cleanupAnchor();
+					cleanupMovers();
 					continue;
 				end;
 
 				local heightOffset = library.flags.farmHeightOffset;
 
 				repeat
-					weldToTarget(rootPart, hrp, heightOffset);
+					moveToTarget(rootPart, hrp, heightOffset);
 					attackWithKeys();
 					task.wait(FARM_TICK_DELAY);
 				until not humanoid or humanoid.Health <= 0 or not library.flags.autoFarmNPCs or not hrp.Parent;
 
-				cleanupAnchor();
+				cleanupMovers();
 
 				if (humanoid and humanoid.Health <= 0) then
 					killCount += 1;
@@ -440,14 +438,14 @@ do -- // Farming Helpers
 				end;
 			end;
 
-			cleanupAnchor();
+			cleanupMovers();
 		end);
 	end;
 
 	function functions.autoFarmBosses(toggle)
 		if (not toggle) then
 			maid.autoFarmBosses = nil;
-			cleanupAnchor();
+			cleanupMovers();
 			return;
 		end;
 
@@ -460,14 +458,14 @@ do -- // Farming Helpers
 
 				local selectedZone = library.flags.bossZone;
 				if (not selectedZone or selectedZone == 'None') then
-					cleanupAnchor();
+					cleanupMovers();
 					task.wait(1);
 					continue;
 				end;
 
 				local mob, hrp, humanoid = findBoss();
 				if (not mob or not hrp) then
-					cleanupAnchor();
+					cleanupMovers();
 					task.wait(1);
 					continue;
 				end;
@@ -475,12 +473,12 @@ do -- // Farming Helpers
 				local heightOffset = library.flags.farmHeightOffset;
 
 				repeat
-					weldToTarget(rootPart, hrp, heightOffset);
+					moveToTarget(rootPart, hrp, heightOffset);
 					attackWithKeys();
 					task.wait(FARM_TICK_DELAY);
 				until not humanoid or humanoid.Health <= 0 or not library.flags.autoFarmBosses or not hrp.Parent;
 
-				cleanupAnchor();
+				cleanupMovers();
 
 				if (humanoid and humanoid.Health <= 0) then
 					bossKillCount += 1;
@@ -494,7 +492,7 @@ do -- // Farming Helpers
 				end;
 			end;
 
-			cleanupAnchor();
+			cleanupMovers();
 		end);
 	end;
 
@@ -514,12 +512,15 @@ do -- // Farming Helpers
 				for _, child in map:GetDescendants() do
 					if (not library.flags.autoCollectDrops) then break end;
 					if (not child:IsA('ProximityPrompt')) then continue end;
+					if (not isInsideDropsFolder(child)) then continue end;
 
 					local dropParent = child.Parent;
 					if (not dropParent) then continue end;
 
 					local cf = getCFrame(dropParent);
 					if (not cf) then continue end;
+
+					if (dropParent.Name ~= 'Yen' and dropParent.Name ~= 'CursedEnergy') then continue end;
 
 					rootPart.CFrame = cf;
 					fireproximityprompt(child);
@@ -660,6 +661,38 @@ do -- // Boss Zone List
 		text = 'Boss Zone',
 		values = bossZones,
 		value = 'None'
+	});
+
+	automation:AddDivider('Skills');
+
+	automation:AddToggle({
+		text = 'Use Skill 1',
+		flag = 'Use Skill 1'
+	});
+
+	automation:AddToggle({
+		text = 'Use Skill 2',
+		flag = 'Use Skill 2'
+	});
+
+	automation:AddToggle({
+		text = 'Use Skill 3',
+		flag = 'Use Skill 3'
+	});
+
+	automation:AddToggle({
+		text = 'Use Skill 4',
+		flag = 'Use Skill 4'
+	});
+
+	automation:AddSlider({
+		text = 'Skill Delay',
+		flag = 'Skill Delay',
+		tip = 'Delay between skill uses (seconds)',
+		min = 0,
+		max = 2,
+		value = 0.1,
+		textpos = 2
 	});
 
 	automation:AddDivider('Farm Settings');
