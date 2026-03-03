@@ -716,8 +716,24 @@ local function calculateParryDelay(rawDelay: number): number
 	return rawDelay - (playerPing * (library.flags.pingCompensation / 100));
 end;
 
+local function isManuallyBlocking(): boolean
+	return UserInputService:IsKeyDown(BLOCK_KEY);
+end;
+
+local function isSneaking(): boolean
+	local character: Model? = LocalPlayer.Character;
+	if (not character) then
+		return false;
+	end;
+
+	return character:FindFirstChild('SneakAttack') ~= nil;
+end;
+
 local function executeParry(rawDelay: number): ()
-	if (isAutoBlocking) then return end;
+	if (isAutoBlocking or isManuallyBlocking() or isSneaking()) then
+		return;
+	end;
+
 	isAutoBlocking = true;
 
 	local adjustedDelay: number = calculateParryDelay(rawDelay);
@@ -725,9 +741,19 @@ local function executeParry(rawDelay: number): ()
 		task.wait(adjustedDelay);
 	end;
 
+	-- re-check after waiting in case state changed
+	if (isManuallyBlocking() or isSneaking()) then
+		isAutoBlocking = false;
+		return;
+	end;
+
 	blockInput();
 	task.wait(library.flags.blockDuration / 1000);
-	unblockInput();
+
+	-- only release if we were the ones controlling block
+	if (not isManuallyBlocking()) then
+		unblockInput();
+	end;
 
 	isAutoBlocking = false;
 end;
