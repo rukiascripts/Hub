@@ -15,9 +15,9 @@
 	function Signal.new()
 		local self = setmetatable({}, Signal)
 
-		self._bindableEvent = Instance.new("BindableEvent")
-		self._argMap = {}
-		self._fireId = 0
+		self._handlers = {}
+		self._waiting = {}
+		self._destroyed = false
 
 		return self
 	end
@@ -31,57 +31,64 @@
 	-- @param ... Variable arguments to pass to handler
 	-- @treturn nil
 function Signal:Fire(...)
-    local id = self._fireId + 1
-    self._fireId = id
-    self._argMap[id] = {n = select("#", ...), ...}
+    local args = {n = select("#", ...), ...}
 
-    self._bindableEvent:Fire(id)
+    for _, handler in self._handlers do
+        task.defer(handler, unpack(args, 1, args.n))
+    end
+
+    for _, thread in self._waiting do
+        task.defer(thread, unpack(args, 1, args.n))
+    end
+
+    table.clear(self._waiting)
 end
 
 	--- Connect a new handler to the event. Returns a connection object that can be disconnected.
 	-- @tparam function handler Function handler called with arguments passed when `:Fire(...)` is called
 	-- @treturn Connection Connection object that can be disconnected
 function Signal:Connect(handler)
-    if not self._bindableEvent then 
-        return error("Signal has been destroyed"); 
+    if self._destroyed then
+        return error("Signal has been destroyed");
     end
 
-    if type(handler) ~= "function" then 
-        error(("connect(%s)"):format(typeof(handler)), 2) 
+    if type(handler) ~= "function" then
+        error(("connect(%s)"):format(typeof(handler)), 2)
     end
 
-    return self._bindableEvent.Event:Connect(function()
-        local id = self._fireId
-        local args = self._argMap[id]
-        if (not args) then return end
-        self._argMap[id] = nil
-        handler(unpack(args, 1, args.n))
-    end)
+    local handlers = self._handlers
+    table.insert(handlers, handler)
+
+    return {
+        Connected = true,
+        Disconnect = function(conn)
+            conn.Connected = false
+            local index = table.find(handlers, handler)
+            if (index) then
+                table.remove(handlers, index)
+            end
+        end,
+        Destroy = function(conn)
+            conn:Disconnect()
+        end
+    }
 end
 
 
 	--- Wait for fire to be called, and return the arguments it was given.
 	-- @treturn ... Variable arguments from connection
 function Signal:Wait()
-    self._bindableEvent.Event:Wait()
-    local id = self._fireId
-    local args = self._argMap[id]
-    if (not args) then return end
-    self._argMap[id] = nil
-    return unpack(args, 1, args.n)
+    table.insert(self._waiting, coroutine.running())
+    return coroutine.yield()
 end
 
 
 	--- Disconnects all connected events to the signal. Voids the signal as unusable.
 	-- @treturn nil
 	function Signal:Destroy()
-		if self._bindableEvent then
-			self._bindableEvent:Destroy()
-			self._bindableEvent = nil
-		end
-
-		self._argMap = nil
-		self._fireId = nil
+		self._destroyed = true
+		table.clear(self._handlers)
+		table.clear(self._waiting)
 	end
 
 return Signal
