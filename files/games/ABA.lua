@@ -611,7 +611,6 @@ local M1_ANIM_IDS: {[string]: number} = {
 
 	-- shanks (mode) (m1 1 & m1 3 shared with fist)
 
-	['180426354'] = 0, -- m1 2
 	['180435571'] = 0, -- m1 4
 
 	-- mash kyrelight
@@ -691,7 +690,7 @@ local M1_ANIM_IDS: {[string]: number} = {
 	['10599110274'] = 0, -- m1 4
 
 	-- nanami (shared m1 3-4 with sword)
-	
+
 	['92901308072582'] = 0, -- m1 1
 };
 
