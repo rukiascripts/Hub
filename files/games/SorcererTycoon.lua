@@ -344,31 +344,38 @@ do -- // Farming Helpers
 	function functions.autoFarmNPCs(toggle)
 		if (not toggle) then
 			maid.autoFarmNPCs = nil;
-			maid.autoFarmNPCsLoop = nil;
 			cleanupMovers();
 			return;
 		end;
 
-		maid.autoFarmNPCsLoop = RunService.Heartbeat:Connect(function()
-			-- guard: skip if already processing a target
-			if (maid.autoFarmNPCs) then return end;
+		maid.autoFarmNPCs = task.spawn(function()
+			while (true) do
+				-- bosses take priority when both are enabled and a zone is selected
+				local bossZone = library.flags.bossZone;
+				if (library.flags.autoFarmBosses and bossZone and bossZone ~= 'None' and findBoss()) then
+					cleanupMovers();
+					task.wait(0.5);
+					continue;
+				end;
 
-			-- bosses take priority when both are enabled and a zone is selected
-			local bossZone = library.flags.bossZone;
-			if (library.flags.autoFarmBosses and bossZone and bossZone ~= 'None' and findBoss()) then return end;
+				local rootPart = Utility:getPlayerData().rootPart;
+				if (not rootPart) then
+					task.wait(0.5);
+					continue;
+				end;
 
-			local rootPart = Utility:getPlayerData().rootPart;
-			if (not rootPart) then return end;
+				local mob, hrp, humanoid = findNPC();
+				if (not mob or not hrp) then
+					cleanupMovers();
+					task.wait(0.5);
+					continue;
+				end;
 
-			local mob, hrp, humanoid = findNPC();
-			if (not mob or not hrp) then return end;
-
-			maid.autoFarmNPCs = task.spawn(function()
 				repeat
 					moveToTarget(rootPart, hrp, library.flags.farmHeightOffset);
 					attackWithKeys();
 					task.wait(FARM_TICK_DELAY);
-				until not humanoid or humanoid.Health <= 0 or not library.flags.autoFarmNPCs or not hrp.Parent;
+				until not humanoid or humanoid.Health <= 0 or not hrp.Parent;
 
 				cleanupMovers();
 
@@ -383,38 +390,45 @@ do -- // Farming Helpers
 					end;
 				end;
 
-				maid.autoFarmNPCs = nil;
-			end);
+				task.wait(0.3);
+			end;
 		end);
 	end;
 
 	function functions.autoFarmBosses(toggle)
 		if (not toggle) then
 			maid.autoFarmBosses = nil;
-			maid.autoFarmBossesLoop = nil;
 			cleanupMovers();
 			return;
 		end;
 
-		maid.autoFarmBossesLoop = RunService.Heartbeat:Connect(function()
-			-- guard: skip if already processing a target
-			if (maid.autoFarmBosses) then return end;
+		maid.autoFarmBosses = task.spawn(function()
+			while (true) do
+				local rootPart = Utility:getPlayerData().rootPart;
+				if (not rootPart) then
+					task.wait(0.5);
+					continue;
+				end;
 
-			local rootPart = Utility:getPlayerData().rootPart;
-			if (not rootPart) then return end;
+				local selectedZone = library.flags.bossZone;
+				if (not selectedZone or selectedZone == 'None') then
+					cleanupMovers();
+					task.wait(1);
+					continue;
+				end;
 
-			local selectedZone = library.flags.bossZone;
-			if (not selectedZone or selectedZone == 'None') then return end;
+				local mob, hrp, humanoid = findBoss();
+				if (not mob or not hrp) then
+					cleanupMovers();
+					task.wait(1);
+					continue;
+				end;
 
-			local mob, hrp, humanoid = findBoss();
-			if (not mob or not hrp) then return end;
-
-			maid.autoFarmBosses = task.spawn(function()
 				repeat
 					moveToTarget(rootPart, hrp, library.flags.farmHeightOffset);
 					attackWithKeys();
 					task.wait(FARM_TICK_DELAY);
-				until not humanoid or humanoid.Health <= 0 or not library.flags.autoFarmBosses or not hrp.Parent;
+				until not humanoid or humanoid.Health <= 0 or not hrp.Parent;
 
 				cleanupMovers();
 
@@ -429,8 +443,8 @@ do -- // Farming Helpers
 					end;
 				end;
 
-				maid.autoFarmBosses = nil;
-			end);
+				task.wait(0.3);
+			end;
 		end);
 	end;
 
