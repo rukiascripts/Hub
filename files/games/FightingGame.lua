@@ -41,7 +41,7 @@ local column1, column2 = unpack(library.columns);
 
 local functions = {};
 
-local Players, RunService, UserInputService, HttpService, CollectionService = Services:Get('Players', 'RunService', 'UserInputService', 'HttpService', 'CollectionService');
+local Players, RunService, UserInputService, HttpService, CollectionService, Lighting, ReplicatedStorage = Services:Get('Players', 'RunService', 'UserInputService', 'HttpService', 'CollectionService', 'Lighting', 'ReplicatedStorage');
 local LocalPlayer = Players.LocalPlayer;
 
 local maid = Maid.new();
@@ -54,7 +54,7 @@ local combatcheats = column2:AddSection('Combat Cheats');
 local playercheats = column2:AddSection('Player Cheats');
 
 
-do -- // Functions
+do
     function functions.speedHack(toggle)
         if (not toggle) then
             maid.speedHack = nil;
@@ -113,18 +113,18 @@ do -- // Functions
 
 end;
 function functions.infiniteJump(toggle)
-    if(not toggle) then return end;
+    if (not toggle) then return end;
 
     repeat
         local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
-        if(rootPart and UserInputService:IsKeyDown(Enum.KeyCode.Space)) then
+        if (rootPart and UserInputService:IsKeyDown(Enum.KeyCode.Space)) then
             rootPart.Velocity = Vector3.new(rootPart.Velocity.X, library.flags.infiniteJumpHeight, rootPart.Velocity.Z);
         end;
         task.wait(0.1);
-    until not library.flags.infiniteJump;
+    until (not library.flags.infiniteJump);
 end;
 
-localcheats:AddDivider("Movement");
+localcheats:AddDivider('Movement');
 
 
 localcheats:AddToggle({
@@ -163,13 +163,13 @@ localcheats:AddSlider({
 
 
 
-localcheats:AddDivider("Notifiers");
+localcheats:AddDivider('Notifiers');
 
 
 local playerSpectating;
 local playerSpectatingLabel;
 
-do -- // Setup Leaderboard Spectate
+do
     local lastUpdateAt = 0;
 
     function setCameraSubject(subject)
@@ -191,8 +191,8 @@ do -- // Setup Leaderboard Spectate
 
         maid.spectateUpdate = task.spawn(function()
             while task.wait() do
-                if (tick() - lastUpdateAt < 5) then continue end;
-                lastUpdateAt = tick();
+                if (DateTime.now().UnixTimestampMillis / 1000 - lastUpdateAt < 5) then continue end;
+                lastUpdateAt = DateTime.now().UnixTimestampMillis / 1000;
                 task.spawn(function()
                     LocalPlayer:RequestStreamAroundAsync(workspace.CurrentCamera.CFrame.Position);
                 end);
@@ -206,7 +206,7 @@ do -- // Setup Leaderboard Spectate
         local newPlayerSpectating;
         local newPlayerSpectatingLabel;
 
-        for _, v in next, LocalPlayer.PlayerGui.Leaderboard.ScrollingFrame:GetChildren() do
+        for _, v in LocalPlayer.PlayerGui.Leaderboard.ScrollingFrame:GetChildren() do
             if (v:IsA('Frame') and v:FindFirstChild('PlayerName')) then
                 local filteredName = string.gsub(v.PlayerName.Text, ' ', '');
                 newPlayerSpectating = filteredName;
@@ -245,40 +245,35 @@ do -- // Setup Leaderboard Spectate
     TextLogger.setCameraSubject = setCameraSubject;
 end;
 
-do --// Notifier
-    local moderatorIDs = {283890177,421391593,5127995337,42235130,1001242712,56721213,38307780,138249029,1041867508,95410360,1459923763,1696452029,150269473,1321098453,45453121,276142024,123755248,585228735,3489954641}
-    local asset = "rbxassetid://367453005"
-    local modJoinSound = Instance.new("Sound")
+do
+    local MODERATOR_IDS = {283890177, 421391593, 5127995337, 42235130, 1001242712, 56721213, 38307780, 138249029, 1041867508, 95410360, 1459923763, 1696452029, 150269473, 1321098453, 45453121, 276142024, 123755248, 585228735, 3489954641};
+    local MOD_SOUND_ASSET = 'rbxassetid://367453005';
+    local modJoinSound = Instance.new('Sound');
 
-    modJoinSound.SoundId = asset
-    modJoinSound.Parent = workspace
-
+    modJoinSound.SoundId = MOD_SOUND_ASSET;
+    modJoinSound.Parent = workspace;
 
     local function onPlayerAdded(player)
-        local playerId = player.UserId
-        local playerName = player.Name
-        if table.find(moderatorIDs, playerId) then 
-            modJoinSound:Play()
+        if (table.find(MODERATOR_IDS, player.UserId)) then
+            modJoinSound:Play();
             ToastNotif.new({
-                text = ('Moderator joined [%s]'):format(playerName),
+                text = `Moderator joined [{player.Name}]`,
             });
-        end
-    end
+        end;
+    end;
 
-    game.Players.PlayerAdded:Connect(onPlayerAdded)
+    Players.PlayerAdded:Connect(onPlayerAdded);
 
     local function onPlayerRemoving(player)
-        local playerId = player.UserId
-        local playerName = player.Name
-        if table.find(moderatorIDs, playerId) then 
-            modJoinSound:Play()
+        if (table.find(MODERATOR_IDS, player.UserId)) then
+            modJoinSound:Play();
             ToastNotif.new({
-                text = ('Moderator left [%s]'):format(playerName),
+                text = `Moderator left [{player.Name}]`,
             });
-        end
-    end
+        end;
+    end;
 
-    game.Players.PlayerRemoving:Connect(onPlayerRemoving)
+    Players.PlayerRemoving:Connect(onPlayerRemoving);
 
 
 
@@ -295,7 +290,7 @@ do --// Notifier
         maid.proximityCheck = RunService.Heartbeat:Connect(function()
             if (not myRootPart) then return end;
 
-            for _, v in next, Players:GetPlayers() do
+            for _, v in Players:GetPlayers() do
                 local rootPart = v.Character and v.Character.PrimaryPart;
                 if (not rootPart or v == LocalPlayer) then continue end;
 
@@ -304,13 +299,13 @@ do --// Notifier
                 if (distance < 300 and not table.find(notifSend, rootPart)) then
                     table.insert(notifSend, rootPart);
                     ToastNotif.new({
-                        text = string.format('%s is nearby [%d]', v.Name, distance),
+                        text = `{v.Name} is nearby [{math.floor(distance)}]`,
                         duration = 30
                     });
                 elseif (distance > 500 and table.find(notifSend, rootPart)) then
-                    table.remove(notifSend, table.find(notifSend, rootPart))
+                    table.remove(notifSend, table.find(notifSend, rootPart));
                     ToastNotif.new({
-                        text = string.format('%s is no longer nearby [%d]', v.Name, distance),
+                        text = `{v.Name} is no longer nearby [{math.floor(distance)}]`,
                         duration = 30
                     });
                 end;
@@ -332,7 +327,7 @@ local function formatMobName(mobName)
     if (not mobName:match('%.(.-)%d+')) then return mobName end;
     local allMobLetters = mobName:match('%.(.-)%d+'):gsub('_', ' '):split(' ');
 
-    for i, v in next, allMobLetters do
+    for i, v in allMobLetters do
         local partialLetters = v:split('');
         partialLetters[1] = partialLetters[1]:upper();
 
@@ -890,14 +885,14 @@ do -- One Shot NPCs
     function NetworkOneShot:Destroy()
         self._maid:DoCleaning();
 
-        for i,v in next, mobs do
+        for i,v in mobs do
             if (v ~= self) then continue; end
             mobs[i] = nil;
         end;
     end;
 
     function NetworkOneShot:ClearAll()
-        for _, v in next, mobs do
+        for _, v in mobs do
             v:Destroy();
         end;
 
@@ -946,7 +941,7 @@ do -- One Shot NPCs
 
         maid.networkOneShot = task.spawn(function()
             while task.wait() do
-                for _, mob in next, mobs do
+                for _, mob in mobs do
                     mob:Update();
                 end;
             end;
@@ -1010,12 +1005,11 @@ playercheats:AddToggle({
 });
 
 local VisualsMisc = column2:AddSection('Visuals');
-VisualsMisc:AddDivider("Game Visuals");
-local Lighting = game:GetService("Lighting")
+VisualsMisc:AddDivider('Game Visuals');
 
 local lastFogDensity = 0;
 function functions.noFog(t)
-    if not t then Lighting.Atmosphere.Density = lastFogDensity; maid.noFog = nil; return; end
+    if (not t) then Lighting.Atmosphere.Density = lastFogDensity; maid.noFog = nil; return; end;
 
     maid.noFog = Lighting.Atmosphere:GetPropertyChangedSignal('Density'):Connect(function()
         Lighting.Atmosphere.Density = 0;
@@ -1023,17 +1017,17 @@ function functions.noFog(t)
 
     lastFogDensity = Lighting.Atmosphere.Density;
     Lighting.Atmosphere.Density = 0;
-end
+end;
 
-local oldAmbient, oldBritghtness = Lighting.Ambient, Lighting.Brightness;
+local oldAmbient, oldBrightness = Lighting.Ambient, Lighting.Brightness;
 function functions.fullBright(toggle)
-    if(not toggle) then
+    if (not toggle) then
         maid.fullBright = nil;
-        Lighting.Ambient, Lighting.Brightness = oldAmbient, oldBritghtness;
-        return
+        Lighting.Ambient, Lighting.Brightness = oldAmbient, oldBrightness;
+        return;
     end;
 
-    oldAmbient, oldBritghtness = Lighting.Ambient, Lighting.Brightness;
+    oldAmbient, oldBrightness = Lighting.Ambient, Lighting.Brightness;
     maid.fullBright = Lighting:GetPropertyChangedSignal('Ambient'):Connect(function()
         Lighting.Ambient = Color3.fromRGB(255, 255, 255);
         Lighting.Brightness = 1;
@@ -1041,9 +1035,9 @@ function functions.fullBright(toggle)
     Lighting.Ambient = Color3.fromRGB(255, 255, 255);
 end;
 
-function functions.noBlur(t)
+function functions.noBlurEffect(t)
     Lighting.Blur.Enabled = not t;
-end
+end;
 
 do -- // Visuals
     VisualsMisc:AddToggle({
@@ -1109,7 +1103,7 @@ do -- // Inventory Viewer (SMH)
     local function showPlayerInventory(player)
         if (typeof(player) ~= 'Instance') then return end;
 
-        for _, v in next, inventoryLabels do
+        for _, v in inventoryLabels do
             v.main:Destroy();
         end;
 
@@ -1156,7 +1150,7 @@ do -- // Inventory Viewer (SMH)
             seen[toolName] = playerItem;
         end;
 
-        for _, tool in next, player.Backpack:GetChildren() do
+        for _, tool in player.Backpack:GetChildren() do
             task.spawn(onBackpackChildAdded, tool);
         end;
 
@@ -1164,7 +1158,7 @@ do -- // Inventory Viewer (SMH)
             return a.type < b.type;
         end);
 
-        for _, v in next, playerItems do
+        for _, v in playerItems do
             v.text = ('<font color="#%s">%s [x%d]</font>'):format(itemColors[v.type]:ToHex(), v.toolName, v.quantity);
             table.insert(inventoryLabels, inventoryViewer:AddLabel(v.text));
         end;
