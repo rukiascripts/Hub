@@ -37,6 +37,15 @@ local Players, RunService, UserInputService, HttpService, CollectionService, Mem
 	'Stats'
 );
 
+Players = cloneref(Players);
+RunService = cloneref(RunService);
+UserInputService = cloneref(UserInputService);
+ReplicatedStorage = cloneref(ReplicatedStorage);
+TweenService = cloneref(TweenService);
+CollectionService = cloneref(CollectionService);
+TeleportService = cloneref(TeleportService);
+Lighting = cloneref(Lighting);
+
 local BLOCKED_PLACES: {[number]: string} = {
 	[2008032602] = 'Script will not run in matchmaking!',
 	[5411459567] = 'Script will not run in AFK World!',
@@ -94,6 +103,8 @@ function EntityESP:Plugin()
 	};
 end;
 
+local BLUE_MOON_COLOR: Color3 = Color3.new(0.345098, 0.847059, 1);
+local ATTACH_MAX_RANGE: number = 300;
 local ZOOM_BF_COOLDOWN: number = 0.15;
 local zoomBfActive: boolean = false;
 local zoomMaid = Maid.new();
@@ -275,6 +286,76 @@ local function WatchLive(live: Folder): ()
 	end);
 end;
 
+local kokushiboMaid = Maid.new();
+
+function functions.autoKokushiboBlueMoon(toggle: boolean): ()
+	if (not toggle) then
+		kokushiboMaid:DoCleaning();
+		local remote: RemoteFunction? = ReplicatedStorage:FindFirstChild('KokushiboCheck') :: RemoteFunction?;
+		if (remote and isfunctionhooked((remote :: RemoteFunction).OnClientInvoke)) then
+			restorefunction((remote :: RemoteFunction).OnClientInvoke);
+		end;
+		return;
+	end;
+
+	local remote: RemoteFunction? = ReplicatedStorage:FindFirstChild('KokushiboCheck') :: RemoteFunction?;
+	if (not remote) then return end;
+
+	hookfunction((remote :: RemoteFunction).OnClientInvoke, newcclosure(function(p1: number, p2: number): boolean
+		local inputWindow: number = p2 * 2;
+		local moveDelay: number = p1 * 2 - inputWindow;
+
+		local template: ScreenGui? = ReplicatedStorage:FindFirstChild('FrenchKokushibo') :: ScreenGui?;
+		if (not template) then return false; end;
+
+		local gui: ScreenGui = (template :: ScreenGui):Clone();
+
+		for _, child: Instance in gui:GetChildren() do
+			if (not child:IsA('ImageLabel')) then continue end;
+			local img: ImageLabel = child :: ImageLabel;
+			local randX: number = math.random(1, 2) / 60 * (math.random(0, 1) == 0 and -1 or 1);
+			local randY: number = math.random(1, 3) / 90 * (math.random(0, 1) == 0 and -1 or 1);
+
+			TweenService:Create(img, TweenInfo.new(moveDelay, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
+				Position = UDim2.new(img.Position.X.Scale + randX, 0, img.Position.Y.Scale + randY, 0);
+			}):Play();
+		end;
+
+		gui.Parent = LocalPlayer.PlayerGui;
+
+		task.wait(moveDelay);
+
+		if (inputWindow <= 0) then
+			gui:Destroy();
+			return false;
+		end;
+
+		-- auto blue effect
+		for _, child: Instance in gui:GetChildren() do
+			if (not child:IsA('ImageLabel')) then continue end;
+			local img: ImageLabel = child :: ImageLabel;
+
+			local uiScale: UIScale? = img:FindFirstChildOfClass('UIScale') :: UIScale?;
+			if (uiScale) then
+				TweenService:Create(uiScale :: UIScale, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+					Scale = 1.2;
+				}):Play();
+			end;
+
+			TweenService:Create(img, TweenInfo.new(0.75, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+				ImageTransparency = 1;
+			}):Play();
+
+			img.ImageColor3 = BLUE_MOON_COLOR;
+		end;
+
+		task.delay(0.75, function(): ()
+			gui:Destroy();
+		end);
+		return true;
+	end));
+end;
+
 function functions.nanamiAutoBlackFlash(toggle: boolean): ()
 	if (not toggle) then
 		nanamiMaid:DoCleaning();
@@ -411,8 +492,6 @@ function functions.clickDestroy(toggle: boolean): ()
 	end);
 end;
 
-
-
 local lockedTarget: Player? = nil;
 
 --[[
@@ -540,6 +619,35 @@ function functions.antiBlind(toggle: boolean): ()
 			(child :: ScreenGui).Enabled = false;
 		end;
 	end);
+end;
+
+local oldNamecall: ((...any) -> ...any)? = nil;
+
+function functions.antiKick(toggle: boolean): ()
+	if (not toggle) then
+		if (oldNamecall) then
+			local mt: any = getrawmetatable(game);
+			setreadonly(mt, false);
+			mt.__namecall = oldNamecall;
+			setreadonly(mt, true);
+			oldNamecall = nil;
+		end;
+		return;
+	end;
+
+	local mt: any = getrawmetatable(game);
+	setreadonly(mt, false);
+
+	oldNamecall = mt.__namecall;
+
+	mt.__namecall = newcclosure(function(self: any, ...: any): ...any
+		if (not checkcaller() and getnamecallmethod() == 'Kick') then
+			return;
+		end;
+		return (oldNamecall :: any)(self, ...);
+	end);
+
+	setreadonly(mt, true);
 end;
 
 local BLOCK_KEY: Enum.KeyCode = Enum.KeyCode.F;
@@ -964,7 +1072,7 @@ function functions.animLogger(toggle: boolean): ()
 
 end;
 
-animLoggerWindow.OnClick:Connect(function(actionName, context)
+animLoggerWindow.OnClick:Connect(function(actionName: string, context: any): ()
 	print(`actionName={actionName} animationId={context.animationId}`);
 
 	if (actionName == 'Add To Ignore List' and not animLoggerWindow.ignoreList[context.animationId]) then
@@ -982,13 +1090,13 @@ animLoggerWindow.OnClick:Connect(function(actionName, context)
 	end;
 end);
 
-library.OnKeyPress:Connect(function(input, gpe): ()
+library.OnKeyPress:Connect(function(input: InputObject, gpe: boolean): ()
 	if (gpe or not library.options.attachToBack) then return end;
 
 	local key = library.options.attachToBack.key;
 	if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
 		local hrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
-		local closest, closestDistance = nil, math.huge;
+		local closest: BasePart?, closestDistance: number = nil, math.huge;
 
 		if (not hrp) then return end;
 
@@ -999,7 +1107,7 @@ library.OnKeyPress:Connect(function(input, gpe): ()
 
 				local distance: number = ((rootPart :: BasePart).Position - (hrp :: BasePart).Position).Magnitude;
 
-				if (distance < 300 and distance < closestDistance) then
+				if (distance < ATTACH_MAX_RANGE and distance < closestDistance) then
 					closest, closestDistance = rootPart, distance;
 				end;
 			end;
@@ -1011,7 +1119,7 @@ library.OnKeyPress:Connect(function(input, gpe): ()
 		local lastGoalPos: Vector3? = nil;
 
 		maid.attachToBack = RunService.Heartbeat:Connect(function(): ()
-			local goalCF: CFrame = closest.CFrame * CFrame.new(0, library.flags.attachToBackHeight, library.flags.attachToBackSpace);
+			local goalCF: CFrame = (closest :: BasePart).CFrame * CFrame.new(0, library.flags.attachToBackHeight, library.flags.attachToBackSpace);
 
 			if (lastGoalPos and (goalCF.Position - lastGoalPos :: Vector3).Magnitude < 0.5) then return end;
 			lastGoalPos = goalCF.Position;
@@ -1030,7 +1138,7 @@ library.OnKeyPress:Connect(function(input, gpe): ()
 	end;
 end);
 
-library.OnKeyRelease:Connect(function(input): ()
+library.OnKeyRelease:Connect(function(input: InputObject): ()
 	if (not library.options.attachToBack) then return end;
 	local key = library.options.attachToBack.key;
 
@@ -1147,11 +1255,16 @@ localCheats:AddSlider({
 	textpos = 2
 });
 
-
 gameplayAssist:AddToggle({
 	text = 'Anti Blind',
 	tip = 'stops krillin and misaka blind',
 	callback = functions.antiBlind
+});
+
+gameplayAssist:AddToggle({
+	text = 'Anti Kick',
+	tip = 'blocks server-side kick calls via namecall hook',
+	callback = functions.antiKick
 });
 
 autoParrySection:AddToggle({
@@ -1231,6 +1344,12 @@ autoParrySection:AddSlider({
 });
 
 automation:AddToggle({
+	text = 'Auto Kokushibo Blue Moon',
+	tip = 'automatically does the blue moon effect on kokushibo QTE',
+	callback = functions.autoKokushiboBlueMoon
+});
+
+automation:AddToggle({
 	text = 'Nanami Auto Black Flash',
 	tip = 'auto clicks when the cutter crosses the goal on nanamis cut gui',
 	callback = functions.nanamiAutoBlackFlash
@@ -1242,7 +1361,7 @@ automation:AddToggle({
 	callback = functions.zoomAutoBlackFlash
 });
 
-function Utility:renderOverload(data)
+function Utility:renderOverload(data: any): ()
 	data.espSettings:AddToggle({
 		text = 'Show Mode',
 		tip = 'shows the mode/ultimate charge percentage on ESP text',
@@ -1258,7 +1377,9 @@ function Utility:renderOverload(data)
 
 		if (obj.Transparency ~= 0) then
 			obj.Transparency = 0.5;
-		else
+		end;
+
+		if (obj.Transparency == 0) then
 			local transparencyConn: RBXScriptConnection;
 			transparencyConn = obj:GetPropertyChangedSignal('Transparency'):Connect(function(): ()
 				if (obj.Transparency ~= 0) then
@@ -1282,7 +1403,7 @@ function Utility:renderOverload(data)
 		sectionName = 'Deidara Mines',
 		type = 'childAdded',
 		args = {workspace:WaitForChild('Thrown')},
-		callback = function(obj: Instance, espConstructor)
+		callback = function(obj: Instance, espConstructor: any): ()
 			if (not obj:IsA('UnionOperation') or obj.Name ~= 'Ball') then return end;
 			makeHiddenESP(obj :: BasePart, espConstructor, 'Deidara Mine');
 		end,
@@ -1293,7 +1414,7 @@ function Utility:renderOverload(data)
 		sectionName = 'Raiden Claymores',
 		type = 'childAdded',
 		args = {workspace:WaitForChild('ClearEachMatch')},
-		callback = function(obj: Instance, espConstructor)
+		callback = function(obj: Instance, espConstructor: any): ()
 			if (not obj:IsA('MeshPart')) then return end;
 			makeHiddenESP(obj :: BasePart, espConstructor, 'Claymore');
 		end,
