@@ -1,5 +1,3 @@
---[[ @author jacob ]]
-
 local library = sharedRequire('UILibrary.lua');
 
 local Utility = sharedRequire('utils/Utility.lua');
@@ -34,8 +32,8 @@ local dropsCollected = 0;
 local localCheats = column1:AddSection('Local Cheats');
 local automation = column2:AddSection('Automation');
 
-do -- // Movement
-	function functions.fly(toggle)
+do
+	function functions.fly(toggle: boolean): ()
 		if (not toggle) then
 			maid.flyHack = nil;
 			maid.flyBv = nil;
@@ -60,7 +58,7 @@ do -- // Movement
 		end);
 	end;
 
-	function functions.speedHack(toggle)
+	function functions.speedHack(toggle: boolean): ()
 		if (not toggle) then
 			maid.speedHack = nil;
 			maid.speedHackBv = nil;
@@ -90,7 +88,7 @@ do -- // Movement
 		end);
 	end;
 
-	function functions.noClip(toggle)
+	function functions.noClip(toggle: boolean): ()
 		if (not toggle) then
 			maid.noClip = nil;
 
@@ -107,15 +105,15 @@ do -- // Movement
 		maid.noClip = RunService.Stepped:Connect(function()
 			local myCharacterParts = Utility:getPlayerData().parts;
 
-			for _, v in next, myCharacterParts do
+			for _, v in myCharacterParts do
 				v.CanCollide = false;
 			end;
 		end);
 	end;
 end;
 
-do -- // Attach To Back
-	function functions.attachToBack()
+do
+	function functions.attachToBack(): ()
 		library.OnKeyPress:Connect(function(input, gpe)
 			if (gpe) then return end;
 
@@ -170,22 +168,31 @@ do -- // Attach To Back
 	end;
 end;
 
-do -- // Farming Helpers
+do
 	local ATTACK_KEYS = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four};
 	local SKILL_FLAGS = {'useSkill1', 'useSkill2', 'useSkill3', 'useSkill4'};
 
 	local STREAM_THRESHOLD = 50;
 
-	--- streams content around a position if the player is far from it, yields until loaded
-	local function ensureStreamed(rootPart, position)
+	--[[
+		streams content around a position if the player is far away, yields until loaded
+		@param rootPart BasePart
+		@param position Vector3
+	]]
+	local function ensureStreamed(rootPart: BasePart, position: Vector3): ()
 		local distance = (rootPart.Position - position).Magnitude;
 		if (distance < STREAM_THRESHOLD) then return end;
 		LocalPlayer:RequestStreamAroundAsync(position);
 		task.wait(0.5);
 	end;
 
-	--- positions rootPart above/below target, facing toward them on the Y axis only
-	local function moveToTarget(rootPart, targetHrp, heightOffset)
+	--[[
+		positions rootpart above or below target, faces toward them horizontally
+		@param rootPart BasePart
+		@param targetHrp BasePart
+		@param heightOffset number
+	]]
+	local function moveToTarget(rootPart: BasePart, targetHrp: BasePart, heightOffset: number): ()
 		local targetPos = targetHrp.Position;
 		local offsetPos = targetPos + Vector3.new(0, heightOffset, 0);
 
@@ -212,16 +219,18 @@ do -- // Farming Helpers
 		maid.farmBg.CFrame = CFrame.lookAt(offsetPos, flatLook);
 	end;
 
-	--- cleans up farm body movers
-	local function cleanupMovers()
+	local function cleanupMovers(): ()
 		maid.farmBp = nil;
 		maid.farmBg = nil;
 	end;
 
 	local SKILL_DELAY_FLAGS = {'skill1Delay', 'skill2Delay', 'skill3Delay', 'skill4Delay'};
 
-	--- gets sorted skill tools from backpack + character
-	local function getSkillTools()
+	--[[
+		grabs skill tools from backpack and character, sorted by name
+		@return {Tool}
+	]]
+	local function getSkillTools(): {Tool}
 		local backpack = LocalPlayer:FindFirstChild('Backpack');
 		local character = LocalPlayer.Character;
 		if (not backpack) then return {} end;
@@ -249,14 +258,12 @@ do -- // Farming Helpers
 		return tools;
 	end;
 
-	--- checks if the Nth skill tool is on cooldown (not in backpack or character)
-	local function isSkillReady(slotIndex)
+	local function isSkillReady(slotIndex: number): boolean
 		local tools = getSkillTools();
 		return tools[slotIndex] ~= nil;
 	end;
 
-	--- sends a key press for skills that are toggled on and ready
-	local function attackWithKeys()
+	local function attackWithKeys(): ()
 		for i, keyCode in ATTACK_KEYS do
 			if (not library.flags[SKILL_FLAGS[i]]) then continue end;
 			if (not isSkillReady(i)) then continue end;
@@ -270,8 +277,7 @@ do -- // Farming Helpers
 		end;
 	end;
 
-	--- finds a live NPC model inside an Info folder under npcSpawns
-	local function findNPC()
+	local function findNPC(): (Model?, BasePart?, Humanoid?)
 		for _, info in npcSpawns:GetChildren() do
 			local npcFolder = info:FindFirstChild('NPC');
 			if (not npcFolder) then continue end;
@@ -288,8 +294,7 @@ do -- // Farming Helpers
 		return nil;
 	end;
 
-	--- finds a live boss model in the selected boss zone
-	local function findBoss()
+	local function findBoss(): (Model?, BasePart?, Humanoid?)
 		local selectedZone = library.flags.bossZone;
 		if (not selectedZone or selectedZone == 'None') then return nil end;
 
@@ -310,15 +315,13 @@ do -- // Farming Helpers
 		return nil;
 	end;
 
-	--- gets the CFrame of an instance whether it's a BasePart or Model
-	local function getCFrame(instance)
+	local function getCFrame(instance: Instance): CFrame?
 		if (instance:IsA('BasePart')) then return instance.CFrame end;
 		if (instance:IsA('Model')) then return instance:GetPivot() end;
 		return nil;
 	end;
 
-	--- checks if an instance is inside a Drops folder
-	local function isInsideDropsFolder(instance)
+	local function isInsideDropsFolder(instance: Instance): boolean
 		local current = instance.Parent;
 
 		while (current and current ~= map) do
@@ -329,8 +332,7 @@ do -- // Farming Helpers
 		return false;
 	end;
 
-	--- collects drops from a specific Drops folder
-	local function collectDropsFrom(dropsFolder, rootPart)
+	local function collectDropsFrom(dropsFolder: Instance?, rootPart: BasePart): ()
 		if (not dropsFolder or not rootPart) then return end;
 
 		for _, drop in dropsFolder:GetDescendants() do
@@ -351,7 +353,7 @@ do -- // Farming Helpers
 		end;
 	end;
 
-	function functions.autoFarmNPCs(toggle)
+	function functions.autoFarmNPCs(toggle: boolean): ()
 		if (not toggle) then
 			maid.autoFarmNPCs = nil;
 			cleanupMovers();
@@ -407,7 +409,7 @@ do -- // Farming Helpers
 		end);
 	end;
 
-	function functions.autoFarmBosses(toggle)
+	function functions.autoFarmBosses(toggle: boolean): ()
 		if (not toggle) then
 			maid.autoFarmBosses = nil;
 			cleanupMovers();
@@ -462,7 +464,7 @@ do -- // Farming Helpers
 		end);
 	end;
 
-	function functions.autoCollectDrops(toggle)
+	function functions.autoCollectDrops(toggle: boolean): ()
 		if (not toggle) then
 			maid.autoCollectDrops = nil;
 			return;
@@ -498,15 +500,15 @@ do -- // Farming Helpers
 	end;
 end;
 
-do -- // Kill Counter
-	function functions.showStats()
+do
+	function functions.showStats(): ()
 		ToastNotif.new({
 			text = `NPC Kills: {killCount} | Boss Kills: {bossKillCount} | Drops: {dropsCollected}`,
 			duration = 5
 		});
 	end;
 
-	function functions.resetStats()
+	function functions.resetStats(): ()
 		killCount = 0;
 		bossKillCount = 0;
 		dropsCollected = 0;
@@ -518,8 +520,8 @@ do -- // Kill Counter
 	end;
 end;
 
-do -- // Anti-AFK
-	function functions.antiAfk(toggle)
+do
+	function functions.antiAfk(toggle: boolean): ()
 		if (not toggle) then
 			maid.antiAfk = nil;
 			return;
@@ -536,14 +538,13 @@ do -- // Anti-AFK
 	end;
 end;
 
-do -- // Boss Zone List
+do
 	local bossZones = {'None'};
 
 	for _, zone in bossFolder:GetChildren() do
 		table.insert(bossZones, zone.Name);
 	end;
 
-	-- // UI Registration
 	localCheats:AddDivider('Movement');
 
 	localCheats:AddToggle({
