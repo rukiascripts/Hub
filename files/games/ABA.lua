@@ -433,7 +433,7 @@ function functions.infiniteJump(toggle: boolean): ()
 			(rootPart :: any).Velocity = Vector3.new((rootPart :: any).Velocity.X, library.flags.infiniteJumpHeight, (rootPart :: any).Velocity.Z);
 		end;
 		task.wait(0.1);
-	until not library.flags.infiniteJump;
+	until (not library.flags.infiniteJump);
 end;
 
 function functions.goToGround(): ()
@@ -1073,7 +1073,6 @@ function functions.animLogger(toggle: boolean): ()
 end;
 
 animLoggerWindow.OnClick:Connect(function(actionName: string, context: any): ()
-	print(`actionName={actionName} animationId={context.animationId}`);
 
 	if (actionName == 'Add To Ignore List' and not animLoggerWindow.ignoreList[context.animationId]) then
 		animLoggerWindow.ignoreList[context.animationId] = true;
@@ -1113,7 +1112,7 @@ library.OnKeyPress:Connect(function(input: InputObject, gpe: boolean): ()
 			end;
 
 			task.wait();
-		until closest or input.UserInputState == Enum.UserInputState.End;
+		until (closest or input.UserInputState == Enum.UserInputState.End);
 		if (input.UserInputState == Enum.UserInputState.End) then return end;
 
 		local lastGoalPos: Vector3? = nil;
