@@ -38,19 +38,28 @@ local column1, column2 = unpack(library.columns);
 local functions = {};
 
 local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService, VirtualInputManager, ReplicatedFirst, TeleportService, ReplicatedStorage = Services:Get(
-    'Players', 
+    'Players',
     'RunService',
-    'UserInputService', 
-    'HttpService', 
-    'CollectionService', 
-    'MemStorageService', 
-    'Lighting', 
-    'TweenService', 
+    'UserInputService',
+    'HttpService',
+    'CollectionService',
+    'MemStorageService',
+    'Lighting',
+    'TweenService',
     'VirtualInputManager',
     'ReplicatedFirst',
     'TeleportService',
     'ReplicatedStorage'
 );
+
+Players = cloneref(Players);
+RunService = cloneref(RunService);
+UserInputService = cloneref(UserInputService);
+ReplicatedStorage = cloneref(ReplicatedStorage);
+TweenService = cloneref(TweenService);
+CollectionService = cloneref(CollectionService);
+TeleportService = cloneref(TeleportService);
+Lighting = cloneref(Lighting);
 
 local LocalPlayer = Players.LocalPlayer;
 local playerMouse = LocalPlayer:GetMouse();
@@ -673,26 +682,34 @@ do -- // Core Hook
 
     local oldNamecall;
 
-    oldNamecall = hookmetamethod(game, '__namecall', function(self, ...)
-        local args = {...}
+    oldNamecall = hookmetamethod(game, '__namecall', newcclosure(function(self, ...)
+        if (checkcaller()) then
+            return oldNamecall(self, ...);
+        end;
 
-        if (getnamecallmethod() == 'FireServer' and self.Name == 'Communicate') then
+        local method = getnamecallmethod();
+
+        if (method == 'Kick') then
+            return;
+        end;
+
+        if (method == 'FireServer' and self.Name == 'Communicate') then
+            local args = {...};
+
             if (type(args[1]) == 'table' and args[1].InputType) then
                 local InputType = args[1].InputType;
 
                 if (library.flags.noFallDamage and InputType == 'Landed') then
-                    -- // Change StudsFallen to 0 so we take no damage and effectively stop "FallDamage". 
-                    args[1].StudsFallen = 0
-                    -- // If legitNoFall is enabled then it'll perfect roll everytime you take "FallDamage". However, you still take 0 damage it just makes it look legit.
+                    args[1].StudsFallen = 0;
                     args[1].FallBrace = library.flags.legitNoFall or false;
-                    
+
                     return oldNamecall(self, unpack(args));
                 end;
             end;
         end;
 
         return oldNamecall(self, ...);
-    end);
+    end));
 end;
 
 do -- // Removal Functions
@@ -1733,7 +1750,7 @@ do -- // ESP Functions
      
         if (chestName == 'Chest1') then
             local typeOfChest = FindFirstChild(chest, 'Silver') or FindFirstChild(chest, 'Trinket');
-
+            
             chestName = typeOfChest.Name or 'unknown type';
         elseif (chestName == 'Chest2') then
             chestName = 'Gold';
@@ -1805,7 +1822,7 @@ do -- // ESP Functions
         local npcName = npc.Name;
 
         local PurchaseInfo = FindFirstChild(npc, 'PurchaseInfo');
-        if (PurchaseInfo) then npcName = PurchaseInfo.ItemName.Value .. ' [Purchasable]' end;
+        if (PurchaseInfo) then npcName = PurchaseInfo.ItemName.Value end;
         
         local npcObj;
         if (npc:IsA('BasePart') or npc:IsA('MeshPart')) then
