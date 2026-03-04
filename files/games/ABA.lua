@@ -288,12 +288,19 @@ end;
 
 local kokushiboMaid = Maid.new();
 
+local kokushiboHooked: boolean = false;
+
 function functions.autoKokushiboBlueMoon(toggle: boolean): ()
 	if (not toggle) then
 		kokushiboMaid:DoCleaning();
-		local remote: RemoteFunction? = ReplicatedStorage:FindFirstChild('KokushiboCheck') :: RemoteFunction?;
-		if (remote and isfunctionhooked((remote :: RemoteFunction).OnClientInvoke)) then
-			restorefunction((remote :: RemoteFunction).OnClientInvoke);
+		if (kokushiboHooked) then
+			local remote: RemoteFunction? = ReplicatedStorage:FindFirstChild('KokushiboCheck') :: RemoteFunction?;
+			if (remote) then
+				(remote :: RemoteFunction).OnClientInvoke = function(): boolean
+					return false;
+				end;
+			end;
+			kokushiboHooked = false;
 		end;
 		return;
 	end;
@@ -301,7 +308,8 @@ function functions.autoKokushiboBlueMoon(toggle: boolean): ()
 	local remote: RemoteFunction? = ReplicatedStorage:FindFirstChild('KokushiboCheck') :: RemoteFunction?;
 	if (not remote) then return end;
 
-	hookfunction((remote :: RemoteFunction).OnClientInvoke, newcclosure(function(p1: number, p2: number): boolean
+	kokushiboHooked = true;
+	(remote :: RemoteFunction).OnClientInvoke = newcclosure(function(p1: number, p2: number): boolean
 		local inputWindow: number = p2 * 2;
 		local moveDelay: number = p1 * 2 - inputWindow;
 
@@ -353,7 +361,7 @@ function functions.autoKokushiboBlueMoon(toggle: boolean): ()
 			gui:Destroy();
 		end);
 		return true;
-	end));
+	end);
 end;
 
 function functions.nanamiAutoBlackFlash(toggle: boolean): ()
