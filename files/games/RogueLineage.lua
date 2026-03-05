@@ -52,14 +52,14 @@ local IsA = game.IsA;
 local IsDescendantOf = game.IsDescendantOf;
 
 local startMenu;
-local ranSince = tick();
+local ranSince = DateTime.now().UnixTimestampMillis / 1000;
 
 repeat
     startMenu = LocalPlayer and LocalPlayer:FindFirstChild('PlayerGui') and LocalPlayer.PlayerGui:FindFirstChild('StartMenu');
     task.wait();
-until startMenu or tick() - ranSince >= 10 or LocalPlayer.Character;
+until startMenu or DateTime.now().UnixTimestampMillis / 1000 - ranSince >= 10 or LocalPlayer.Character;
 
-if(tick() - ranSince >= 10) then
+if(DateTime.now().UnixTimestampMillis / 1000 - ranSince >= 10) then
     print('[Rogue Lineage Anti Bug] Timeout excedeed!');
     while true do
         TeleportService:Teleport(3016661674);
@@ -135,7 +135,7 @@ local spellCounter;
 
 local Trinkets = {};
 local spellValues = {};
-local Ingredients = {"Acorn Light","Glow Scroom","Lava Flower","Canewood","Moss Plant","Freeleaf","Trote","Scroom","Zombie Scroom","Potato","Tellbloom","Polar Plant","Strange Tentacle","Vile Seed","Ice Jar","Dire Flower","Crown Flower","Bloodthorn","Periascroom","Orcher Leaf","Uncanny Tentacle","Creely","Desert Mist","Snow Scroom"};
+local Ingredients = {'Acorn Light','Glow Scroom','Lava Flower','Canewood','Moss Plant','Freeleaf','Trote','Scroom','Zombie Scroom','Potato','Tellbloom','Polar Plant','Strange Tentacle','Vile Seed','Ice Jar','Dire Flower','Crown Flower','Bloodthorn','Periascroom','Orcher Leaf','Uncanny Tentacle','Creely','Desert Mist','Snow Scroom'};
 
 local trinkets = {};
 local ingredients = {};
@@ -146,35 +146,42 @@ local queue = {};
 
 local Bots;
 
-do -- // Download Assets
-    local assetsList = {'IllusionistJoin.mp3', 'IllusionistLeft.mp3', 'IllusionistSpectateEnd.mp3', 'IllusionistSpectateStart.mp3', 'ModeratorJoin.mp3', 'ModeratorLeft.mp3'};
-    local assets = {};
+local assets: {[string]: string} = {};
 
-    local apiEndpoint = USE_INSECURE_ENDPOINT and 'http://test.aztupscripts.xyz' or 'https://aztupscripts.xyz';
+do
+    local ASSETS_LIST: {string} = {'IllusionistJoin.mp3', 'IllusionistLeft.mp3', 'IllusionistSpectateEnd.mp3', 'IllusionistSpectateStart.mp3', 'ModeratorJoin.mp3', 'ModeratorLeft.mp3'};
+    local API_ENDPOINT: string = 'https://rukiascripts.xyz/';
 
-    for i, v in next, assetsList do
-        if(not isfile(string.format('Rukia Hub V1/sounds/%s', v))) then
-            print('Downloading', v, '...');
-            writefile(string.format('Rukia Hub V1/sounds/%s', v), game:HttpGet(string.format('%s/%s', apiEndpoint, v)));
+    for _, v: string in next, ASSETS_LIST do
+        local path: string = `Rukia Hub V1/sounds/{v}`;
+
+        if (not isfile(path)) then
+            local ok: boolean, data: string? = pcall(game.HttpGet, game, `{API_ENDPOINT}/{v}`);
+            if (ok and data) then
+                print('Downloading', v, '...');
+                pcall(writefile, path, data :: string);
+            else
+                warn(`Failed to download {v}`);
+            end;
         end;
 
-        --assets[v] = getcustomasset(string.format('Rukia Hub V1/sounds/%s', v));
+        --assets[v] = getcustomasset(path);
     end;
+end;
 
-    function loadSound(soundName)
-        if (assets[soundName]) then
-            local sound = Instance.new('Sound');
-            sound.SoundId = assets[soundName];
-            sound.Volume = 1;
-            sound.Parent = game:GetService('CoreGui');
+function loadSound(soundName: string): ()
+    if (not assets[soundName]) then return end;
 
-            sound:Play();
+    local sound: Sound = Instance.new('Sound');
+    sound.SoundId = assets[soundName];
+    sound.Volume = 1;
+    sound.Parent = game:GetService('CoreGui');
 
-            task.delay(4, function()
-                sound:Destroy();
-            end);
-        end;
-    end;
+    sound:Play();
+
+    task.delay(4, function(): ()
+        sound:Destroy();
+    end);
 end;
 
 print('analytics')
@@ -183,7 +190,7 @@ do -- // Mod Ban Analytics
     local sentUserIds = false;
 
     local function onPlayerRemoving(plr)
-        disconnectedPlayers[plr.UserId] = tick();
+        disconnectedPlayers[plr.UserId] = DateTime.now().UnixTimestampMillis / 1000;
     end;
 
     GuiService.ErrorMessageChanged:Connect(function(msg)
@@ -202,25 +209,13 @@ do -- // Mod Ban Analytics
             end;
 
             for userId, userLeftAt in next, disconnectedPlayers do
-                if(tick() - userLeftAt <= 120) then
+                if(DateTime.now().UnixTimestampMillis / 1000 - userLeftAt <= 120) then
                     table.insert(userIds, userId);
                 else
                     print(string.format('[Moderator Detection] Removed %s from the list', userId));
                     userIds[userId] = nil;
                 end;
-            end;
-
-            print(request({
-                Url = 'https://aztupscripts.xyz/api/v1/moderatorDetection',
-                Method = 'POST',
-                Headers = {
-                    ['Content-Type'] = 'application/json',
-                    Authorization = websiteScriptKey
-                },
-                Body = HttpService:JSONEncode({
-                    userIds = userIds
-                })
-            }).Body)
+            end;          
         end;
     end);
 
@@ -260,15 +255,8 @@ do -- // Functions
     -- LocalPlayer:Kick();
     -- game:GetService('GuiService'):ClearError();
 
-    print('oh uh')
-
     local collectorUI;
-    local apiEndpoint = USE_INSECURE_ENDPOINT and 'http://test.aztupscripts.xyz/api/v1/' or 'https://aztupscripts.xyz/api/v1/';
-
-
-    print('mlurrpy')
-
-    print('glurpy')
+    local apiEndpoint = 'https://rukiascripts.xyz/';
 
     local injuryObjects = {'Careless', 'PsychoInjury', 'MindWarp', 'NoControl', 'Maniacal', 'BrokenLeg', 'BrokenArm', 'VisionBlur'};
 
@@ -308,7 +296,7 @@ do -- // Functions
 
     do -- // Get Ingredient Folder
         for i, v in next, workspace:GetChildren() do
-            if(v:IsA("Folder")) then
+            if(v:IsA('Folder')) then
                 local union = v:FindFirstChild('UnionOperation');
                 if(union) then
                     ingredientsFolder = v;
@@ -375,16 +363,16 @@ do -- // Functions
         if (character:FindFirstChild('ActiveCast')) then return end;
         if (character:FindFirstChild('Stun')) then return end;
 
-        if CollectionService:HasTag(character, 'Knocked') then return end;
-        if CollectionService:HasTag(character, 'Unconscious') then return end;
+        if (CollectionService:HasTag(character, 'Knocked')) then return end;
+        if (CollectionService:HasTag(character, 'Unconscious')) then return end;
 
         return true;
     end;
 
     print('can use heh')
 
-    local function makeNotification(title, text)
-        return ToastNotif.new({text = title .. ' - ' .. text})
+    local function makeNotification(title: string, text: string)
+        return ToastNotif.new({text = `{title} - {text}`});
     end;
 
     local function spawnLocalCharacter()
@@ -542,7 +530,7 @@ do -- // Functions
                     local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA('Tool');
                     if(not tool) then return oldFireServer(self, ...) end;
 
-                    -- local useSnap = library.flags[toCamelCase(tool.Name .. ' Use Snap')];
+                    -- local useSnap = library.flags[toCamelCase(`{tool.Name} Use Snap`)];
                     local amount = spellValues[tool.Name]
                     amount = amount and amount[1];
 
@@ -558,7 +546,7 @@ do -- // Functions
                     local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA('Tool');
                     if(not tool) then return oldFireServer(self, ...) end;
 
-                    -- local useSnap = library.flags[toCamelCase(tool.Name .. ' Use Snap')];
+                    -- local useSnap = library.flags[toCamelCase(`{tool.Name} Use Snap`)];
                     local amount = spellValues[tool.Name]
                     amount = amount and amount[2];
 
@@ -669,20 +657,20 @@ do -- // Functions
                         end;
                     end;
 
-                    if library.flags.spellStack then
+                    if (library.flags.spellStack) then
                         --Wait until keypress?
                         --Make it a table queue sort of thing that removes oldest first?
-                        print("HOLDING FIRE")
-                        local info = {currentTime = tick(), fired = false};
+                        print('HOLDING FIRE')
+                        local info = {currentTime = DateTime.now().UnixTimestampMillis / 1000, fired = false};
                         table.insert(queue,info);
 
                         spellCounter.Text = string.format('Spell Counter: %d', Utility:countTable(queue));
                         repeat
                             task.wait();
-                        until info.fired or tick()-info.currentTime >= 2;
+                        until info.fired or DateTime.now().UnixTimestampMillis / 1000-info.currentTime >= 2;
 
                         for i,v in next, queue do 
-                            if v.currentTime == info.currentTime then
+                            if (v.currentTime == info.currentTime) then
                             
                                 queue[i] = nil;
                                 break;
@@ -692,7 +680,7 @@ do -- // Functions
                         table.foreach(queue,warn)
 
                         spellCounter.Text = string.format('Spell Counter: %d', Utility:countTable(queue));
-                        warn("FIRING")
+                        warn('FIRING')
                     end
 
                     return mouseT;
@@ -1053,10 +1041,10 @@ do -- // Functions
 
         local function createComponent(c, p)
             local obj = Instance.new(c)
-            obj.Name = tostring({}):gsub("table: ", ""):gsub("0x", "")
+            obj.Name = tostring({}):gsub('table: ', ''):gsub('0x', '')
             for i, v in next, p do
-                if i ~= "Parent" then
-                    if typeof(v) == "Instance" then
+                if (i ~= 'Parent') then
+                    if (typeof(v) == 'Instance') then
                         v.Parent = obj
                     else
                         obj[i] = v
@@ -1163,7 +1151,7 @@ do -- // Functions
             end)
 
             UserInputService.InputChanged:Connect(function(input)
-                if input == dragInput and dragging then
+                if (input == dragInput and dragging) then
                     update(input)
                 end
             end)
@@ -1351,7 +1339,7 @@ do -- // Functions
             local character = spawnLocalCharacter();
 
             LocalPlayer.CharacterAdded:Connect(function(newCharacter)
-                kickPlayer('You were killed, please DM Aztup and sent him a clip if you have any, dont do that if you just pressed the menu button');
+                kickPlayer('You were killed, please DM Rukia and send him a clip if you have any, dont do that if you just pressed the menu button');
                 task.wait(1);
 
                 while true do end;
@@ -1396,8 +1384,8 @@ do -- // Functions
                     end;
                 end;
 
-                if(not collectorData and tick() - lastNotificationSentAt > 1) then
-                    lastNotificationSentAt = tick();
+                if(not collectorData and DateTime.now().UnixTimestampMillis / 1000 - lastNotificationSentAt > 1) then
+                    lastNotificationSentAt = DateTime.now().UnixTimestampMillis / 1000;
                     ToastNotif.new({
                         text = 'You must be at the collector',
                         duration = 1
@@ -1420,7 +1408,7 @@ do -- // Functions
             runPanicCheck(rootPart.Position);
             MemStorageService:SetItem('lastPlayerPosition', tostring(rootPart.Position));
 
-            local ranSince = tick();
+            local ranSince = DateTime.now().UnixTimestampMillis / 1000;
 
             local function isDoorHere()
                 local rayResult = workspace:Raycast(collectorRoot.Position + Vector3.new(0, 5, 0), collectorRoot.CFrame.LookVector * 250, params);
@@ -1438,11 +1426,11 @@ do -- // Functions
             if (library.flags.rollOutOfFf) then
                 local lastCFrame = rootPart.CFrame;
                 local lastPosition = lastCFrame.Position;
-                local lastDodgeAt = tick();
+                local lastDodgeAt = DateTime.now().UnixTimestampMillis / 1000;
 
                 repeat
-                    if (tick() - lastDodgeAt > 1) then
-                        lastDodgeAt = tick();
+                    if (DateTime.now().UnixTimestampMillis / 1000 - lastDodgeAt > 1) then
+                        lastDodgeAt = DateTime.now().UnixTimestampMillis / 1000;
                         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game);
                     end;
                     task.wait();
@@ -1482,7 +1470,7 @@ do -- // Functions
                 end;
 
                 task.wait();
-            until not isDoorHere() or tick() - ranSince >= library.flags.collectorBotWaitTime;
+            until not isDoorHere() or DateTime.now().UnixTimestampMillis / 1000 - ranSince >= library.flags.collectorBotWaitTime;
 
             if(isDoorHere()) then
                 while true do
@@ -1525,7 +1513,7 @@ do -- // Functions
                     until LocalPlayer.Character and not LocalPlayer.Character:FindFirstChild('Danger');
 
                     if(artifactPickedUp) then
-                        kickPlayer('You got a ' .. artifactPickedUp);
+                        kickPlayer(`You got a {artifactPickedUp}`);
 
                         task.spawn(function()
                             pcall(function()
@@ -1549,7 +1537,7 @@ do -- // Functions
                                                 },
                                                 {
                                                     name = 'Options',
-                                                    value = '['.. table.concat(choices or {'DM', 'Aztup'}, ', ') .. ']',
+                                                    value = `[{table.concat(choices or {'DM', 'Rukia'}, ', ')}]`,
                                                 },
                                             }
                                         }}
@@ -1583,7 +1571,7 @@ do -- // Functions
                                             },
                                             {
                                                 name = 'Options',
-                                                value = '['.. table.concat(choices or {'DM', 'Aztup'}, ', ') .. ']',
+                                                value = `[{table.concat(choices or {'DM', 'Rukia'}, ', ')}]`,
                                             }
                                         }
                                     }}
@@ -1633,7 +1621,7 @@ do -- // Functions
 
             toggleGUI(false);
 
-            local elapsedTime = tick();
+            local elapsedTime = DateTime.now().UnixTimestampMillis / 1000;
 
             repeat
                 print('Clicking Click Detector Distance', (rootPart.Position - collectorRoot.Position).Magnitude);
@@ -1647,10 +1635,10 @@ do -- // Functions
                 VirtualInputManager:SendMouseButtonEvent(pos.X, pos.Y, 0, true, game, 1)
 
                 task.wait(0.25);
-            until LocalPlayer.PlayerGui:FindFirstChild('CaptchaLoad') or tick() - elapsedTime >= 8;
+            until LocalPlayer.PlayerGui:FindFirstChild('CaptchaLoad') or DateTime.now().UnixTimestampMillis / 1000 - elapsedTime >= 8;
             -- // No need to add anything else since the auto dialog will serverhop as soon as collector gives exit
 
-            if (tick() - elapsedTime >= 5) then
+            if (DateTime.now().UnixTimestampMillis / 1000 - elapsedTime >= 5) then
                 ReplicatedStorage.Requests.ReturnToMenu:InvokeServer();
                 task.wait(2);
                 return findServer();
@@ -1672,14 +1660,14 @@ do -- // Functions
 
                 if(choices and union) then
                     local captchaAnswer = solveCaptcha(union);
-                    if(tick() - lastWebhookSentAt > 0.1) then
-                        lastWebhookSentAt = tick();
+                    if(DateTime.now().UnixTimestampMillis / 1000 - lastWebhookSentAt > 0.1) then
+                        lastWebhookSentAt = DateTime.now().UnixTimestampMillis / 1000;
                     end;
 
                     for i, v in next, choices do
                         if(v.Name == captchaAnswer) then
-                            if(tick() - lastWebhookSentAt2 > 0.1) then
-                                lastWebhookSentAt2 = tick();
+                            if(DateTime.now().UnixTimestampMillis / 1000 - lastWebhookSentAt2 > 0.1) then
+                                lastWebhookSentAt2 = DateTime.now().UnixTimestampMillis / 1000;
                             end;
 
                             local position = v.AbsolutePosition + Vector2.new(40, 40);
@@ -1691,8 +1679,8 @@ do -- // Functions
                         end;
                     end;
                 else
-                    if(tick() - lastWebhookSentAt3 > 0.1) then
-                        lastWebhookSentAt3 = tick();
+                    if(DateTime.now().UnixTimestampMillis / 1000 - lastWebhookSentAt3 > 0.1) then
+                        lastWebhookSentAt3 = DateTime.now().UnixTimestampMillis / 1000;
                     end;
                 end;
 
@@ -1708,107 +1696,107 @@ do -- // Functions
     do -- // Set Trinkets
         Trinkets = {
             {
-                ["MeshId"] = "5204003946";
-                ["Name"] = "Goblet";
+                ['MeshId'] = '5204003946';
+                ['Name'] = 'Goblet';
             };
             {
-                ["MeshId"] = "5196776695";
-                ["Name"] = "Ring";
+                ['MeshId'] = '5196776695';
+                ['Name'] = 'Ring';
             };
             {
-                ["MeshId"] = "5196782997";
-                ["Name"] = "Old Ring";
+                ['MeshId'] = '5196782997';
+                ['Name'] = 'Old Ring';
             };
             {
-                ["Name"] = "Emerald";
+                ['Name'] = 'Emerald';
             };
             {
-                ["Name"] = "Ruby";
+                ['Name'] = 'Ruby';
             };
             {
-                ["Name"] = "Sapphire";
+                ['Name'] = 'Sapphire';
             };
             {
-                ["Name"] = "Diamond";
+                ['Name'] = 'Diamond';
             };
             {
-                ["Name"] = "Rift Gem";
-                ["Rare"] = true;
+                ['Name'] = 'Rift Gem';
+                ['Rare'] = true;
             };
             {
-                ["Name"] = "Fairfrozen";
-                ["Rare"] = true;
+                ['Name'] = 'Fairfrozen';
+                ['Rare'] = true;
             };
             {
-                ["MeshId"] = "5204453430";
-                ["Name"] = "Ninja Scroll";
+                ['MeshId'] = '5204453430';
+                ['Name'] = 'Ninja Scroll';
             };
             {
-                ["Name"] = "Old Amulet";
-                ["MeshId"] = "5196577540";
+                ['Name'] = 'Old Amulet';
+                ['MeshId'] = '5196577540';
             };
             {
-                ["Name"] = "Amulet";
-                ["MeshId"] = "5196551436";
+                ['Name'] = 'Amulet';
+                ['MeshId'] = '5196551436';
             };
             {
-                ["Name"] = "Idol Of The Forgotten";
-                ["ParticleEmitter"] = true;
+                ['Name'] = 'Idol Of The Forgotten';
+                ['ParticleEmitter'] = true;
             };
             {
-                ["Name"] = "Opal";
-                ["VertexColor"] = Vector3.new(1, 1, 1);
-                ["MeshType"] = "Sphere";
+                ['Name'] = 'Opal';
+                ['VertexColor'] = Vector3.new(1, 1, 1);
+                ['MeshType'] = 'Sphere';
             },
             {
-                Name = "Candy";
+                Name = 'Candy';
                 MeshId = '4103271893'
             },
             {
-                ["Texture"] = "20443483";
-                ["Name"] = "Ya'alda";
-                ["Rare"] = true;
+                ['Texture'] = '20443483';
+                ['Name'] = "Ya'alda";
+                ['Rare'] = true;
             };
             {
-                ["Texture"] = "1536547385";
-                ["Name"] = "Pheonix Down";
-                ["Rare"] = true;
+                ['Texture'] = '1536547385';
+                ['Name'] = 'Pheonix Down';
+                ['Rare'] = true;
             };
             {
-                ["Texture"] = "20443483";
-                ["ParticleEmitter"] = true;
-                ["PointLight"] = true;
-                ["Name"] = "Ice Essence";
-                ["Rare"] = true;
+                ['Texture'] = '20443483';
+                ['ParticleEmitter'] = true;
+                ['PointLight'] = true;
+                ['Name'] = 'Ice Essence';
+                ['Rare'] = true;
             };
             {
-                ["Name"] = "White King's Amulet";
-                ["Rare"] = true;
+                ['Name'] = "White King's Amulet";
+                ['Rare'] = true;
             };
             {
-                ["Name"] = "Lannis Amulet";
-                ["Rare"] = true;
+                ['Name'] = 'Lannis Amulet';
+                ['Rare'] = true;
             };
             {
-                ["Name"] = "Night Stone";
-                ["Rare"] = true;
+                ['Name'] = 'Night Stone';
+                ['Rare'] = true;
             };
             {
-                ["Name"] = "Philosopher's Stone";
-                ["Rare"] = true;
+                ['Name'] = "Philosopher's Stone";
+                ['Rare'] = true;
             };
             {
-                ["Name"] = "Spider Cloak";
-                ["Rare"] = true;
+                ['Name'] = 'Spider Cloak';
+                ['Rare'] = true;
             };
             {
-                ["Name"] = "Howler Friend";
-                ["Rare"] = true;
-                ["MeshId"] = "2520762076";
+                ['Name'] = 'Howler Friend';
+                ['Rare'] = true;
+                ['MeshId'] = '2520762076';
             };
             {
-                ["Name"] = "Scroom Key";
-                ["Rare"] = true;
+                ['Name'] = 'Scroom Key';
+                ['Rare'] = true;
             },
             {
                 Name = 'Mysterious Artifact',
@@ -1823,75 +1811,75 @@ do -- // Functions
 
     do -- // Player Classes
         playerClassesList = {
-            ["Warrior"] = {
-                ["Active"] = {"Pommel Strike", "Action Surge"};
-                ["Classes"] = {
-                    ["Sigil Knight"] = {"Thunder Charge", Level = 1};
-                    ["Blacksmith"] = {"Remote Smithing", "Grindstone", "Shockwave", Level = 1};
-                    ["Greatsword"] = {"Greatsword Training", "Stun Resistance", Level = 1};
-                    ["Sigil Knight Commander"] = {"Charged Blow", "White Flame Charge", "Hyper Body", Level = 2};
-                    ["Lapidarist"] = {"Hammer Training", "Improved Grindstone", "Gem Mastery", "Gem Abilities", Level = 2},
-                    ["AbyssWalker"] = {"Wrathful Leap", "Abyssal Scream", Level = 2};
-                    ["Wraith Knight"] = {"Wraith Training", Level = 2};
-                    ["Pilgrim Knight"] = {"Chain of Fate", "Rod of Narsa", "Pasmarkinti", Level = 3};
-                    ["Abyss Dancer"] = {"Great Cyclone", "Spinning Soul", "Void Slicer", "Deflecting Spin", Level = 3};
-                    ["Reaper"] = {"Mirror", "Chase", "Hunt", "Soul Burst", Level = 3};
+            ['Warrior'] = {
+                ['Active'] = {'Pommel Strike', 'Action Surge'};
+                ['Classes'] = {
+                    ['Sigil Knight'] = {'Thunder Charge', Level = 1};
+                    ['Blacksmith'] = {'Remote Smithing', 'Grindstone', 'Shockwave', Level = 1};
+                    ['Greatsword'] = {'Greatsword Training', 'Stun Resistance', Level = 1};
+                    ['Sigil Knight Commander'] = {'Charged Blow', 'White Flame Charge', 'Hyper Body', Level = 2};
+                    ['Lapidarist'] = {'Hammer Training', 'Improved Grindstone', 'Gem Mastery', 'Gem Abilities', Level = 2},
+                    ['AbyssWalker'] = {'Wrathful Leap', 'Abyssal Scream', Level = 2};
+                    ['Wraith Knight'] = {'Wraith Training', Level = 2};
+                    ['Pilgrim Knight'] = {'Chain of Fate', 'Rod of Narsa', 'Pasmarkinti', Level = 3};
+                    ['Abyss Dancer'] = {'Great Cyclone', 'Spinning Soul', 'Void Slicer', 'Deflecting Spin', Level = 3};
+                    ['Reaper'] = {'Mirror', 'Chase', 'Hunt', 'Soul Burst', Level = 3};
                 }
             };
-            ["Pit Fighter"] = {
-                ["Active"] = {"Serpent Strike", "Triple Strike"};
-                ["Classes"] = {
-                    ["Dragon Knight"] = {"Spear Crusher", "Dragon Roar", "Dragon Blood", Level = 1};
-                    ["Church Knight"] = {"Church Knight Helmet", "Impale", "Light Piercer", Level = 1};
-                    ["Dragon Slayer"] = {"Wing Soar", "Thunder Spear Crash", "Dragon Awakening", Level = 2};
-                    ["Deep Knight"] = {"Deep Sacrifice", "Leviathan Plunge", "Chain Pull", Level = 2};
-                    ["Dragon Rider"] = {"Heroic Volley", "Call Drake", "Ensnaring Strike", "Justice Spears", Level = 3};
-                    ["Abomination"] = {"Tethering Lance", "Void Spear", "Aura of Despair", "Soul Siphon", Level = 3};
+            ['Pit Fighter'] = {
+                ['Active'] = {'Serpent Strike', 'Triple Strike'};
+                ['Classes'] = {
+                    ['Dragon Knight'] = {'Spear Crusher', 'Dragon Roar', 'Dragon Blood', Level = 1};
+                    ['Church Knight'] = {'Church Knight Helmet', 'Impale', 'Light Piercer', Level = 1};
+                    ['Dragon Slayer'] = {'Wing Soar', 'Thunder Spear Crash', 'Dragon Awakening', Level = 2};
+                    ['Deep Knight'] = {'Deep Sacrifice', 'Leviathan Plunge', 'Chain Pull', Level = 2};
+                    ['Dragon Rider'] = {'Heroic Volley', 'Call Drake', 'Ensnaring Strike', 'Justice Spears', Level = 3};
+                    ['Abomination'] = {'Tethering Lance', 'Void Spear', 'Aura of Despair', 'Soul Siphon', Level = 3};
                 }
             };
-            ["Scholar"] = {
-                ["Active"] = {"FastSigns", "CurseBlock", "WiseCasting"};
-                ["Classes"] = {
-                    ["Illusionist"] = {"Custos", "Claritum", "Observe", Level = 1};
-                    ["Botanist"] = {"Fons Vitae", "Verdien", "Life Sense", Level = 1};
-                    ["Necromancer"] = {"Inferi", "Reditus", "Ligans", Level = 1};
-                    ["Master Illusionist"] = {"Globus", "Intermissium", "Dominus", Level = 2};
-                    ["Druid"] = {"Snap Verdien", "Snap Fons Vitae", "Perflora", "Snap Perflora", "Floresco", "Snap Floresco", Level = 2};
-                    ["Master Necromancer"] = {"Secare", "Furantur", "Command Monsters", "Howler Summoning", Level = 2};
-                    ["Uber Illusionist"] = {"Doube", "Compress", "Terra Rebus", Level = 3};
-                    ["Monster Hunter"] = {"Coercere", "Liber", "Scribo", Level = 3};
-                    ["Crystal Cage"] = {"Mirgeti", "Krusa", "Spindulys", Level = 3};
-                    ["Worm Prophet"] = {"Worm Bombs", "Worm Blast", "Call of the Dead", Level = 3};
+            ['Scholar'] = {
+                ['Active'] = {'FastSigns', 'CurseBlock', 'WiseCasting'};
+                ['Classes'] = {
+                    ['Illusionist'] = {'Custos', 'Claritum', 'Observe', Level = 1};
+                    ['Botanist'] = {'Fons Vitae', 'Verdien', 'Life Sense', Level = 1};
+                    ['Necromancer'] = {'Inferi', 'Reditus', 'Ligans', Level = 1};
+                    ['Master Illusionist'] = {'Globus', 'Intermissium', 'Dominus', Level = 2};
+                    ['Druid'] = {'Snap Verdien', 'Snap Fons Vitae', 'Perflora', 'Snap Perflora', 'Floresco', 'Snap Floresco', Level = 2};
+                    ['Master Necromancer'] = {'Secare', 'Furantur', 'Command Monsters', 'Howler Summoning', Level = 2};
+                    ['Uber Illusionist'] = {'Doube', 'Compress', 'Terra Rebus', Level = 3};
+                    ['Monster Hunter'] = {'Coercere', 'Liber', 'Scribo', Level = 3};
+                    ['Crystal Cage'] = {'Mirgeti', 'Krusa', 'Spindulys', Level = 3};
+                    ['Worm Prophet'] = {'Worm Bombs', 'Worm Blast', 'Call of the Dead', Level = 3};
                 }
             };
-            ["Thief"] = {
-                ["Active"] = {"Dagger Throw", "Pickpocket", "Trinket Steal", "Lock Manipulation"};
-                ["Classes"] = {
-                    ["Spy"] = {"Interrogation", Level = 1};
-                    ["Assassin"] = {"Lethality", "Bane", "Triple Dagger Throw", Level = 1};
-                    ["Whisperer"] = {"Elegant Slash", "The Shadow", "Needle's Eye", "The Wraith", "The Soul", Level = 2};
-                    ["Cadence"] = {"Music Meter", "Faster Meter Charge", "Feel Invincible", Level = 2};
-                    ["Faceless"] = {"Shadow Step", "Chain Lethality", "Improved Bane", "Faceless", Level = 2};
-                    ["Shinobi"] = {"Resurrection", Level = 2};
-                    ["Duelist"] = {"Mana Grenade", "Auto Reload", "Duelist Dash", "Bomb Jump", "Bullseye", Level = 3};
-                    ["Uber Bard"] = {"Inferno March", "Galecaller's Melody", "Bad Time Symphony", "Theme of Reversal", Level = 3};
-                    ["Friendless One"] = {"Shadow Buddy", "Falling Darkness", "Flash of Darkness", Level = 3};
-                    ["Shura"] = {"Rising Cloud", "Autumn Rain", "Cruel Wind", Level = 3};
+            ['Thief'] = {
+                ['Active'] = {'Dagger Throw', 'Pickpocket', 'Trinket Steal', 'Lock Manipulation'};
+                ['Classes'] = {
+                    ['Spy'] = {'Interrogation', Level = 1};
+                    ['Assassin'] = {'Lethality', 'Bane', 'Triple Dagger Throw', Level = 1};
+                    ['Whisperer'] = {'Elegant Slash', 'The Shadow', "Needle's Eye", 'The Wraith', 'The Soul', Level = 2};
+                    ['Cadence'] = {'Music Meter', 'Faster Meter Charge', 'Feel Invincible', Level = 2};
+                    ['Faceless'] = {'Shadow Step', 'Chain Lethality', 'Improved Bane', 'Faceless', Level = 2};
+                    ['Shinobi'] = {'Resurrection', Level = 2};
+                    ['Duelist'] = {'Mana Grenade', 'Auto Reload', 'Duelist Dash', 'Bomb Jump', 'Bullseye', Level = 3};
+                    ['Uber Bard'] = {'Inferno March', "Galecaller's Melody", 'Bad Time Symphony', 'Theme of Reversal', Level = 3};
+                    ['Friendless One'] = {'Shadow Buddy', 'Falling Darkness', 'Flash of Darkness', Level = 3};
+                    ['Shura'] = {'Rising Cloud', 'Autumn Rain', 'Cruel Wind', Level = 3};
                 };
             };
-            ["Monk"] = {
+            ['Monk'] = {
                 Level = 1,
-                ["Active"] = {"Monastic Stance"};
-                ["Classes"] = {
-                    ["Dragon Sage"] = {"Lightning Drop", "Lightning Elbow", "Lightning Dash", "Dragon Static", Level = 2};
-                    ["Vhiunese Monk"] = {"Thundering Leap", "Seismic Toss", "Electric Smite", Level = 3};
+                ['Active'] = {'Monastic Stance'};
+                ['Classes'] = {
+                    ['Dragon Sage'] = {'Lightning Drop', 'Lightning Elbow', 'Lightning Dash', 'Dragon Static', Level = 2};
+                    ['Vhiunese Monk'] = {'Thundering Leap', 'Seismic Toss', 'Electric Smite', Level = 3};
                 };
             };
-            ["Akuma"] = {
-                ["Active"] = {"Leg Breaker", "Spin Kick", "Rising Dragon", Level = 1};
-                ["Classes"] = {
-                    ["Oni"] = {"Demon Flip", "Axe Kick", "Demon Step", Level = 2};
-                    ["Uber Oni"] = {"Consuming Flames", "Rampage", "Augimas M1 & M2", "Axe Kick M2", Level = 3}
+            ['Akuma'] = {
+                ['Active'] = {'Leg Breaker', 'Spin Kick', 'Rising Dragon', Level = 1};
+                ['Classes'] = {
+                    ['Oni'] = {'Demon Flip', 'Axe Kick', 'Demon Step', Level = 2};
+                    ['Uber Oni'] = {'Consuming Flames', 'Rampage', 'Augimas M1 & M2', 'Axe Kick M2', Level = 3}
                 };
             };
         };
@@ -1957,352 +1945,352 @@ do -- // Functions
 
     do -- // Set Spells Values
         spellValues = {
-            ["Secare"] = {
+            ['Secare'] = {
                 [1] = {
-                ["max"] = 95,
-                ["min"] = 90
+                ['max'] = 95,
+                ['min'] = 90
                 }
             },
-            ["Maledicta Terra"] = {
+            ['Maledicta Terra'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 20
+                ['max'] = 100,
+                ['min'] = 20
                 }
             },
-            ["Better Mori"] = {
+            ['Better Mori'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 0
+                ['max'] = 100,
+                ['min'] = 0
                 },
                 [2] = {
-                ["max"] = 100,
-                ["min"] = 0
+                ['max'] = 100,
+                ['min'] = 0
                 }
             },
-            ["Contrarium"] = {
+            ['Contrarium'] = {
                 [1] = {
-                ["max"] = 95,
-                ["min"] = 80
+                ['max'] = 95,
+                ['min'] = 80
                 },
                 [2] = {
-                ["max"] = 90,
-                ["min"] = 70
+                ['max'] = 90,
+                ['min'] = 70
                 }
             },
-            ["Mederi"] = {
+            ['Mederi'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 0
+                ['max'] = 100,
+                ['min'] = 0
                 }
             },
-            ["Scrupus"] = {
+            ['Scrupus'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 30
+                ['max'] = 100,
+                ['min'] = 30
                 }
             },
-            ["Intermissum"] = {
+            ['Intermissum'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 70
+                ['max'] = 100,
+                ['min'] = 70
                 }
             },
-            ["Gourdus"] = {
+            ['Gourdus'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 75
+                ['max'] = 100,
+                ['min'] = 75
                 }
             },
-            ["Inferi"] = {
+            ['Inferi'] = {
                 [1] = {
-                ["max"] = 30,
-                ["min"] = 10
+                ['max'] = 30,
+                ['min'] = 10
                 }
             },
-            ["Custos"] = {
+            ['Custos'] = {
                 [1] = {
-                ["max"] = 65,
-                ["min"] = 45
+                ['max'] = 65,
+                ['min'] = 45
                 }
             },
-            ["Gelidus"] = {
+            ['Gelidus'] = {
                 [1] = {
-                ["max"] = 95,
-                ["min"] = 80
+                ['max'] = 95,
+                ['min'] = 80
                 },
                 [2] = {
-                ["max"] = 100,
-                ["min"] = 80
+                ['max'] = 100,
+                ['min'] = 80
                 }
             },
-            ["Telorum"] = {
+            ['Telorum'] = {
                 [1] = {
-                ["max"] = 90,
-                ["min"] = 80
+                ['max'] = 90,
+                ['min'] = 80
                 },
                 [2] = {
-                ["max"] = 80,
-                ["min"] = 70
+                ['max'] = 80,
+                ['min'] = 70
                 }
             },
-            ["Viribus"] = {
+            ['Viribus'] = {
                 [1] = {
-                ["max"] = 35,
-                ["min"] = 25
+                ['max'] = 35,
+                ['min'] = 25
                 },
                 [2] = {
-                ["max"] = 70,
-                ["min"] = 60
+                ['max'] = 70,
+                ['min'] = 60
                 }
             },
-            ["Hoppa"] = {
+            ['Hoppa'] = {
                 [1] = {
-                ["max"] = 60,
-                ["min"] = 40
+                ['max'] = 60,
+                ['min'] = 40
                 },
                 [2] = {
-                ["max"] = 60,
-                ["min"] = 50
+                ['max'] = 60,
+                ['min'] = 50
                 }
             },
-            ["Velo"] = {
+            ['Velo'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 70
+                ['max'] = 100,
+                ['min'] = 70
                 },
                 [2] = {
-                ["max"] = 60,
-                ["min"] = 40
+                ['max'] = 60,
+                ['min'] = 40
                 }
             },
-            ["Pondus"] = {
+            ['Pondus'] = {
                 [1] = {
-                ["max"] = 90,
-                ["min"] = 70
+                ['max'] = 90,
+                ['min'] = 70
                 },
                 [2] = {
-                ["max"] = 30,
-                ["min"] = 20
+                ['max'] = 30,
+                ['min'] = 20
                 }
             },
-            ["Verdien"] = {
+            ['Verdien'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 75
+                ['max'] = 100,
+                ['min'] = 75
                 },
                 [2] = {
-                ["max"] = 85,
-                ["min"] = 75
+                ['max'] = 85,
+                ['min'] = 75
                 }
             },
-            ["Trahere"] = {
+            ['Trahere'] = {
                 [1] = {
-                ["max"] = 85,
-                ["min"] = 75
+                ['max'] = 85,
+                ['min'] = 75
                 }
             },
-            ["Dominus"] = {
+            ['Dominus'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 50
+                ['max'] = 100,
+                ['min'] = 50
                 }
             },
-            ["Armis"] = {
+            ['Armis'] = {
                 [1] = {
-                ["max"] = 60,
-                ["min"] = 40
+                ['max'] = 60,
+                ['min'] = 40
                 },
                 [2] = {
-                ["max"] = 80,
-                ["min"] = 70
+                ['max'] = 80,
+                ['min'] = 70
                 }
             },
-            ["Ligans"] = {
+            ['Ligans'] = {
                 [1] = {
-                ["max"] = 80,
-                ["min"] = 63
+                ['max'] = 80,
+                ['min'] = 63
                 }
             },
-            ["Shrieker"] = {
+            ['Shrieker'] = {
                 [1] = {
-                ["max"] = 50,
-                ["min"] = 30
+                ['max'] = 50,
+                ['min'] = 30
                 }
             },
-            ["Celeritas"] = {
+            ['Celeritas'] = {
                 [1] = {
-                ["max"] = 90,
-                ["min"] = 70
+                ['max'] = 90,
+                ['min'] = 70
                 },
                 [2] = {
-                ["max"] = 80,
-                ["min"] = 70
+                ['max'] = 80,
+                ['min'] = 70
                 }
             },
-            ["Hystericus"] = {
+            ['Hystericus'] = {
                 [1] = {
-                ["max"] = 90,
-                ["min"] = 75
+                ['max'] = 90,
+                ['min'] = 75
                 },
                 [2] = {
-                ["max"] = 35,
-                ["min"] = 15
+                ['max'] = 35,
+                ['min'] = 15
                 }
             },
-            ["Snarvindur"] = {
+            ['Snarvindur'] = {
                 [1] = {
-                ["max"] = 75,
-                ["min"] = 60
+                ['max'] = 75,
+                ['min'] = 60
                 },
                 [2] = {
-                ["max"] = 30,
-                ["min"] = 20
+                ['max'] = 30,
+                ['min'] = 20
                 }
             },
-            ["Percutiens"] = {
+            ['Percutiens'] = {
                 [1] = {
-                ["max"] = 70,
-                ["min"] = 60
+                ['max'] = 70,
+                ['min'] = 60
                 },
                 [2] = {
-                ["max"] = 80,
-                ["min"] = 70
+                ['max'] = 80,
+                ['min'] = 70
                 }
             },
-            ["Furantur"] = {
+            ['Furantur'] = {
                 [1] = {
-                ["max"] = 80,
-                ["min"] = 60
+                ['max'] = 80,
+                ['min'] = 60
                 }
             },
-            ["Nosferatus"] = {
+            ['Nosferatus'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 90
+                ['max'] = 100,
+                ['min'] = 90
                 }
             },
-            ["Reditus"] = {
+            ['Reditus'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 50
+                ['max'] = 100,
+                ['min'] = 50
                 }
             },
-            ["Floresco"] = {
+            ['Floresco'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 90
+                ['max'] = 100,
+                ['min'] = 90
                 },
                 [2] = {
-                ["max"] = 95,
-                ["min"] = 80
+                ['max'] = 95,
+                ['min'] = 80
                 }
             },
-            ["Howler"] = {
+            ['Howler'] = {
                 [1] = {
-                ["max"] = 80,
-                ["min"] = 60
+                ['max'] = 80,
+                ['min'] = 60
                 }
             },
-            ["Manus Dei"] = {
+            ['Manus Dei'] = {
                 [1] = {
-                ["max"] = 95,
-                ["min"] = 90
+                ['max'] = 95,
+                ['min'] = 90
                 },
                 [2] = {
-                ["max"] = 60,
-                ["min"] = 50
+                ['max'] = 60,
+                ['min'] = 50
                 }
             },
-            ["Fons Vitae"] = {
+            ['Fons Vitae'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 75
+                ['max'] = 100,
+                ['min'] = 75
                 },
                 [2] = {
-                ["max"] = 100,
-                ["min"] = 75
+                ['max'] = 100,
+                ['min'] = 75
                 }
             },
-            ["Ignis"] = {
+            ['Ignis'] = {
                 [1] = {
-                ["max"] = 95,
-                ["min"] = 80
+                ['max'] = 95,
+                ['min'] = 80
                 },
                 [2] = {
-                ["max"] = 60,
-                ["min"] = 50
+                ['max'] = 60,
+                ['min'] = 50
                 }
             },
-            ["Globus"] = {
+            ['Globus'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 70
+                ['max'] = 100,
+                ['min'] = 70
                 }
             },
-            ["Fimbulvetr"] = {
+            ['Fimbulvetr'] = {
                 [1] = {
-                ["max"] = 92,
-                ["min"] = 84
+                ['max'] = 92,
+                ['min'] = 84
                 },
                 [2] = {
-                ["max"] = 80,
-                ["min"] = 70
+                ['max'] = 80,
+                ['min'] = 70
                 }
             },
-            ["Perflora"] = {
+            ['Perflora'] = {
                 [1] = {
-                ["max"] = 90,
-                ["min"] = 70
+                ['max'] = 90,
+                ['min'] = 70
                 },
                 [2] = {
-                ["max"] = 50,
-                ["min"] = 30
+                ['max'] = 50,
+                ['min'] = 30
                 }
             },
-            ["Gate"] = {
+            ['Gate'] = {
                 [1] = {
-                ["max"] = 83,
-                ["min"] = 75
+                ['max'] = 83,
+                ['min'] = 75
                 },
                 [2] = {
-                ["max"] = 83,
-                ["min"] = 75
+                ['max'] = 83,
+                ['min'] = 75
                 }
             },
-            ["Nocere"] = {
+            ['Nocere'] = {
                 [1] = {
-                ["max"] = 85,
-                ["min"] = 70
+                ['max'] = 85,
+                ['min'] = 70
                 },
                 [2] = {
-                ["max"] = 85,
-                ["min"] = 70
+                ['max'] = 85,
+                ['min'] = 70
                 }
             },
-            ["Sagitta Sol"] = {
+            ['Sagitta Sol'] = {
                 [1] = {
-                ["max"] = 65,
-                ["min"] = 50
+                ['max'] = 65,
+                ['min'] = 50
                 },
                 [2] = {
-                ["max"] = 60,
-                ["min"] = 40
+                ['max'] = 60,
+                ['min'] = 40
                 }
             },
-            ["Claritum"] = {
+            ['Claritum'] = {
                 [1] = {
-                ["max"] = 100,
-                ["min"] = 90
+                ['max'] = 100,
+                ['min'] = 90
                 }
             },
-            ["Trickstus"] = {
+            ['Trickstus'] = {
                 [1] = {
-                ["max"] = 70,
-                ["min"] = 30
+                ['max'] = 70,
+                ['min'] = 30
                 },
                 [2] = {
-                ["max"] = 50,
-                ["min"] = 30
+                ['max'] = 50,
+                ['min'] = 30
                 }
             }
         }
@@ -2495,15 +2483,15 @@ do -- // Functions
         end;
 
         function spellStack(t)
-            if not t then maid.spellStack = nil; table.clear(queue); return; end
+            if (not t) then maid.spellStack = nil; table.clear(queue); return; end
             
             maid.spellStack = UserInputService.InputBegan:Connect(function(input,gameProcessed)
                 if (input.KeyCode ~= Enum.KeyCode[library.options.spellStackKeybind.key] or gameProcessed) then return end;
         
-                local youngest = tick();
+                local youngest = DateTime.now().UnixTimestampMillis / 1000;
                 local found;
                 for i,v in next, queue do 
-                    if v.currentTime > youngest or v.fired then continue; end
+                    if (v.currentTime > youngest or v.fired) then continue; end
                     
                     found = i;
                     youngest = v.currentTime;
@@ -2560,8 +2548,8 @@ do -- // Functions
         params.FilterDescendantsInstances = {workspace.Live, workspace:FindFirstChild('NPCs') or Instance.new('Folder'), workspace:FindFirstChild('AreaMarkers') or Instance.new('Folder')};
 
         local flying        = false;
-        local lastFly       = tick();
-        local onGroundAt    = tick();
+        local lastFly       = DateTime.now().UnixTimestampMillis / 1000;
+        local onGroundAt    = DateTime.now().UnixTimestampMillis / 1000;
         local flyStartedAt  = lastFly;
 
         function aaGunCounter(toggle)
@@ -2579,25 +2567,25 @@ do -- // Functions
                 local isOnGround = workspace:Raycast(rootPart.Position, Vector3.new(0, -10, 0), params)
                 if(not isOnGround) then
                     if(not flying) then
-                        flyStartedAt = tick();
+                        flyStartedAt = DateTime.now().UnixTimestampMillis / 1000;
                     end;
                     flying = true;
-                    lastFly = tick();
+                    lastFly = DateTime.now().UnixTimestampMillis / 1000;
                 else
                     if(flying) then
-                        onGroundAt = tick();
+                        onGroundAt = DateTime.now().UnixTimestampMillis / 1000;
                     end;
                     flying = false;
                 end;
 
-                local timeSinceLastFly = tick() - flyStartedAt;
-                local timeOnGround = tick() - onGroundAt;
+                local timeSinceLastFly = DateTime.now().UnixTimestampMillis / 1000 - flyStartedAt;
+                local timeOnGround = DateTime.now().UnixTimestampMillis / 1000 - onGroundAt;
                 local shouldFly = (timeOnGround >= 6 and (flying and timeSinceLastFly < 5 or not flying and true));
 
                 local red, green = 'rgb(255, 0, 0)', 'rgb(0, 255, 0)'
-                local onGroundText = string.format('<font color="%s"> %s </font>', isOnGround and green or red, isOnGround and 'Yes' or 'No')
-                local timeOnGroundText = string.format('<font color="%s"> %.01f </font>', flying and red or green, flying and -timeSinceLastFly or timeOnGround);
-                local canFlyText = string.format('<font color="%s"> %s </font>', shouldFly and green or red, shouldFly and 'Yes' or 'No');
+                local onGroundText = string.format('<font color='%s'> %s </font>', isOnGround and green or red, isOnGround and 'Yes' or 'No')
+                local timeOnGroundText = string.format('<font color='%s'> %.01f </font>', flying and red or green, flying and -timeSinceLastFly or timeOnGround);
+                local canFlyText = string.format('<font color='%s'> %s </font>', shouldFly and green or red, shouldFly and 'Yes' or 'No');
 
                 aaGunCounterText.Text = string.format('On Ground: %s\nTime on ground: %s\nCan Fly (Recommended): %s', onGroundText, timeOnGroundText, canFlyText);
             end);
@@ -2757,11 +2745,11 @@ do -- // Functions
             }
         }
 
-        local stations = workspace:FindFirstChild("Stations");
+        local stations = workspace:FindFirstChild('Stations');
 
         local function GrabStation(type)
-            if typeof(type) ~= "string" then
-                return error(string.format("Expected type string got <%s>",typeof(type)))
+            if (typeof(type) ~= 'string') then
+                return error(string.format('Expected type string got <%s>',typeof(type)))
             elseif(not stations) then
                 return warn('[Auto Potion] No Stations');
             end
@@ -2981,7 +2969,7 @@ do -- // Functions
     end;
 
     local function getPlayerClass(player)
-        if(playerClasses[player] and tick() - playerClasses[player].lastUpdate <= 5) then
+        if(playerClasses[player] and DateTime.now().UnixTimestampMillis / 1000 - playerClasses[player].lastUpdate <= 5) then
             return playerClasses[player].name;
         end;
 
@@ -2993,8 +2981,8 @@ do -- // Functions
 
         for i, v in next, playerClassesList do
             for i2, v2 in next, v.Active do
-                local alternative = tostring(v2):gsub("%s", "");
-                if(i2 ~= "Level" and (playerBackpack:FindFirstChild(v2) or playerBackpack:FindFirstChild(alternative))) then
+                local alternative = tostring(v2):gsub('%s', '');
+                if(i2 ~= 'Level' and (playerBackpack:FindFirstChild(v2) or playerBackpack:FindFirstChild(alternative))) then
                     table.insert(allFounds, {Level = -1, Name = i});
                     break;
                 end;
@@ -3002,8 +2990,8 @@ do -- // Functions
 
             for i2, v2 in next, v.Classes do
                 for i3, v3 in next, v2 do
-                    local alternative = tostring(v3):gsub("%s", "");
-                    if(i3 ~= "Level" and (playerBackpack:FindFirstChild(v3) or playerBackpack:FindFirstChild(alternative))) then
+                    local alternative = tostring(v3):gsub('%s', '');
+                    if(i3 ~= 'Level' and (playerBackpack:FindFirstChild(v3) or playerBackpack:FindFirstChild(alternative))) then
                         table.insert(allFounds, {Level = v2.Level, Name = i2});
                         break;
                     end;
@@ -3020,7 +3008,7 @@ do -- // Functions
         end;
 
         playerClasses[player] = {
-            lastUpdate = tick();
+            lastUpdate = DateTime.now().UnixTimestampMillis / 1000;
             name = foundClass and foundClass.Name or 'Freshie'
         };
 
@@ -3034,8 +3022,7 @@ do -- // Functions
     local playerRaces = {};
     local raceColors = {};
 
-    do -- // Grab Race Data
-        if(ReplicatedStorage:FindFirstChild('Info') and ReplicatedStorage.Info:FindFirstChild('Races')) then
+    if(ReplicatedStorage:FindFirstChild('Info') and ReplicatedStorage.Info:FindFirstChild('Races')) then
             for i, v in next, ReplicatedStorage.Info.Races:GetChildren() do
                 table.insert(raceColors, {tostring(v.EyeColor.Value), tostring(v.SkinColor.Value), v.Name})
             end;
@@ -3043,7 +3030,7 @@ do -- // Functions
     end;
 
     local function getPlayerRace(player)
-        if(playerRaces[player] and tick() - playerRaces[player].lastUpdateAt <= 5) then
+        if(playerRaces[player] and DateTime.now().UnixTimestampMillis / 1000 - playerRaces[player].lastUpdateAt <= 5) then
             return playerRaces[player].name;
         end;
 
@@ -3075,7 +3062,7 @@ do -- // Functions
 
 
         playerRaces[player] = {
-            lastUpdateAt = tick(),
+            lastUpdateAt = DateTime.now().UnixTimestampMillis / 1000,
             name = raceFound
         };
 
@@ -3111,10 +3098,8 @@ do -- // Functions
                 task.wait(0.3);
             end;
         end;
-    end;
 
-    do -- // Bots
-        local function runSafetyCheck(serverHop)
+    local function runSafetyCheck(serverHop)
             local playerRangeCheck = library.flags.playerRangeCheck;
 
             if(moderatorInGame) then
@@ -3317,12 +3302,12 @@ do -- // Functions
                     runSafetyCheck(true);
                     tweenTeleport(rootPart, tpData.position);
 
-                    local ranAt = tick();
+                    local ranAt = DateTime.now().UnixTimestampMillis / 1000;
 
                     repeat
                         runSafetyCheck(true);
                         task.wait();
-                    until tick() - ranAt >= tpData.delay;
+                    until DateTime.now().UnixTimestampMillis / 1000 - ranAt >= tpData.delay;
                 end;
 
                 findServer(true);
@@ -3333,12 +3318,12 @@ do -- // Functions
                 runSafetyCheck(true);
                 tweenTeleport(rootPart, v.position);
 
-                local ranAt = tick();
+                local ranAt = DateTime.now().UnixTimestampMillis / 1000;
 
                 repeat
                     runSafetyCheck(true);
                     task.wait();
-                until tick() - ranAt >= v.delay;
+                until DateTime.now().UnixTimestampMillis / 1000 - ranAt >= v.delay;
 
                 local trinkets = getClosestTrinkets(rootPart);
 
@@ -3357,8 +3342,8 @@ do -- // Functions
                         continue;
                     end;
 
-                    local pickedUpAt = tick();
-                    repeat task.wait() until not v.object.Parent or tick() - pickedUpAt >= 5;
+                    local pickedUpAt = DateTime.now().UnixTimestampMillis / 1000;
+                    repeat task.wait() until not v.object.Parent or DateTime.now().UnixTimestampMillis / 1000 - pickedUpAt >= 5;
 
                     trinketPickedUp[v.object] = true;
                     task.wait(0.1);
@@ -3543,7 +3528,7 @@ do -- // Functions
             local clickDetector = npc and npc:FindFirstChildWhichIsA('ClickDetector');
 
             if (not npc or not npcRootPart or not clickDetector) then
-                kickPlayer('Please dm Aztup!');
+                kickPlayer('Please dm Rukia!');
                 return findServer();
             end;
 
@@ -3767,7 +3752,7 @@ do -- // Functions
                     local isBlacklisted = v:FindFirstChild('Blacklist') and v.Blacklist:FindFirstChild(LocalPlayer.Name);
 
                     if ((v.Position - rootPart.Position).Magnitude < 10 and v.Transparency == 0 and not isBlacklisted and (not library.flags.skipIllusionistServer or Utility:countTable(illusionists) <= 0)) then
-                        local startedAt = tick();
+                        local startedAt = DateTime.now().UnixTimestampMillis / 1000;
 
                         repeat
                             local pickaxe = table.remove(pickaxes, 1);
@@ -3779,7 +3764,7 @@ do -- // Functions
                             pickaxe.Parent = LocalPlayer.Backpack;
 
                             table.insert(pickaxes, pickaxe);
-                        until v.Transparency ~= 0 or tick() - startedAt >= 2;
+                        until v.Transparency ~= 0 or DateTime.now().UnixTimestampMillis / 1000 - startedAt >= 2;
                     end;
                 end;
             end;
@@ -4197,8 +4182,8 @@ do -- // Functions
                     tween:Play();
 
                     repeat task.wait() until completed or canceled;
-                    local startedAt = tick();
-                    repeat task.wait() until tick() - startedAt > v.delay or canceled;
+                    local startedAt = DateTime.now().UnixTimestampMillis / 1000;
+                    repeat task.wait() until DateTime.now().UnixTimestampMillis / 1000 - startedAt > v.delay or canceled;
 
                     if(canceled) then
                         tween:Cancel();
@@ -4219,7 +4204,7 @@ do -- // Functions
         end;
 
         function saveBot()
-            if(isfile(library.flags.fileName .. '.json')) then
+            if (isfile(`{library.flags.fileName}.json`)) then
                 library:ShowMessage('A file with this name already exists!');
                 return;
             end;
@@ -4234,14 +4219,14 @@ do -- // Functions
                 });
             end;
 
-            writefile(library.flags.fileName .. '.json', HttpService:JSONEncode(saveData));
-            library:ShowMessage('Path has been saved under synapsex/workspace/' .. library.flags.fileName .. '.json');
+            writefile(`{library.flags.fileName}.json`, HttpService:JSONEncode(saveData));
+            library:ShowMessage(`Path has been saved under synapsex/workspace/{library.flags.fileName}.json`);
         end;
 
         function loadBot()
             if (library:ShowConfirm('Are you sure ? (This will clear your current path)')) then
                 xpcall(function()
-                    local suc, file = pcall(readfile, library.flags.fileName .. '.json');
+                    local suc, file = pcall(readfile, `{library.flags.fileName}.json`);
                     if(not suc) then
                         return library:ShowMessage('File not found');
                     end;
@@ -4281,7 +4266,7 @@ do -- // Functions
         end;
 
         function startBot()
-            local suc, file = pcall(readfile, library.flags.fileName .. '.json');
+            local suc, file = pcall(readfile, `{library.flags.fileName}.json`);
 
             if(not suc) then
                 return library:ShowMessage('Failed to start bot, file not found');
@@ -4317,7 +4302,7 @@ do -- // Functions
 
         library.options.fly:SetState(true);
         repeat
-            local Humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid");
+            local Humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('Humanoid');
 
             if(Humanoid and not isUnderWater() and not isKnocked()) then
                 for _, part in next, LocalPlayer.Character:GetDescendants() do
@@ -4326,11 +4311,11 @@ do -- // Functions
                     end;
                 end;
             end;
-            Humanoid:ChangeState("Jumping");
+            Humanoid:ChangeState('Jumping');
             Humanoid.JumpPower = 0;
             RunService.Stepped:Wait();
         until not library.flags.noClip;
-        local Humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid");
+        local Humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('Humanoid');
 
         library.options.fly:SetState(false);
         if (not Humanoid) then return; end
@@ -4516,12 +4501,12 @@ do -- // Functions
             return
         end;
 
-        local lastClick = tick();
+        local lastClick = DateTime.now().UnixTimestampMillis / 1000;
 
         maid.spamClick = RunService.RenderStepped:Connect(function()
-            if(tick() - lastClick < 0.13) then return end;
+            if(DateTime.now().UnixTimestampMillis / 1000 - lastClick < 0.13) then return end;
             if(not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild('CharacterHandler')) then return end;
-            lastClick = tick();
+            lastClick = DateTime.now().UnixTimestampMillis / 1000;
 
             LocalPlayer.Character.CharacterHandler.Remotes.LeftClick:FireServer({math.random(1, 10), math.random()});
         end);
@@ -4575,10 +4560,8 @@ do -- // Functions
         for i,v in next, killBricks do
             v.Parent = not toggle and workspace or nil;
         end;
-    end;
 
-    do -- // Auto Pickup
-        local trinkets = {};
+    local trinkets = {};
         local ingredients = {};
 
         local function onChildAdded(obj)
@@ -4637,9 +4620,9 @@ do -- // Functions
 
                 maid[maidName] = RunService.RenderStepped:Connect(function()
                     local rootPart = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart;
-                    if(not rootPart or tick() - lastUpdate < 0.2) then return end;
+                    if(not rootPart or DateTime.now().UnixTimestampMillis / 1000 - lastUpdate < 0.2) then return end;
 
-                    lastUpdate = tick();
+                    lastUpdate = DateTime.now().UnixTimestampMillis / 1000;
 
                     for i,v in next, t do
                         if((rootPart.Position - v.Position).Magnitude <= 25) then
@@ -4709,8 +4692,8 @@ do -- // Functions
             end;
 
             if(characterName and characterNameShadow) then
-                characterName.Text = value and "" or defaultCharName;
-                characterNameShadow.Text = value and "" or defaultCharName;
+                characterName.Text = value and '' or defaultCharName;
+                characterNameShadow.Text = value and '' or defaultCharName;
             end;
 
             if(deadContainer) then
@@ -4745,7 +4728,7 @@ do -- // Functions
 
             if(boosts) then
                 for i, v in next, boosts:GetChildren() do
-                    if(v.Name == "SpeedBoost" and v.Value <= 0) then
+                    if(v.Name == 'SpeedBoost' and v.Value <= 0) then
                         v:Destroy();
                     end;
                 end;
@@ -4839,9 +4822,9 @@ do -- // Functions
                 if (not handle) then continue end;
 
                 firetouchinterest(handle, currentFurnace, 0);
-                lastSmeltAttempt = tick();
+                lastSmeltAttempt = DateTime.now().UnixTimestampMillis / 1000;
                 humanoid:EquipTool(v);
-                repeat task.wait() until v.Parent == nil or tick() - lastSmeltAttempt >= 2;
+                repeat task.wait() until v.Parent == nil or DateTime.now().UnixTimestampMillis / 1000 - lastSmeltAttempt >= 2;
                 firetouchinterest(handle, currentFurnace, 1);
             end;
         until not library.flags.autoSmelt;
@@ -4857,7 +4840,7 @@ do -- // Functions
 
         repeat
             task.wait()
-            if(tick() - lastUpdate < 1) then continue end;
+            if(DateTime.now().UnixTimestampMillis / 1000 - lastUpdate < 1) then continue end;
 
             local merchant = getCurrentNpc({'Merchant', 'Pawnbroker'});
             if(not merchant) then continue end;
@@ -4876,7 +4859,7 @@ do -- // Functions
                 end;
 
                 if(not scroll) then continue end;
-                lastUpdate = tick();
+                lastUpdate = DateTime.now().UnixTimestampMillis / 1000;
 
                 humanoid:EquipTool(scroll);
                 fireclickdetector(merchant.ClickDetector, 1);
@@ -4999,7 +4982,7 @@ do -- // Functions
         local lastCast = 0;
 
         maid.spellCast = RunService.RenderStepped:Connect(function()
-            if(tick() - lastCast <= 2.5 and not library.flags.spellStacking) then return end;
+            if(DateTime.now().UnixTimestampMillis / 1000 - lastCast <= 2.5 and not library.flags.spellStacking) then return end;
 
             local currentTool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA('Tool');
             if(not currentTool) then return end;
@@ -5007,14 +4990,14 @@ do -- // Functions
             local amounts = spellValues[currentTool.Name];
             if(not amounts) then return end;
 
-            local useSnap = library.flags[toCamelCase(currentTool.Name .. ' Use Snap')];
+            local useSnap = library.flags[toCamelCase(`{currentTool.Name} Use Snap`)];
             amounts = amounts[useSnap and 2 or 1];
 
             local mana = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('Mana');
             if(not mana) then return end;
 
             if(mana.Value > amounts.min and mana.value < amounts.max) then
-                lastCast = tick();
+                lastCast = DateTime.now().UnixTimestampMillis / 1000;
                 if(useSnap) then
                     LocalPlayer.Character.CharacterHandler.Remotes.RightClick:FireServer({math.random(1, 10), math.random()});
                 else
@@ -5036,7 +5019,7 @@ do -- // Functions
             local amounts = spellValues[currentTool.Name];
             if(not amounts) then continue end;
 
-            local useSnap = library.flags[toCamelCase(currentTool.Name .. ' Use Snap')];
+            local useSnap = library.flags[toCamelCase(`{currentTool.Name} Use Snap`)];
             amounts = amounts[useSnap and 2 or 1];
 
             local amount = amounts.max - (amounts.max  - amounts.min) / 2;
@@ -5250,8 +5233,7 @@ do -- // Functions
     local function initEspStuff()
         local damageIndicator = {};
 
-        do -- // Player Stuff
-            local blacklistedHouses = {'Mudock', 'Mudockfat', 'Archfat', 'Female'};
+        local blacklistedHouses = {'Mudock', 'Mudockfat', 'Archfat', 'Female'};
             local mudockList = {};
 
             local function isInGroup(player, groupId)
@@ -5399,7 +5381,7 @@ do -- // Functions
 
         local function findInTable(t, index, value)
             for i, v in next, t do
-                if v[index] == value then
+                if (v[index] == value) then
                     return v;
                 end;
             end;
@@ -5408,78 +5390,78 @@ do -- // Functions
         local opalColor = Vector3.new(1, 1, 1);
 
         function getTrinketType(v) -- // This code is from the old source too lazy to remake it as this one works properly
-            if (v.Name == "Part" or v.Name == "Handle" or v.Name == "MeshPart") and (v:IsA("Part") or v:IsA("UnionOperation") or v:IsA("MeshPart")) then
-                local Mesh = (v:IsA("MeshPart") and v) or v:FindFirstChildOfClass("SpecialMesh");
-                local ParticleEmitter = v:FindFirstChildOfClass("ParticleEmitter");
-                local Attachment = v:FindFirstChildOfClass("Attachment");
-                local PointLight = v:FindFirstChildOfClass("PointLight");
+            if (v.Name == 'Part' or v.Name == 'Handle' or v.Name == 'MeshPart') and (v:IsA('Part') or v:IsA('UnionOperation') or v:IsA('MeshPart')) then
+                local Mesh = (v:IsA('MeshPart') and v) or v:FindFirstChildOfClass('SpecialMesh');
+                local ParticleEmitter = v:FindFirstChildOfClass('ParticleEmitter');
+                local Attachment = v:FindFirstChildOfClass('Attachment');
+                local PointLight = v:FindFirstChildOfClass('PointLight');
                 local Material = v.Material;
                 local className = v.ClassName;
                 local Size = v.Size;
                 local SizeMagnitude = Size.Magnitude;
                 local Color = v.BrickColor.Name;
 
-                if(className == "UnionOperation" and Material == Enum.Material.Neon and SizeMagnitude < 3.1 and SizeMagnitude > 2) then
+                if(className == 'UnionOperation' and Material == Enum.Material.Neon and SizeMagnitude < 3.1 and SizeMagnitude > 2) then
                     if(not v.UsePartColor) then
                         return trinketsData["White King's Amulet"];
                     else
-                        return trinketsData["Lannis Amulet"];
+                        return trinketsData['Lannis Amulet'];
                     end;
                 end;
 
-                if(className == "Part" and v.Shape == Enum.PartType.Block and Material == Enum.Material.Neon and Color == "Pastel Blue" and Mesh.MeshId == "") then
-                    return trinketsData["Fairfrozen"];
+                if(className == 'Part' and v.Shape == Enum.PartType.Block and Material == Enum.Material.Neon and Color == 'Pastel Blue' and Mesh.MeshId == '') then
+                    return trinketsData['Fairfrozen'];
                 end;
 
-                if(SizeMagnitude < 0.9 and Material == Enum.Material.Neon and className == "UnionOperation" and v.Transparency == 0) then
-                    if(Color == "Persimmon") then
+                if(SizeMagnitude < 0.9 and Material == Enum.Material.Neon and className == 'UnionOperation' and v.Transparency == 0) then
+                    if(Color == 'Persimmon') then
                         return trinketsData["Philosopher's Stone"];
-                    elseif(Color == "Black") then
-                        return trinketsData["Night Stone"];
+                    elseif(Color == 'Black') then
+                        return trinketsData['Night Stone'];
                     end;
                 end;
 
                 if(Material == Enum.Material.DiamondPlate and v.Transparency == 0 and PointLight and PointLight.Brightness == 0.5) then
-                    return trinketsData["Scroom Key"];
+                    return trinketsData['Scroom Key'];
                 end;
 
-                if(className == "MeshPart" and getId(v.MeshId) == "2520762076") then
-                    return trinketsData["Howler Friend"];
+                if(className == 'MeshPart' and getId(v.MeshId) == '2520762076') then
+                    return trinketsData['Howler Friend'];
                 end;
 
-                if(Mesh and getId(Mesh.MeshId) == "2877143560") then
-                    if(string.find(Color, "green")) then
-                        return trinketsData["Emerald"];
-                    elseif(Color == "Really red") then
-                        return trinketsData["Ruby"];
-                    elseif(Color == "Lapis") then
-                        return trinketsData["Sapphire"];
-                    elseif(string.find(Color, "blue")) then
-                        return trinketsData["Diamond"];
+                if(Mesh and getId(Mesh.MeshId) == '2877143560') then
+                    if(string.find(Color, 'green')) then
+                        return trinketsData['Emerald'];
+                    elseif(Color == 'Really red') then
+                        return trinketsData['Ruby'];
+                    elseif(Color == 'Lapis') then
+                        return trinketsData['Sapphire'];
+                    elseif(string.find(Color, 'blue')) then
+                        return trinketsData['Diamond'];
                     else
-                        return trinketsData["Rift Gem"];
+                        return trinketsData['Rift Gem'];
                     end;
                 end;
 
-                if(ParticleEmitter and ParticleEmitter.Texture:find("20443483") and SizeMagnitude > 0.6 and SizeMagnitude < 0.8 and v.Transparency == 1 and Material == Enum.Material.Neon) then
-                    if(className == "Part") then
-                        return trinketsData["Ice Essence"];
+                if(ParticleEmitter and ParticleEmitter.Texture:find('20443483') and SizeMagnitude > 0.6 and SizeMagnitude < 0.8 and v.Transparency == 1 and Material == Enum.Material.Neon) then
+                    if(className == 'Part') then
+                        return trinketsData['Ice Essence'];
                     end;
-                    return trinketsData["Spider Cloak"];
+                    return trinketsData['Spider Cloak'];
                 end;
 
                 if(ParticleEmitter) then
-                    local TextureId = ParticleEmitter.Texture:gsub("%D", "");
-                    local Trinket = findInTable(Trinkets, "Texture", TextureId);
+                    local TextureId = ParticleEmitter.Texture:gsub('%D', '');
+                    local Trinket = findInTable(Trinkets, 'Texture', TextureId);
 
                     if(Trinket) then
                         return Trinket;
                     end;
                 end;
 
-                if(Mesh and Mesh.MeshId ~= "") then
-                    local MeshId = Mesh.MeshId:gsub("%D", "");
-                    local Trinket = findInTable(Trinkets, "MeshId", MeshId);
+                if(Mesh and Mesh.MeshId ~= '') then
+                    local MeshId = Mesh.MeshId:gsub('%D', '');
+                    local Trinket = findInTable(Trinkets, 'MeshId', MeshId);
 
                     if(Trinket) then
                         return Trinket;
@@ -5487,12 +5469,12 @@ do -- // Functions
                 end;
 
                 if(ParticleEmitter and Material == Enum.Material.Slate) then
-                    return trinketsData["Idol Of The Forgotten"];
+                    return trinketsData['Idol Of The Forgotten'];
                 end;
 
                 if(Attachment) then
-                    if(Attachment:FindFirstChildOfClass("ParticleEmitter")) then
-                        local ParticleEmitter2 = Attachment:FindFirstChildOfClass("ParticleEmitter");
+                    if(Attachment:FindFirstChildOfClass('ParticleEmitter')) then
+                        local ParticleEmitter2 = Attachment:FindFirstChildOfClass('ParticleEmitter');
 
                         if (ParticleEmitter2) then
                             local TextureId = getId(ParticleEmitter2.Texture);
@@ -5503,7 +5485,7 @@ do -- // Functions
 
                                 return trinketsData['Pheonix Down'];
                             end
-                            local Trinket = findInTable(Trinkets, "Texture", TextureId);
+                            local Trinket = findInTable(Trinkets, 'Texture', TextureId);
                             return Trinket;
                         end;
                     end;
@@ -5655,8 +5637,7 @@ do -- // Functions
             end));
         end;
 
-        do -- // Damage Indicator
-            damageIndicator.ClassName = 'DamageIndicator';
+        damageIndicator.ClassName = 'DamageIndicator';
             damageIndicator.__index = damageIndicator;
 
             local function generateOffSet()
@@ -5683,7 +5664,7 @@ do -- // Functions
                     Rotation = generateOffSet() * 5,
                     Visible = true,
                     TextColor3 = Color3.fromRGB(231, 76, 60),
-                  Text = '-' .. tostring(math.ceil(damage)),
+                  Text = `-{math.ceil(damage)}`,
                     BackgroundTransparency = 1,
                     TextStrokeTransparency = 0,
                     TextSize = 10
@@ -5714,7 +5695,6 @@ do -- // Functions
                 self._maid:Destroy();
                 self._maid = nil;
             end;
-        end;
 
         if(ingredientsFolder) then
             Utility.listenToChildAdded(ingredientsFolder, onChildAddedIngredient);
@@ -5724,10 +5704,9 @@ do -- // Functions
         Utility.listenToChildAdded(workspace.Live, onMobAdded);
         Utility.listenToChildAdded(workspace:FindFirstChild('NPCs') or Instance.new('Folder'), onNpcAdded);
         Utility.listenToChildAdded(workspace.Thrown, onBagAdded);
-    end;
 
     local climbBoost = Instance.new('NumberValue');
-    climbBoost.Name = "ClimbBoost";
+    climbBoost.Name = 'ClimbBoost';
 
     task.spawn(function()
         local killPartsObjects = {'KillBrick', 'Lava', 'PoisonField', 'PitKillBrick'};
@@ -5829,7 +5808,7 @@ do -- // Functions
     library.OnLoad:Connect(initEspStuff);
 end;
 
-function Utility:renderOverload(data)
+function Utility.renderOverload(self, data)
     local misc = data.column1:AddSection('Misc');
     local trinketEsp = data.column2:AddSection('Trinkets');
     local ingredientEsp = data.column2:AddSection('Ingredients');
@@ -6057,24 +6036,24 @@ if (isGaia) then
 		['Sunken Passage'] = triggers.evileye1.LastSpawned,
     };
 
-    local function formatTime(seconds)
-        local minutes = math.floor(seconds / 60);
-        local hours = math.floor(minutes / 60);
-        local days = math.floor(hours / 24);
-        local formattedTime = '';
+    local function formatTime(seconds: number): string
+        local minutes: number = math.floor(seconds / 60);
+        local hours: number = math.floor(minutes / 60);
+        local days: number = math.floor(hours / 24);
+        local formattedTime: string = '';
 
-        if days > 0 then
-            formattedTime = formattedTime .. days .. 'd ';
+        if (days > 0) then
+            formattedTime = `{formattedTime}{days}d `;
             hours = hours % 24;
         end;
 
-        if hours > 0 then
-            formattedTime = formattedTime .. hours .. 'h ';
+        if (hours > 0) then
+            formattedTime = `{formattedTime}{hours}h `;
             minutes = minutes % 60;
         end;
 
-        if minutes > 0 then
-            formattedTime = formattedTime .. minutes .. 'm';
+        if (minutes > 0) then
+            formattedTime = `{formattedTime}{minutes}m`;
             seconds = seconds % 60;
         end;
 
@@ -6135,8 +6114,8 @@ Spell:AddToggle({text = 'Auto Cast', callback = toggleSpellAutoCast})
 for i, v in next, spellValues do
     if(v[2]) then
         Spell:AddToggle({
-            text = i .. ' - Use Snap',
-            flag = i .. ' Use Snap',
+            text = `{i} - Use Snap`,
+            flag = `{i} Use Snap`,
             state = true
         });
     end;
