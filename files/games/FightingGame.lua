@@ -55,7 +55,7 @@ local playercheats = column2:AddSection('Player Cheats');
 
 
 do
-    function functions.speedHack(toggle)
+    function functions.speedHack(toggle: boolean): ()
         if (not toggle) then
             maid.speedHack = nil;
             maid.speedHackBv = nil;
@@ -86,7 +86,7 @@ do
     end;
 
 
-    function functions.fly(toggle)
+    function functions.fly(toggle: boolean): ()
         if (not toggle) then
             maid.flyHack = nil;
             maid.flyBv = nil;
@@ -112,7 +112,7 @@ do
     end;
 
 end;
-function functions.infiniteJump(toggle)
+function functions.infiniteJump(toggle: boolean): ()
     if (not toggle) then return end;
 
     repeat
@@ -172,7 +172,7 @@ local playerSpectatingLabel;
 do
     local lastUpdateAt = 0;
 
-    function setCameraSubject(subject)
+    function setCameraSubject(subject: Instance): ()
         if (subject == LocalPlayer.Character) then
             playerSpectating = nil;
             CollectionService:RemoveTag(LocalPlayer, 'ForcedSubject');
@@ -253,7 +253,7 @@ do
     modJoinSound.SoundId = MOD_SOUND_ASSET;
     modJoinSound.Parent = workspace;
 
-    local function onPlayerAdded(player)
+    local function onPlayerAdded(player: Player): ()
         if (table.find(MODERATOR_IDS, player.UserId)) then
             modJoinSound:Play();
             ToastNotif.new({
@@ -264,7 +264,7 @@ do
 
     Players.PlayerAdded:Connect(onPlayerAdded);
 
-    local function onPlayerRemoving(player)
+    local function onPlayerRemoving(player: Player): ()
         if (table.find(MODERATOR_IDS, player.UserId)) then
             modJoinSound:Play();
             ToastNotif.new({
@@ -277,7 +277,7 @@ do
 
 
 
-    function functions.playerProximityCheck(toggle)
+    function functions.playerProximityCheck(toggle: boolean): ()
         if (not toggle) then
             maid.proximityCheck = nil;
             return;
@@ -323,7 +323,7 @@ end
 
 
 
-local function formatMobName(mobName)
+local function formatMobName(mobName: string): string
     if (not mobName:match('%.(.-)%d+')) then return mobName end;
     local allMobLetters = mobName:match('%.(.-)%d+'):gsub('_', ' '):split(' ');
 
@@ -337,7 +337,7 @@ local function formatMobName(mobName)
     return table.concat(allMobLetters, ' ');
 end;
 
-local function onNewMobAdded(mob, espConstructor)
+local function onNewMobAdded(mob: Instance, espConstructor: any): ()
     local validMobNames = {
         "#HITBOX_SIMULATION",
         "_Dungeon",
@@ -349,7 +349,7 @@ local function onNewMobAdded(mob, espConstructor)
     for i, model in pairs(game:GetService("Workspace"):WaitForChild("Live"):GetChildren()) do
 
         for i, string in ipairs(validMobNames) do
-            if string.find(model.Name,string) then
+            if (string.find(model.Name,string)) then
                 table.insert(foundMobs,model)
 
                 CollectionService:AddTag(model, "Mob")
@@ -393,7 +393,7 @@ local function onNewMobAdded(mob, espConstructor)
     end);
 end;
 
-local function onNewNpcAdded(npc, espConstructor)
+local function onNewNpcAdded(npc: Instance, espConstructor: any): ()
     local npcObj;
     if (npc:IsA('BasePart') or npc:IsA('MeshPart')) then
         npcObj = espConstructor.new(npc, npc.Name);
@@ -444,7 +444,7 @@ local function onNewAwardAdded(award, espConstructor)
     for i, model in pairs(game:GetService("Workspace"):GetChildren()) do
 
         for i, string in ipairs(validMobNames) do
-            if string.find(model.Name,string) then
+            if (string.find(model.Name,string)) then
                 table.insert(foundMobs,model)
                 CollectionService:AddTag(model, "award")
             end
@@ -501,7 +501,7 @@ getrenv().Tmea =
         args = workspace.Thrown,
         callback = function(value)
             onLoaded = function(section)
-                if value then
+                if (value) then
                 getrenv().Tmea = true
             else
                 getrenv().Tmea = false
@@ -510,7 +510,7 @@ getrenv().Tmea =
         end;
     });
 workspace.Thrown.ChildAdded:Connect(function(child)
-    if child.Name == "TRAPlol!" then
+    if (child.Name == "TRAPlol!") then
         if (not getrenv().Tmea) then return end
         local changed
         local c
@@ -518,7 +518,7 @@ workspace.Thrown.ChildAdded:Connect(function(child)
             child.Transparency = 0.2
         end)
         changed = child.Changed:Connect(function()
-            if not child:IsDescendantOf(workspace.Thrown) then
+            if (not child:IsDescendantOf(workspace.Thrown)) then
                 changed:Disconnect()
                 c:Disconnect()
             end
@@ -530,7 +530,7 @@ end)
 
 --- MISC AREA!!
 ----------------
-function functions.serverHop(bypass)
+function functions.serverHop(bypass: boolean?): ()
     if(bypass or library:ShowConfirm('Are you sure you want to switch server?')) then
         xpcall(
             function()
@@ -539,48 +539,47 @@ function functions.serverHop(bypass)
                 module:Teleport(game.PlaceId)
             end,
             function(err)
-                warn("An error occurred: " .. tostring(err))
+                warn(`An error occurred: {tostring(err)}`)
             end
         )
     end;
 end;
 
-function functions.Respawn(resp)
-    if(resp or library:ShowConfirm('Are you sure you want to respawn?')) then
-
-        game.Players.LocalPlayer.Character.Humanoid.Health = 0
-    end
-end
-
-function functions.InstantLog()
-    local Player = game:GetService("Players")
-    Player.LocalPlayer:Kick("Instant Logged")
-end;
-function functions.RemoveSpellZones()
-    for _, part in pairs(workspace:GetChildren()) do
-        if part:IsA("BasePart") and part.Name == "NoSpellZone" then
-            part:Destroy()
-        end;
-    end;
+function functions.Respawn(resp: boolean?): ()
+	if (resp or library:ShowConfirm('Are you sure you want to respawn?')) then
+		(LocalPlayer.Character :: any).Humanoid.Health = 0;
+	end;
 end;
 
-function functions.FindOutDays()
-    local days =  game:GetService("Players").LocalPlayer.PlayerGui.DayCount.Value
-    ToastNotif.new({
-        text = ('Your day count is [%s]'):format(days),
-        duration = 5,
-    });
+function functions.InstantLog(): ()
+	LocalPlayer:Kick('Instant Logged');
 end;
 
-function functions.FindOutWeather()
-    local Weather = game:GetService("Workspace").Weather.Value
-    ToastNotif.new({
-        text = ('The weather is [%s]'):format(Weather),
-        duration = 5,
-    });
+function functions.RemoveSpellZones(): ()
+	for _, part: Instance in workspace:GetChildren() do
+		if (part:IsA('BasePart') and part.Name == 'NoSpellZone') then
+			part:Destroy();
+		end;
+	end;
 end;
 
-function functions.noStun(toggle)
+function functions.FindOutDays(): ()
+	local days: number = LocalPlayer.PlayerGui.DayCount.Value;
+	ToastNotif.new({
+		text = `Your day count is [{days}]`,
+		duration = 5,
+	});
+end;
+
+function functions.FindOutWeather(): ()
+	local weather: string = (workspace :: any).Weather.Value;
+	ToastNotif.new({
+		text = `The weather is [{weather}]`,
+		duration = 5,
+	});
+end;
+
+function functions.noStun(toggle: boolean): ()
     if(not toggle) then
         maid.noStun   = nil;
         maid.noStunBv = nil;
@@ -605,11 +604,11 @@ function functions.noStun(toggle)
         end;
 
         maid.noStunBv.Parent = not library.flags.fly and rootPart or nil;
-        maid.noStunBv.Velocity = (humanoid.MoveDirection.Magnitude ~= 0 and humanoid.MoveDirection or gethiddenproperty(humanoid, 'WalkDirection')) * if (LocalPlayer.Character.Values.Running.Value) then 26 else 16;
+        maid.noStunBv.Velocity = (humanoid.MoveDirection.Magnitude ~= 0 and humanoid.MoveDirection or gethiddenproperty(humanoid, 'WalkDirection')) * (LocalPlayer.Character.Values.Running.Value and 26 or 16);
     end);
 end;
 
-function functions.blatantNoStun(toggle)
+function functions.blatantNoStun(toggle: boolean): ()
     if(not toggle) then
         maid.blatantNoStun = nil;
         maid.blatantNoStunBv = nil;
@@ -638,7 +637,7 @@ function functions.blatantNoStun(toggle)
     end);
 end;
 
-function functions.antiFire(toggle)
+function functions.antiFire(toggle: boolean): ()
     if(not toggle) then
         maid.antiFire = nil;
         return;
@@ -656,7 +655,7 @@ function functions.antiFire(toggle)
     end);
 end;
 
-function functions.antiVoidFire(toggle)
+function functions.antiVoidFire(toggle: boolean): ()
     if(not toggle) then
         maid.antiVoidFire = nil;
         return;
@@ -669,7 +668,7 @@ function functions.antiVoidFire(toggle)
     end);
 end;
 
-function functions.antiConfused(toggle)
+function functions.antiConfused(toggle: boolean): ()
     if(not toggle) then
         maid.antiConfused = nil;
         return;
@@ -682,7 +681,7 @@ function functions.antiConfused(toggle)
     end);
 end;
 
-function functions.antiHeal(toggle)
+function functions.antiHeal(toggle: boolean): ()
     if(not toggle) then
          maid.antiHeal = nil;
         return;
@@ -695,7 +694,7 @@ function functions.antiHeal(toggle)
     end);
 end;
 
-function functions.noFallDamage(toggle)
+function functions.noFallDamage(toggle: boolean): ()
     if(not toggle) then
          maid.noFallDamage = nil;
         return;
@@ -708,7 +707,7 @@ function functions.noFallDamage(toggle)
     end);
 end;
 
-function functions.noBlur(toggle)
+function functions.noBlur(toggle: boolean): ()
         if(not toggle) then
          maid.noBlur = nil;
         return;
@@ -763,7 +762,7 @@ getrenv().IsLord =
     misccheats:AddToggle({
         text = 'Lord of House',
         callback = function(value)
-            if value then
+            if (value) then
             getrenv().IsLord = true
         else
             getrenv().IsLord = false
@@ -776,14 +775,14 @@ local connection
 connection = game:GetService("RunService").RenderStepped:Connect(function()
     if (not getrenv().IsLord) then return end
     game:GetService("Players").LocalPlayer.leaderstats.HouseOwner.Value = true
-    if getrenv().IsLord == false then
+    if (getrenv().IsLord == false) then
         game:GetService("Players").LocalPlayer.leaderstats.HouseOwner.Value = false
 
     end;
 end);
 
-function functions.NameChanger(toggle)
-    if toggle == false then
+function functions.NameChanger(toggle: boolean): ()
+    if (toggle == false) then
         getrenv().NameChanger = false;
     else
         getrenv().NameChanger = true;
@@ -796,7 +795,7 @@ misccheats:AddToggle({
     callback = functions.NameChanger
 })
 
-if getrenv().NameChanger == false then
+if (getrenv().NameChanger == false) then
 misccheats:AddBox({
     text = 'First Name',
     tip = 'Change the first name of your character [client]',
@@ -826,12 +825,12 @@ print("before do")
 do -- One Shot NPCs
     local mobs = {};
 
-    local function getAnyPart(model)
+    local function getAnyPart(model: Instance): BasePart?
         for _, obj in ipairs(model:GetDescendants()) do
             if (obj.Name == 'HumanoidRootPart') then
                 return obj;
             end;
-            if obj:IsA('BasePart') then
+            if (obj:IsA('BasePart')) then
                 return obj;
             end;
         end;
@@ -864,7 +863,7 @@ do -- One Shot NPCs
         local hasOwnership = isnetworkowner(self.hrp);
 
         -- store previous state
-        if self._hadOwnership == nil then
+        if (self._hadOwnership == nil) then
             self._hadOwnership = false;
         end;
 
@@ -876,7 +875,7 @@ do -- One Shot NPCs
 
         self._hadOwnership = hasOwnership;
 
-        if hasOwnership then
+        if (hasOwnership) then
             self.char:PivotTo(CFrame.new(self.hrp.Position.X, workspace.FallenPartsDestroyHeight - 100000, self.hrp.Position.Z));
         end;
     end;
@@ -927,7 +926,7 @@ do -- One Shot NPCs
         NetworkOneShot.new(obj);
     end);
 
-    function functions.networkOneShot(t)
+    function functions.networkOneShot(t: boolean): ()
         if (not t) then
             maid.networkOneShot = nil;
             maid.networkOneShot2 = nil;
@@ -1008,7 +1007,7 @@ local VisualsMisc = column2:AddSection('Visuals');
 VisualsMisc:AddDivider('Game Visuals');
 
 local lastFogDensity = 0;
-function functions.noFog(t)
+function functions.noFog(t: boolean): ()
     if (not t) then Lighting.Atmosphere.Density = lastFogDensity; maid.noFog = nil; return; end;
 
     maid.noFog = Lighting.Atmosphere:GetPropertyChangedSignal('Density'):Connect(function()
@@ -1020,7 +1019,7 @@ function functions.noFog(t)
 end;
 
 local oldAmbient, oldBrightness = Lighting.Ambient, Lighting.Brightness;
-function functions.fullBright(toggle)
+function functions.fullBright(toggle: boolean): ()
     if (not toggle) then
         maid.fullBright = nil;
         Lighting.Ambient, Lighting.Brightness = oldAmbient, oldBrightness;
@@ -1035,7 +1034,7 @@ function functions.fullBright(toggle)
     Lighting.Ambient = Color3.fromRGB(255, 255, 255);
 end;
 
-function functions.noBlurEffect(t)
+function functions.noBlurEffect(t: boolean): ()
     Lighting.Blur.Enabled = not t;
 end;
 
@@ -1071,7 +1070,7 @@ do -- // Inventory Viewer (SMH)
     itemColors[5] = Color3.new(0.33333299999999999, 0, 1);
     itemColors[999] = Color3.new(0.792156, 0.792156, 0.792156);
 
-    local function getToolType(tool)
+    local function getToolType(tool: Instance): number
         if (tool:FindFirstChild("PrimaryWeapon"))then
             return 0;
         elseif (tool:FindFirstChild("Skill")) then
@@ -1100,7 +1099,7 @@ do -- // Inventory Viewer (SMH)
         return 999;
     end;
 
-    local function showPlayerInventory(player)
+    local function showPlayerInventory(player: Player): ()
         if (typeof(player) ~= 'Instance') then return end;
 
         for _, v in inventoryLabels do
@@ -1113,7 +1112,7 @@ do -- // Inventory Viewer (SMH)
         local seen = {};
         local seenJSON = {};
 
-        local function onBackpackChildAdded(tool)
+        local function onBackpackChildAdded(tool: Tool): ()
             debug.profilebegin('onBackpackChildAdded');
             local toolName = tool:GetAttribute('DisplayName') or tool.Name:gsub('[^:]*:', ''):gsub('%$[^%$]*', '');
             local toolType = getToolType(tool);
