@@ -21,35 +21,20 @@ local fromHex = sharedRequire('utils/fromHex.lua');
 local toCamelCase = sharedRequire('utils/toCamelCase.lua');
 local Webhook = sharedRequire('utils/Webhook.lua');
 
-if (game.PlaceId == 126222071643660) then
-    ToastNotif.new({
-        text = 'Script will not run in menu!',
-        duration = 5
-    });
-
-    task.delay(0.005, function()
-        library:Unload();
-    end);
-    return;
-end;
-
-local column1, column2 = unpack(library.columns);
-
-local functions = {};
-
-local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService, VirtualInputManager, ReplicatedFirst, TeleportService, ReplicatedStorage = Services:Get(
-    'Players',
-    'RunService',
-    'UserInputService',
-    'HttpService',
-    'CollectionService',
-    'MemStorageService',
-    'Lighting',
-    'TweenService',
-    'VirtualInputManager',
-    'ReplicatedFirst',
-    'TeleportService',
-    'ReplicatedStorage'
+local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService, VirtualInputManager, ReplicatedFirst, TeleportService, ReplicatedStorage, Stats = Services:Get(
+	'Players',
+	'RunService',
+	'UserInputService',
+	'HttpService',
+	'CollectionService',
+	'MemStorageService',
+	'Lighting',
+	'TweenService',
+	'VirtualInputManager',
+	'ReplicatedFirst',
+	'TeleportService',
+	'ReplicatedStorage',
+	'Stats'
 );
 
 Players = cloneref(Players);
@@ -61,1840 +46,1384 @@ CollectionService = cloneref(CollectionService);
 TeleportService = cloneref(TeleportService);
 Lighting = cloneref(Lighting);
 
-local LocalPlayer = Players.LocalPlayer;
+local BLOCKED_PLACES: {[number]: string} = {
+	[2008032602] = 'Script will not run in matchmaking!',
+	[5411459567] = 'Script will not run in AFK World!',
+};
+
+local blockedMessage: string? = BLOCKED_PLACES[game.PlaceId];
+if (blockedMessage) then
+	ToastNotif.new({ text = blockedMessage :: string, duration = 5 });
+	task.delay(0.005, function(): ()
+		library:Unload();
+	end);
+	return;
+end;
+
+local LocalPlayer: Player = Players.LocalPlayer;
 local playerMouse = LocalPlayer:GetMouse();
+
+local column1, column2 = unpack(library.columns);
 
 local maid = Maid.new();
 
 local localCheats = column1:AddSection('Local Cheats');
-local notifier = column1:AddSection('Notifier');
-local playerMods = column1:AddSection('Player Mods');
+local autoParrySection = column2:AddSection('Auto Parry');
 local automation = column2:AddSection('Automation');
-local misc = column2:AddSection('Misc');
-local visuals = column2:AddSection('Visuals');
-local farms = column2:AddSection('Farms');
-local inventoryViewer = column2:AddSection('Inventory Viewer');
+local gameplayAssist = column2:AddSection('Gameplay-Assist');
 
-local IsA = game.IsA;
-local FindFirstChild = game.FindFirstChild;
-local FindFirstChildWhichIsA = game.FindFirstChildWhichIsA;
-local IsDescendantOf = game.IsDescendantOf;
+local functions = {};
 
-local Trinkets = {};
-local playerClassesList = {};
+--[[
+	reads the mode/ultimate charge from the Charge value under the player.
+	returns 0-100 as a rounded percent
+]]
+local function GetModePercent(player: Player): number
+	local charge: DoubleConstrainedValue? = player:FindFirstChild('Charge') :: DoubleConstrainedValue?;
+	if (not charge) then
+		return 0;
+	end;
 
-local rayParams = RaycastParams.new();
-rayParams.FilterDescendantsInstances = {workspace.Live};
-rayParams.FilterType = Enum.RaycastFilterType.Blacklist;
-
-local NPCFolder = workspace.NPCs;
-
-local Armors, Weapons, Items, NPCs = {}, {}, {}, {};
-local ArmorSelected, WeaponSelected, ItemSelected, NPCSelected;
-
-local Thrown = workspace.Thrown;
-local Map    = workspace.Map;
-
-local oldAmbient, oldBrightness;
-
-local BodyMoverTag = 'good';
-
-local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
-
-local DUNGEON_PLACE_ID = 89371625020632;
-
-local inventoryLabels = {};
-local itemColors = {};
-
-itemColors[100] = Color3.new(0.76862699999999995, 1, 0);
-itemColors[9] = Color3.new(1, 0.90000000000000002, 0.10000000000000001);
-itemColors[10] = Color3.new(0, 1, 0);
-itemColors[11] = Color3.new(0.90000000000000002, 0, 1);
-itemColors[3] = Color3.new(0, 0.80000000000000004, 1);
-itemColors[8] = Color3.new(0.17254900000000001, 0.80000000000000004, 0.64313699999999996);
-itemColors[7] = Color3.new(0.2588, 0.6588, 0.3490); -- Regular Spell
-itemColors[6] = Color3.new(1, 0, 0);
-itemColors[4] = Color3.new(0.82745100000000005, 0.466667, 0.207843);
-itemColors[0] = Color3.new(1, 1, 1);
-itemColors[5] = Color3.new(0.33333299999999999, 0, 1);
-itemColors[999] = Color3.new(0.792156, 0.792156, 0.792156);
-itemColors[87] = Color3.new(0.235, 0.714, 0.961); -- God Spell
-
-local function getToolType(tool): number
-    if (tool:FindFirstChild('PrimaryWeapon')) then
-        return 0;
-    elseif (tool:FindFirstChild('Skill') or tool:FindFirstChild('Activator')) then
-        return 8;
-    elseif (tool:FindFirstChild('Droppable')) then
-        return 6;
-    elseif (tool:FindFirstChild('Spell')) then
-        if (tool:FindFirstChild('Godspell')) then
-            return 87;
-        end;
-        return 7;
-    elseif (tool:FindFirstChild('Trinket')) then
-        return 4;
-    elseif (tool:FindFirstChild('COWL')) then
-        return 100;
-    elseif (tool:FindFirstChild('Active') or tool.Parent.Name == 'Novachrono' or tool.Parent.Name == 'Muto\'s Blood') then
-        return 5;
-    elseif (tool:FindFirstChild('Schematic')) then
-        return 8;
-    elseif (tool:FindFirstChild('Ingredient')) then
-        return 10;
-    elseif (tool:FindFirstChild('SpellIngredient')) then
-        return 11;
-    elseif (tool:FindFirstChild('Item')) then
-        return 9;
-    end;
-
-    return 999;
+	return math.floor((charge :: DoubleConstrainedValue).Value / (charge :: DoubleConstrainedValue).MaxValue * 100);
 end;
 
-local function showPlayerInventory(player)
-    if (typeof(player) ~= 'Instance') then return end;
+function EntityESP:Plugin()
+	local modeText: string = '';
+	local modePercent: number? = nil;
 
-    for _, v in next, inventoryLabels do
-        v.main:Destroy();
-    end;
+	if (library.flags.showMode) then
+		modePercent = GetModePercent(self._player);
+		modeText = ` [Mode: {modePercent}%]`;
+	end;
 
-    inventoryLabels = {};
-
-    local playerItems = {};
-    local seen = {};
-    local seenJSON = {};
-
-    local function onBackpackChildAdded(tool)
-        debug.profilebegin('onBackpackChildAdded');
-        local toolName = tool:GetAttribute('DisplayName') or tool.Name:gsub('[^:]*:', ''):gsub('%$[^%$]*', '');
-        local toolType = getToolType(tool);
-        local weaponData = tool:FindFirstChild('WeaponData');
-
-        xpcall(function()
-            weaponData = seenJSON[weaponData] or HttpService:JSONDecode(weaponData.Value);
-        end, function()
-            weaponData = crypt.base64decode(weaponData.Value);
-            weaponData = weaponData:sub(1, #weaponData - 2);
-
-            weaponData = HttpService:JSONDecode(weaponData);
-        end);
-
-        if (typeof(weaponData) == 'table') then
-            table.foreach(weaponData, warn);
-            toolName = string.format('%s%s', toolName, (weaponData.Soulbound or weaponData.SoulBound) and ' [Soulbound]' or '');
-        end;
-
-        local exitingPlayerItem = seen[toolName];
-
-        if (exitingPlayerItem) then
-            exitingPlayerItem.quantity += 1;
-            return;
-        end;
-
-        local playerItem =  {
-            type = toolType,
-            toolName = toolName,
-            quantity = 1
-        };
-
-        table.insert(playerItems, playerItem);
-        seen[toolName] = playerItem;
-    end;
-
-    for _, tool in next, player.Backpack:GetChildren() do
-        task.spawn(onBackpackChildAdded, tool);
-    end;
-
-    table.sort(playerItems, function(a, b)
-        return a.type < b.type;
-    end);
-
-    for _, v in next, playerItems do
-        v.text = ('<font color="#%s">%s [x%d]</font>'):format(itemColors[v.type]:ToHex(), v.toolName, v.quantity);
-        table.insert(inventoryLabels, inventoryViewer:AddLabel(v.text));
-    end;
+	return {
+		text = modeText,
+		playerName = self._playerName,
+		modePercent = modePercent,
+	};
 end;
 
-inventoryViewer:AddList({
-    text = 'Player',
-    tip = 'Player to watch inventory for',
-    playerOnly = true,
-    skipflag = true,
-    callback = showPlayerInventory
-});
-
-function functions.speedHack(toggle: boolean): ()
-    if (not toggle) then
-        maid.speedHack = nil;
-        maid.speedHackBv = nil;
-
-        return;
-    end;
-
-    maid.speedHack = RunService.Heartbeat:Connect(function()
-        local playerData = Utility:getPlayerData();
-        local humanoid, rootPart = playerData.humanoid, playerData.primaryPart;
-        if (not humanoid or not rootPart) then return end;
-
-        if (library.flags.fly) then
-            maid.speedHackBv = nil;
-            return;
-        end;
-
-        maid.speedHackBv = maid.speedHackBv or Instance.new('BodyVelocity');
-        maid.speedHackBv.MaxForce = Vector3.new(100000, 0, 100000);
-
-        if (not CollectionService:HasTag(maid.speedHackBv, 'good')) then
-            CollectionService:AddTag(maid.speedHackBv, 'good');
-            CollectionService:AddTag(maid.speedHackBv, 'DONTDELETE');
-        end;
-
-        maid.speedHackBv.Parent = not library.flags.fly and rootPart or nil;
-        maid.speedHackBv.Velocity = (humanoid.MoveDirection.Magnitude ~= 0 and humanoid.MoveDirection or gethiddenproperty(humanoid, 'WalkDirection')) * library.flags.speedHackValue;
-    end);
-end;
-
-
-function functions.fly(toggle: boolean): ()
-    if (not toggle) then
-        maid.flyHack = nil;
-        maid.flyBv = nil;
-
-        return;
-    end;
-
-    maid.flyBv = Instance.new('BodyVelocity');
-    maid.flyBv.MaxForce = Vector3.new(math.huge, math.huge, math.huge);
-
-    maid.flyHack = RunService.Heartbeat:Connect(function()
-        local playerData = Utility:getPlayerData();
-        local rootPart, camera = playerData.rootPart, workspace.CurrentCamera;
-        if (not rootPart or not camera) then return end;
-
-        if (not CollectionService:HasTag(maid.flyBv, 'good')) then
-            CollectionService:AddTag(maid.flyBv, 'good');
-            CollectionService:AddTag(maid.flyBv, 'DONTDELETE');
-        end;
-
-        maid.flyBv.Parent = rootPart;
-        maid.flyBv.Velocity = camera.CFrame:VectorToWorldSpace(ControlModule:GetMoveVector() * library.flags.flyHackValue);
-    end);
-end;
-
-
-function functions.noKillBricks(toggle: boolean): ()
-    for i, v in next, killBricks do
-        v.part.Parent = not toggle and v.oldParent or nil;
-    end;
-end;
-
-function functions.infiniteJump(toggle: boolean): ()
-    if (not toggle) then return end;
-
-    repeat
-        local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
-        if (rootPart and UserInputService:IsKeyDown(Enum.KeyCode.Space)) then
-            rootPart.Velocity = Vector3.new(rootPart.Velocity.X, library.flags.infiniteJumpHeight, rootPart.Velocity.Z);
-        end;
-        task.wait(0.1);
-    until not library.flags.infiniteJump;
-end;
-
-function functions.goToGround(): ()
-    local params = RaycastParams.new();
-    params.FilterDescendantsInstances = {workspace.Live, workspace.NPCs};
-    params.FilterType = Enum.RaycastFilterType.Blacklist;
-
-    local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
-
-    if (not myRootPart or not myRootPart.Parent) then return end;
-
-    local floor = workspace:Raycast(myRootPart.Position, Vector3.new(0, -1000, 0), params);
-    if (not floor or not floor.Instance) then return end;
-
-    myRootPart.CFrame *= CFrame.new(0, -(myRootPart.Position.Y - floor.Position.Y) + 3, 0);
-    myRootPart.Velocity *= Vector3.new(1, 0, 1);
-end;
-
-library.OnKeyPress:Connect(function(input, gpe)
-    if (gpe or not library.options.attachToBack) then return end;
-
-    local key = library.options.attachToBack.key;
-    if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
-        local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
-        local closest, closestDistance = nil, math.huge;
-
-        if (not myRootPart) then return end;
-
-        repeat
-            for _, entity in next, workspace.Live:GetChildren() do
-                local rootPart = entity:FindFirstChild('HumanoidRootPart');
-                if (not rootPart or rootPart == myRootPart) then continue end;
-
-                local distance = (rootPart.Position - myRootPart.Position).magnitude;
-
-                if (distance < 300 and distance < closestDistance) then
-                    closest, closestDistance = rootPart, distance;
-                end;
-            end;
-
-            task.wait();
-        until closest or input.UserInputState == Enum.UserInputState.End;
-        if (input.UserInputState == Enum.UserInputState.End) then return end;
-
-        maid.attachToBack = RunService.Heartbeat:Connect(function()
-            local goalCF = closest.CFrame * CFrame.new(0, library.flags.attachToBackHeight, library.flags.attachToBackSpace);
-
-            local distance = (goalCF.Position - myRootPart.Position).Magnitude;
-            local tweenInfo = TweenInfo.new(distance / 100, Enum.EasingStyle.Linear);
-
-            local tween = TweenService:Create(myRootPart, tweenInfo, {
-                CFrame = goalCF
-            });
-
-            tween:Play();
-
-            maid.attachToBackTween = function()
-                tween:Cancel();
-            end;
-        end);
-    end;
-end);
-
-library.OnKeyRelease:Connect(function(input)
-    if (not library.options.attachToBack) then return end;
-    local key = library.options.attachToBack.key;
-
-    if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
-        maid.attachToBack = nil;
-        maid.attachToBackTween = nil;
-    end;
-end);
-
-function functions.noClip(toggle: boolean): ()
-    if (not toggle) then
-        maid.noClip = nil;
-
-        local humanoid = Utility:getPlayerData().humanoid;
-        if (not humanoid) then return end;
-
-        humanoid:ChangeState('Physics');
-        task.wait();
-        humanoid:ChangeState('RunningNoPhysics');
-
-        return;
-    end;
-
-    maid.noClip = RunService.Stepped:Connect(function()
-        debug.profilebegin('noclip');
-
-        local myCharacterParts = Utility:getPlayerData().parts;
-        local isKnocked = LocalPlayer.Character:FindFirstChild('Knocked') or LocalPlayer.Character:FindFirstChild('Ragdolled') or LocalPlayer.Character:FindFirstChild('ActuallyRagdolled');
-        local disableNoClipWhenKnocked = library.flags.disableNoClipWhenKnocked;
-
-        for _, v in next, myCharacterParts do
-            if (disableNoClipWhenKnocked) then
-                v.CanCollide = not not isKnocked;
-            else
-                v.CanCollide = false;
-            end;
-        end;
-        debug.profileend();
-    end);
-end;
-
-function functions.knockedOwnership(toggle: boolean): ()
-    if (not toggle) then
-        maid.knockedOwnership = nil;
-        return;
-    end;
-
-    if (LocalPlayer.Character:FindFirstChild('Knocked')) then
-        for _, newChild in LocalPlayer.Character:GetChildren() do
-            if (newChild.Name == 'Ragdolled' or newChild.Name == 'ActuallyRagdolled') then
-                newChild:Destroy();
-            end;
-        end;
-
-        LocalPlayer.Character.Knocked:Destroy();
-    end;
-
-    maid.knockedOwnership = LocalPlayer.Character.ChildAdded:Connect(function(child)
-        if (child.Name == 'Knocked') then
-            for _, newChild in LocalPlayer.Character:GetChildren() do
-                if (newChild.Name == 'Ragdolled' or newChild.Name == 'ActuallyRagdolled') then
-                    newChild:Destroy();
-                end;
-            end;
-            child:Destroy();
-        end;
-    end);
-end;
-
-function functions.clickDestroy(toggle: boolean): ()
-    if (not toggle) then
-        maid.clickDestroy = nil;
-        return;
-    end;
-
-    maid.clickDestroy = UserInputService.InputBegan:Connect(function(input, gpe)
-        if (input.UserInputType ~= Enum.UserInputType.MouseButton1 or gpe) then return end;
-
-        local target = playerMouse.Target;
-        if (not target or target:IsA('Terrain')) then return end;
-
-        target:Destroy();
-    end);
-end;
-
-function functions.serverHop(bypass): ()
-    if (bypass or library:ShowConfirm('Are you sure you want to switch server?')) then
-        library:UpdateConfig();
-
-        BlockUtils:BlockRandomUser();
-        TeleportService:Teleport(89371625020632);
-    end;
-end;
-
-function functions.respawn(bypass): ()
-    if (bypass or library:ShowConfirm('Are you sure you want to respawn?')) then
-        LocalPlayer.Character.Humanoid.Health = 0;
-    end;
-end;
-
-function functions.playerProximityCheck(toggle: boolean): ()
-    if (not toggle) then
-        maid.proximityCheck = nil;
-        return;
-    end;
-
-    local notifSend = setmetatable({}, {
-        __mode = 'k';
-    });
-
-    myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
-
-    maid.proximityCheck = RunService.Heartbeat:Connect(function()
-        if (not myRootPart) then return end;
-
-        for _, v in next, Players:GetPlayers() do
-            local rootPart = v.Character and v.Character.PrimaryPart;
-            if (not rootPart or v == LocalPlayer) then continue end;
-
-            local distance = (myRootPart.Position - rootPart.Position).Magnitude;
-
-            if (distance < 400 and not table.find(notifSend, rootPart)) then
-                table.insert(notifSend, rootPart);
-                ToastNotif.new({
-                    text = string.format('%s is nearby [%d]', v.Name, distance),
-                    duration = 30
-                });
-            elseif (distance > 600 and table.find(notifSend, rootPart)) then
-                table.remove(notifSend, table.find(notifSend, rootPart));
-                ToastNotif.new({
-                    text = string.format('%s is no longer nearby [%d]', v.Name, distance),
-                    duration = 30
-                });
-            end;
-        end;
-    end);
-end;
-
-
-function functions.autoSprint(toggle: boolean): ()
-    if (not toggle) then
-        maid.autoSprint = nil;
-        return;
-    end;
-    maid.autoSprint = true;
-
-    maid.sprintLoop = UserInputService.InputBegan:Connect(function(input, gpe)
-        if (gpe) then return end;
-        if (input.KeyCode == Enum.KeyCode.W) then
-            local remote = LocalPlayer.Character:FindFirstChild('Communicate');
-            if (remote) then
-                remote:FireServer({
-                    ['InputType'] = 'Sprinting',
-                    ['Enabled'] = true
-                });
-            end;
-        end;
-    end);
-end;
-
-local myChatLogs = {};
-
-local assetsList = {'ModeratorJoin.mp3', 'ModeratorLeft.mp3'};
-local audios = {};
-
-local apiEndpoint = 'https://rukiascripts.xyz/';
-
-for i, v in next, assetsList do
-	audios[v] = AudioPlayer.new({
-		url = `{apiEndpoint}{v}`,
-		volume = 10,
-		forcedAudio = true
-	});
-end;
-
-local function loadSound(soundName: string): ()
-	if ((soundName == 'ModeratorJoin.mp3' or soundName == 'ModeratorLeft.mp3') and not library.flags.modNotifier) then
+local BLUE_MOON_COLOR: Color3 = Color3.new(0.345098, 0.847059, 1);
+local ATTACH_MAX_RANGE: number = 300;
+local ZOOM_BF_COOLDOWN: number = 0.15;
+local zoomBfActive: boolean = false;
+local zoomMaid = Maid.new();
+
+function functions.zoomAutoBlackFlash(toggle: boolean): ()
+	if (not toggle) then
+		zoomMaid:DoCleaning();
+		zoomBfActive = false;
 		return;
 	end;
 
-	audios[soundName]:Play();
+	local camera: Camera = workspace.CurrentCamera;
+	local defaultFov: number = 70;
+	local lastFov: number = camera.FieldOfView;
+	local zooming: boolean = false;
+	local hitMin: boolean = false;
+
+	zoomMaid.fovWatch = camera:GetPropertyChangedSignal('FieldOfView'):Connect(function(): ()
+		local fov: number = camera.FieldOfView;
+
+		-- detect zoom-in starting (FOV dropping significantly below default)
+		if (not zooming and fov < defaultFov - 5) then
+			zooming = true;
+			hitMin = false;
+		end;
+
+		-- detect the FOV bottomed out and is now rising
+		if (zooming and fov < lastFov) then
+			hitMin = false;
+		end;
+
+		if (zooming and not hitMin and fov > lastFov) then
+			hitMin = true;
+		end;
+
+		-- click when FOV is rising back and crosses the threshold
+		if (zooming and hitMin and not zoomBfActive and fov >= defaultFov - 3) then
+			zoomBfActive = true;
+			zooming = false;
+			hitMin = false;
+			mouse1click();
+
+			task.delay(ZOOM_BF_COOLDOWN, function(): ()
+				zoomBfActive = false;
+			end);
+		end;
+
+		-- reset if FOV returns to normal without triggering
+		if (fov >= defaultFov - 1) then
+			zooming = false;
+			hitMin = false;
+		end;
+
+		lastFov = fov;
+	end);
 end;
 
-_G.loadSound = loadSound;
+local NANAMI_CLICK_COOLDOWN: number = 0.15;
+local nanamiTracking: { [Model]: boolean } = {};
+local nanamiMaid = Maid.new();
 
-local setCameraSubject;
-local isInDanger;
+local function WatchCutter(character: Model, cutter: GuiObject, goal: GuiObject, gui: BillboardGui): ()
+	if (nanamiTracking[character]) then
+		return;
+	end;
+	nanamiTracking[character] = true;
 
-local moderators = {};
+	local lastX: number? = nil;
+	local connection: RBXScriptConnection;
 
--- Y am I hardcoding this?
+	connection = RunService.RenderStepped:Connect(function(): ()
+		if (not gui.Parent or not cutter.Parent or not goal.Parent) then
+			connection:Disconnect();
+			nanamiTracking[character] = nil;
+			return;
+		end;
 
-local GROUP_ID = 475163115;
-local MINIMUM_RANK = 252;
+		local cutterX: number = cutter.AbsolutePosition.X;
+		local goalX: number = goal.AbsolutePosition.X;
 
-local suc, err = pcall(function()
-    for _, player in ipairs(Players:GetPlayers()) do
-        player:GetRankInGroup(GROUP_ID);
-    end;
+		if (lastX and (lastX :: number) <= goalX and cutterX > goalX) then
+			task.wait(math.random() * 0.04);
+			mouse1click();
+
+			if (connection) then
+				(connection :: RBXScriptConnection):Disconnect();
+			end;
+
+			task.delay(NANAMI_CLICK_COOLDOWN, function(): ()
+				nanamiTracking[character] = nil;
+			end);
+			return;
+		end;
+
+		lastX = cutterX;
+	end);
+
+	-- track so we can kill it when toggled off
+	local key: string = `cutterWatch_{tostring(character)}`;
+	nanamiMaid[key] = connection;
+end;
+
+--[[
+	tries to grab the cutter/goal from a gui that just appeared.
+	if the children arent there yet we listen for them briefly
+]]
+local function TryAttach(character: Model, gui: BillboardGui): ()
+	if (not library.flags.nanamiAutoBlackFlash) then
+		return;
+	end;
+
+	local mainBar: Frame? = gui:FindFirstChild('MainBar') :: Frame?;
+	if (not mainBar) then
+		local child: Instance? = gui:WaitForChild('MainBar', 1);
+		if (not child) then
+			return;
+		end;
+		mainBar = child :: Frame;
+	end;
+
+	local cutter: GuiObject? = (mainBar :: Frame):FindFirstChild('Cutter') :: GuiObject?;
+	local goal: GuiObject? = (mainBar :: Frame):FindFirstChild('Goal') :: GuiObject?;
+
+	if (not cutter) then
+		local c: Instance? = (mainBar :: Frame):WaitForChild('Cutter', 1);
+		if (not c) then
+			return;
+		end;
+		cutter = c :: GuiObject;
+	end;
+
+	if (not goal) then
+		local g: Instance? = (mainBar :: Frame):WaitForChild('Goal', 1);
+		if (not g) then
+			return;
+		end;
+		goal = g :: GuiObject;
+	end;
+
+	if (not gui.Parent) then
+		return;
+	end;
+
+	WatchCutter(character, cutter :: GuiObject, goal :: GuiObject, gui);
+end;
+
+--[[
+	hooks into a characters hrp so we catch the nanami gui the instant it appears.
+	no polling so we dont miss instant pop/depop guis
+]]
+local function WatchCharacter(character: Model): ()
+	local hrp: BasePart? = character:FindFirstChild('HumanoidRootPart') :: BasePart?;
+	if (not hrp) then
+		return;
+	end;
+
+	local existingGui: BillboardGui? = (hrp :: BasePart):FindFirstChild('NanamiCutGUI') :: BillboardGui?;
+	if (existingGui) then
+		task.spawn(TryAttach, character, existingGui :: BillboardGui);
+	end;
+
+	local conn: RBXScriptConnection = (hrp :: BasePart).ChildAdded:Connect(function(child: Instance): ()
+		if (child.Name == 'NanamiCutGUI' and child:IsA('BillboardGui')) then
+			task.spawn(TryAttach, character, child :: BillboardGui);
+		end;
+	end);
+
+	local key: string = `charWatch_{tostring(character)}`;
+	nanamiMaid[key] = conn;
+end;
+
+local function WatchLive(live: Folder): ()
+	for _, character: Instance in live:GetChildren() do
+		task.spawn(WatchCharacter, character :: Model);
+	end;
+
+	nanamiMaid.liveChildAdded = live.ChildAdded:Connect(function(child: Instance): ()
+		task.spawn(WatchCharacter, child :: Model);
+	end);
+end;
+
+local kokushiboMaid = Maid.new();
+
+local kokushiboHooked: boolean = false;
+
+function functions.autoKokushiboBlueMoon(toggle: boolean): ()
+	if (not toggle) then
+		kokushiboMaid:DoCleaning();
+		if (kokushiboHooked) then
+			local remote: RemoteFunction? = ReplicatedStorage:FindFirstChild('KokushiboCheck') :: RemoteFunction?;
+			if (remote) then
+				(remote :: RemoteFunction).OnClientInvoke = function(): boolean
+					return false;
+				end;
+			end;
+			kokushiboHooked = false;
+		end;
+		return;
+	end;
+
+	local remote: RemoteFunction? = ReplicatedStorage:FindFirstChild('KokushiboCheck') :: RemoteFunction?;
+	if (not remote) then return end;
+
+	kokushiboHooked = true;
+	(remote :: RemoteFunction).OnClientInvoke = newcclosure(function(p1: number, p2: number): boolean
+		local inputWindow: number = p2 * 2;
+		local moveDelay: number = p1 * 2 - inputWindow;
+
+		local template: ScreenGui? = ReplicatedStorage:FindFirstChild('FrenchKokushibo') :: ScreenGui?;
+		if (not template) then return false; end;
+
+		local gui: ScreenGui = (template :: ScreenGui):Clone();
+
+		for _, child: Instance in gui:GetChildren() do
+			if (not child:IsA('ImageLabel')) then continue end;
+			local img: ImageLabel = child :: ImageLabel;
+			local randX: number = math.random(1, 2) / 60 * (math.random(0, 1) == 0 and -1 or 1);
+			local randY: number = math.random(1, 3) / 90 * (math.random(0, 1) == 0 and -1 or 1);
+
+			TweenService:Create(img, TweenInfo.new(moveDelay, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {
+				Position = UDim2.new(img.Position.X.Scale + randX, 0, img.Position.Y.Scale + randY, 0);
+			}):Play();
+		end;
+
+		gui.Parent = LocalPlayer.PlayerGui;
+
+		task.wait(moveDelay);
+
+		if (inputWindow <= 0) then
+			gui:Destroy();
+			return false;
+		end;
+
+		-- auto blue effect
+		for _, child: Instance in gui:GetChildren() do
+			if (not child:IsA('ImageLabel')) then continue end;
+			local img: ImageLabel = child :: ImageLabel;
+
+			local uiScale: UIScale? = img:FindFirstChildOfClass('UIScale') :: UIScale?;
+			if (uiScale) then
+				TweenService:Create(uiScale :: UIScale, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+					Scale = 1.2;
+				}):Play();
+			end;
+
+			TweenService:Create(img, TweenInfo.new(0.75, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+				ImageTransparency = 1;
+			}):Play();
+
+			img.ImageColor3 = BLUE_MOON_COLOR;
+		end;
+
+		task.delay(0.75, function(): ()
+			gui:Destroy();
+		end);
+		return true;
+	end);
+end;
+
+function functions.nanamiAutoBlackFlash(toggle: boolean): ()
+	if (not toggle) then
+		nanamiMaid:DoCleaning();
+		nanamiTracking = {};
+		return;
+	end;
+
+	local live: Folder? = workspace:FindFirstChild('Live') :: Folder?;
+	if (live) then
+		WatchLive(live :: Folder);
+	end;
+end;
+
+function functions.speedHack(toggle: boolean): ()
+	if (not toggle) then
+		maid.speedHack = nil;
+		maid.speedHackBv = nil;
+		return;
+	end;
+
+	maid.speedHack = RunService.Heartbeat:Connect(function(): ()
+		local playerData = Utility:getPlayerData();
+		local humanoid, rootPart = playerData.humanoid, playerData.primaryPart;
+		if (not humanoid or not rootPart) then return end;
+
+		if (library.flags.fly) then
+			maid.speedHackBv = nil;
+			return;
+		end;
+
+		maid.speedHackBv = maid.speedHackBv or Instance.new('BodyVelocity');
+		maid.speedHackBv.MaxForce = Vector3.new(100000, 0, 100000);
+
+		if (not CollectionService:HasTag(maid.speedHackBv, 'good')) then
+			CollectionService:AddTag(maid.speedHackBv, 'good');
+			CollectionService:AddTag(maid.speedHackBv, 'DONTDELETE');
+		end;
+
+		maid.speedHackBv.Parent = not library.flags.fly and rootPart or nil;
+		maid.speedHackBv.Velocity = (humanoid.MoveDirection.Magnitude ~= 0 and humanoid.MoveDirection or gethiddenproperty(humanoid, 'WalkDirection')) * library.flags.speedHackValue;
+	end);
+end;
+
+function functions.fly(toggle: boolean): ()
+	if (not toggle) then
+		maid.flyHack = nil;
+		maid.flyBv = nil;
+		return;
+	end;
+
+	maid.flyBv = Instance.new('BodyVelocity');
+	maid.flyBv.MaxForce = Vector3.new(math.huge, math.huge, math.huge);
+
+	maid.flyHack = RunService.Heartbeat:Connect(function(): ()
+		local playerData = Utility:getPlayerData();
+		local rootPart, camera = playerData.rootPart, workspace.CurrentCamera;
+		if (not rootPart or not camera) then return end;
+
+		if (not CollectionService:HasTag(maid.flyBv, 'good')) then
+			CollectionService:AddTag(maid.flyBv, 'good');
+			CollectionService:AddTag(maid.flyBv, 'DONTDELETE');
+		end;
+
+		maid.flyBv.Parent = rootPart;
+		maid.flyBv.Velocity = camera.CFrame:VectorToWorldSpace(ControlModule:GetMoveVector() * library.flags.flyHackValue);
+	end);
+end;
+
+function functions.infiniteJump(toggle: boolean): ()
+	if (not toggle) then return end;
+
+	repeat
+		local rootPart: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
+		if (rootPart and UserInputService:IsKeyDown(Enum.KeyCode.Space)) then
+			(rootPart :: any).Velocity = Vector3.new((rootPart :: any).Velocity.X, library.flags.infiniteJumpHeight, (rootPart :: any).Velocity.Z);
+		end;
+		task.wait(0.1);
+	until (not library.flags.infiniteJump);
+end;
+
+function functions.goToGround(): ()
+	local params: RaycastParams = RaycastParams.new();
+	params.FilterDescendantsInstances = {(workspace :: any).Mobs};
+	params.FilterType = Enum.RaycastFilterType.Exclude;
+
+	local hrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
+	if (not hrp or not (hrp :: BasePart).Parent) then return end;
+
+	local floor: RaycastResult? = workspace:Raycast((hrp :: BasePart).Position, Vector3.new(0, -1000, 0), params);
+	if (not floor or not (floor :: RaycastResult).Instance) then return end;
+
+	(hrp :: BasePart).CFrame *= CFrame.new(0, -((hrp :: BasePart).Position.Y - (floor :: RaycastResult).Position.Y) + 3, 0);
+	(hrp :: any).Velocity *= Vector3.new(1, 0, 1);
+end;
+
+function functions.noClip(toggle: boolean): ()
+	if (not toggle) then
+		maid.noClip = nil;
+
+		local humanoid = Utility:getPlayerData().humanoid;
+		if (not humanoid) then return end;
+
+		humanoid:ChangeState('Physics');
+		task.wait();
+		humanoid:ChangeState('RunningNoPhysics');
+		return;
+	end;
+
+	maid.noClip = RunService.Stepped:Connect(function(): ()
+		local myCharacterParts = Utility:getPlayerData().parts;
+		local character = LocalPlayer.Character :: Model;
+		local isKnocked = character:FindFirstChild('Knocked') or character:FindFirstChild('Ragdolled') or character:FindFirstChild('ActuallyRagdolled');
+		local disableNoClipWhenKnocked: boolean = library.flags.disableNoClipWhenKnocked;
+
+		for _, v in myCharacterParts do
+			v.CanCollide = disableNoClipWhenKnocked and isKnocked ~= nil;
+		end;
+	end);
+end;
+
+function functions.clickDestroy(toggle: boolean): ()
+	if (not toggle) then
+		maid.clickDestroy = nil;
+		return;
+	end;
+
+	maid.clickDestroy = UserInputService.InputBegan:Connect(function(input: InputObject, gpe: boolean): ()
+		if (input.UserInputType ~= Enum.UserInputType.MouseButton1 or gpe) then return end;
+
+		local target = playerMouse.Target;
+		if (not target or target:IsA('Terrain')) then return end;
+
+		target:Destroy();
+	end);
+end;
+
+local lockedTarget: Player? = nil;
+
+--[[
+	finds the closest player to the mouse cursor within the lock on range.
+	uses screen distance so it feels like mouse perspective
+]]
+local function FindClosestToMouse(): Player?
+	local camera: Camera? = workspace.CurrentCamera;
+	if (not camera) then
+		return nil;
+	end;
+
+	local myCharacter: Model? = LocalPlayer.Character;
+	local myHead: BasePart? = myCharacter and (myCharacter :: Model):FindFirstChild('Head') :: BasePart?;
+	if (not myHead) then
+		return nil;
+	end;
+
+	local mousePos: Vector2 = UserInputService:GetMouseLocation();
+	local maxDistance: number = library.flags.lockOnMaxDistance;
+	local closestPlayer: Player? = nil;
+	local closestScreenDist: number = math.huge;
+
+	for _, player: Player in Players:GetPlayers() do
+		if (player == LocalPlayer) then continue end;
+		if (library.flags.lockOnCheckTeam and Utility:isTeamMate(player)) then continue end;
+
+		local character: Model? = player.Character;
+		if (not character) then continue end;
+
+		local humanoid: Humanoid? = (character :: Model):FindFirstChildOfClass('Humanoid');
+		if (not humanoid or (humanoid :: Humanoid).Health <= 0) then continue end;
+
+		local head: BasePart? = (character :: Model):FindFirstChild('Head') :: BasePart?;
+		if (not head) then continue end;
+
+		local worldDist: number = ((myHead :: BasePart).Position - (head :: BasePart).Position).Magnitude;
+		if (worldDist > maxDistance) then continue end;
+
+		local screenPos: Vector3, visible: boolean = (camera :: Camera):WorldToViewportPoint((head :: BasePart).Position);
+		if (not visible) then continue end;
+
+		local screenDist: number = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude;
+		if (screenDist < closestScreenDist) then
+			closestScreenDist = screenDist;
+			closestPlayer = player;
+		end;
+	end;
+
+	return closestPlayer;
+end;
+
+function functions.lockOn(toggle: boolean): ()
+	if (not toggle) then
+		maid.lockOn = nil;
+		lockedTarget = nil;
+		return;
+	end;
+
+	lockedTarget = FindClosestToMouse();
+	if (not lockedTarget) then
+		library.flags.lockOn = false;
+		return;
+	end;
+
+	maid.lockOn = RunService.RenderStepped:Connect(function(): ()
+		if (not lockedTarget) then
+			maid.lockOn = nil;
+			return;
+		end;
+
+		local character: Model? = (lockedTarget :: Player).Character;
+		if (not character) then
+			maid.lockOn = nil;
+			lockedTarget = nil;
+			return;
+		end;
+
+		local humanoid: Humanoid? = (character :: Model):FindFirstChildOfClass('Humanoid');
+		if (not humanoid or (humanoid :: Humanoid).Health <= 0) then
+			maid.lockOn = nil;
+			lockedTarget = nil;
+			return;
+		end;
+
+		local head: BasePart? = (character :: Model):FindFirstChild('Head') :: BasePart?;
+		if (not head) then return end;
+
+		local camera: Camera? = workspace.CurrentCamera;
+		if (not camera) then return end;
+
+		local aimPart: string = library.flags.lockOnAimPart or 'Head';
+		local hitPos: Vector3 = (head :: BasePart).Position;
+
+		if (aimPart == 'Torso') then
+			hitPos -= Vector3.new(0, 1.5, 0);
+		elseif (aimPart == 'Leg') then
+			hitPos -= Vector3.new(0, 3, 0);
+		end;
+
+		local screenPos: Vector3, visible: boolean = (camera :: Camera):WorldToViewportPoint(hitPos);
+		if (not visible) then return end;
+
+		local mousePos: Vector2 = UserInputService:GetMouseLocation();
+		local smoothness: number = library.flags.lockOnSmoothness or 1;
+		local delta: Vector2 = (Vector2.new(screenPos.X, screenPos.Y) - mousePos) / smoothness;
+		mousemoverel(delta.X, delta.Y);
+	end);
+end;
+
+function functions.respawn(bypass: boolean?): ()
+	if (bypass or library:ShowConfirm('Are you sure you want to respawn?')) then
+		(LocalPlayer.Character :: any).Humanoid.Health = 0;
+	end;
+end;
+
+function functions.antiBlind(toggle: boolean): ()
+	if (not toggle) then
+		maid.antiBlind = nil;
+		return;
+	end;
+
+	maid.antiBlind = (LocalPlayer :: any).PlayerGui.ChildAdded:Connect(function(child: Instance): ()
+		if (child.Name == 'Flare') then
+			(child :: ScreenGui).Enabled = false;
+		end;
+	end);
+end;
+
+local oldNamecall: ((...any) -> ...any)? = nil;
+
+function functions.antiKick(toggle: boolean): ()
+	if (not toggle) then
+		if (oldNamecall) then
+			local mt: any = getrawmetatable(game);
+			setreadonly(mt, false);
+			mt.__namecall = oldNamecall;
+			setreadonly(mt, true);
+			oldNamecall = nil;
+		end;
+		return;
+	end;
+
+	local mt: any = getrawmetatable(game);
+	setreadonly(mt, false);
+
+	oldNamecall = mt.__namecall;
+
+	mt.__namecall = newcclosure(function(self: any, ...: any): ...any
+		if (not checkcaller() and getnamecallmethod() == 'Kick') then
+			return;
+		end;
+		return (oldNamecall :: any)(self, ...);
+	end);
+
+	setreadonly(mt, true);
+end;
+
+local BLOCK_KEY: Enum.KeyCode = Enum.KeyCode.F;
+
+-- m1 anim ids collected from anim logger, delay in seconds before blocking
+local M1_ANIM_IDS: {[string]: number} = {
+	-- fist
+
+	['1461128166'] = 0, -- m1 1
+	['1461128859'] = 0, -- m1 2
+	['1461136273'] = 0, -- m1 3
+	['1461145506'] = 0, -- m1 4 (non-uptilt version)
+	['1461136875'] = 0, -- m1 4 (uptilt version)
+
+	-- sword animations
+
+	['1470422387'] = 0, -- m1 1
+	['1470439852'] = 0, -- m1 2
+	['1470449816'] = 0, -- m1 3
+	['1470447472'] = 0, -- m1 4
+	['1470472673'] = 0, -- m1 4 (uptilt version)
+
+	-- kirito
+
+	['8319862463'] = 0, -- m1 1
+	['8320258247'] = 0, -- m1 2
+	['8321532463'] = 0, -- m1 3
+	['8321564926'] = 0, -- m1 4
+
+	-- whitebeard
+
+	['2653288957'] = 0, -- m1 1
+	['2653292053'] = 0, -- m1 2
+	['2653295985'] = 0, -- m1 3
+	['2653299927'] = 0, -- m1 4
+
+	-- asuna
+
+	['9068688717'] = 0, -- m1 1
+	['9068689970'] = 0, -- m1 2
+	['9068691739'] = 0, -- m1 3
+	['9068693092'] = 0, -- m1 4
+
+	-- alucard
+
+	['129856070992547'] = 0, -- m1 1
+	['106548325298957'] = 0, -- m1 2
+	['108198644371262'] = 0, -- m1 3
+	['139353659760475'] = 0, -- m1 4
+
+	-- spear
+
+	['6765035204'] = 0, -- m1 1
+	['6765057406'] = 0, -- m1 2
+
+	-- gogeta
+
+	['17306012933'] = 0, -- m1 1
+	['17306015782'] = 0, -- m1 2
+	['17306019069'] = 0, -- m1 3
+	['17306052984'] = 0, -- m1 4
+
+	-- law
+
+	['1947173251'] = 0, -- m1 1
+	['1947196236'] = 0, -- m1 2
+	['1947219719'] = 0, -- m1 3
+	['1947230024'] = 0, -- m1 4
+
+	-- shanks (mode) (m1 1 & m1 3 shared with fist)
+
+	-- mash kyrelight
+
+	['9941010371'] = 0, -- m1 1
+	['9941073313'] = 0, -- m1 2
+	['9941176251'] = 0, -- m1 3
+	['9941247556'] = 0, -- m1 4
+
+	-- iskandar (m1 3 & m1 4 shared with sword)
+
+	['7413861926'] = 0, -- m1 1
+	['7413904138'] = 0, -- m1 2
+
+	-- lancer (all m1s shared with spear/shanks/sword)
+
+	-- gaara (other m1s shared with shanks)
+
+	['3263871265'] = 0, -- m1 1
+	['3263870104'] = 0, -- m1 2
+	['180435792'] = 0, -- m1 3
+
+	-- shirou (enhanced projection / raw projection)
+
+	['1730596371'] = 0, -- m1 1
+	['1730606513'] = 0, -- m1 2
+	['1730618971'] = 0, -- m1 3
+	['1730629532'] = 0, -- m1 4
+
+	-- sanji/boa (leg animations)
+
+	['1885667765'] = 0, -- m1 1
+	['1885679702'] = 0, -- m1 2
+	['1885690040'] = 0, -- m1 3
+	['1885693880'] = 0, -- m1 4
+
+	-- hol horse
+
+	['82359465822698'] = 0, -- m1 1
+	['122595882915968'] = 0, -- m1 2
+	['130515957991251'] = 0, -- m1 3
+	['71698176452644'] = 0, -- m1 4
+
+	-- tatsumaki
+
+	['14272212914'] = 0, -- m1 1
+	['14272246471'] = 0, -- m1 2
+	['14272266117'] = 0, -- m1 3
+	['14272296104'] = 0, -- m1 4
+
+	-- usopp
+
+	['8328283823'] = 0, -- m1 1
+
+	-- jotaro (stand m1s shared with fist/shanks)
+
+	-- kisame (all m1s shared with sword)
+
+	-- raiden (m1 4 uptilt shared with fist)
+
+	['128980851549763'] = 0, -- m1 1
+	['122609664088954'] = 0, -- m1 2
+	['75267484294449'] = 0, -- m1 3
+
+	-- killer b
+
+	['14436312737'] = 0, -- m1 1
+	['14437145085'] = 0, -- m1 2
+	['14437148019'] = 0, -- m1 3
+	['14437150122'] = 0, -- m1 4
+
+	-- sinon
+
+	['10598162443'] = 0, -- m1 1 / m1 4 (uptilt version)
+	['10599060714'] = 0, -- m1 2
+	['10599128601'] = 0, -- m1 3
+	['10599110274'] = 0, -- m1 4
+
+	-- nanami (shared m1 3-4 with sword)
+
+	['92901308072582'] = 0, -- m1 1
+};
+
+local isAutoBlocking: boolean = false;
+local autoParryMaid = Maid.new();
+
+local function blockInput(): ()
+	VirtualInputManager:SendKeyEvent(true, BLOCK_KEY, false, game);
+end;
+
+local function unblockInput(): ()
+	VirtualInputManager:SendKeyEvent(false, BLOCK_KEY, false, game);
+end;
+
+--[[
+	calculates the ping-adjusted wait time for blocking.
+	subtracts a percentage of the player's ping from the raw delay
+]]
+local function calculateParryDelay(rawDelay: number): number
+	if (library.flags.autoParryCustomDelay) then
+		return rawDelay + library.flags.autoParryCustomDelayValue / 1000;
+	end;
+
+	local playerPing: number = Stats.PerformanceStats.Ping:GetValue() / 1000;
+	return rawDelay - (playerPing * (library.flags.pingCompensation / 100));
+end;
+
+
+local function isSneaking(): boolean
+	local character: Model? = LocalPlayer.Character;
+	if (not character) then
+		return false;
+	end;
+
+	return character:FindFirstChild('SneakAttack') ~= nil;
+end;
+
+local function executeParry(rawDelay: number): ()
+	if (isAutoBlocking or isSneaking()) then
+		return;
+	end;
+
+	isAutoBlocking = true;
+
+	local adjustedDelay: number = calculateParryDelay(rawDelay);
+	if (adjustedDelay > 0) then
+		task.wait(adjustedDelay);
+	end;
+
+	-- re-check before pressing
+	if (isSneaking()) then
+		isAutoBlocking = false;
+		return;
+	end;
+
+	blockInput();
+
+	task.wait(library.flags.blockDuration / 1000);
+	unblockInput();
+	
+	isAutoBlocking = false;
+end;
+
+--[[
+	hooks a single character in workspace.Live, listens for animations
+	and triggers parry when an M1 anim plays within range
+]]
+local function hookCharacterForParry(character: Model): ()
+	if (not character or character == LocalPlayer.Character) then return end;
+
+	local humanoid: Humanoid? = (character:FindFirstChildOfClass('Humanoid') or character:WaitForChild('Humanoid', 5)) :: any;
+	if (not humanoid) then return end;
+
+	local player: Player? = Players:GetPlayerFromCharacter(character);
+	local entityMaid = Maid.new();
+
+	entityMaid:GiveTask((character :: any).Destroying:Connect(function(): ()
+		entityMaid:DoCleaning();
+	end));
+
+	entityMaid:GiveTask((humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
+		if (isAutoBlocking) then return end;
+
+		-- team check
+		if (player and library.flags.autoParryCheckTeam and Utility:isTeamMate(player :: Player)) then return end;
+
+		-- lock-on requirement check
+		if (library.flags.autoParryLockOn and (not lockedTarget or lockedTarget ~= player)) then return end;
+
+		-- distance check
+		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
+		local theirRoot = character:FindFirstChild('HumanoidRootPart') :: BasePart;
+		if (not myRoot or not theirRoot) then return end;
+
+		local distance: number = ((myRoot :: BasePart).Position - (theirRoot :: BasePart).Position).Magnitude;
+		if (distance > library.flags.radius) then return end;
+
+		-- anim id check
+		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or '';
+		local delay: number? = M1_ANIM_IDS[animId];
+		if (not delay) then return end;
+
+		task.spawn(executeParry, delay :: number);
+	end));
+
+	autoParryMaid:GiveTask(function(): ()
+		entityMaid:DoCleaning();
+	end);
+end;
+
+local function hookStandForParry(stand: Model): ()
+	-- skip own stand
+	if (stand.Name == LocalPlayer.Name) then return end;
+
+	local humanoid: Humanoid? = (stand:FindFirstChildOfClass('Humanoid') or stand:WaitForChild('Humanoid', 5)) :: any;
+	if (not humanoid) then return end;
+
+	local rootPart: BasePart? = stand:FindFirstChild('HumanoidRootPart') :: BasePart?;
+	if (not rootPart) then return end;
+
+	local entityMaid = Maid.new();
+
+	entityMaid:GiveTask((stand :: any).Destroying:Connect(function(): ()
+		entityMaid:DoCleaning();
+	end));
+
+	local standOwner: Player? = Players:FindFirstChild(stand.Name) :: any;
+
+	entityMaid:GiveTask((humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
+		if (isAutoBlocking) then return end;
+
+		-- team check
+		if (standOwner and library.flags.autoParryCheckTeam and Utility:isTeamMate(standOwner :: Player)) then return end;
+
+		-- lock-on requirement check (match stand name to locked player name)
+		if (library.flags.autoParryLockOn and (not lockedTarget or (lockedTarget :: Player).Name ~= stand.Name)) then return end;
+
+		-- distance check
+		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
+		if (not myRoot) then return end;
+
+		local distance: number = ((myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude;
+		if (distance > library.flags.radius) then return end;
+
+		-- anim id check
+		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or '';
+		local delay: number? = M1_ANIM_IDS[animId];
+		if (not delay) then return end;
+
+		task.spawn(executeParry, delay :: number);
+	end));
+
+	autoParryMaid:GiveTask(function(): ()
+		entityMaid:DoCleaning();
+	end);
+end;
+
+function functions.autoParry(toggle: boolean): ()
+	if (not toggle) then
+		maid.autoParry = nil;
+		maid.autoParryStands = nil;
+		autoParryMaid:DoCleaning();
+		isAutoBlocking = false;
+		return;
+	end;
+
+	local liveFolder = workspace:WaitForChild('Live');
+
+	for _, character in liveFolder:GetChildren() do
+		task.spawn(hookCharacterForParry, character :: any);
+	end;
+
+	maid.autoParry = liveFolder.ChildAdded:Connect(function(character: Instance): ()
+		task.spawn(hookCharacterForParry, character :: any);
+	end);
+
+	local standsFolder = workspace:FindFirstChild('Stands');
+	if (standsFolder) then
+		for _, stand in standsFolder:GetChildren() do
+			task.spawn(hookStandForParry, stand :: any);
+		end;
+
+		maid.autoParryStands = standsFolder.ChildAdded:Connect(function(stand: Instance): ()
+			task.spawn(hookStandForParry, stand :: any);
+		end);
+	end;
+end;
+
+local animLoggerWindow = TextLogger.new({
+	title = 'Animation Logger',
+	buttons = {'Copy Animation Id', 'Add To Ignore List', 'Delete Log', 'Clear All'}
+});
+
+animLoggerWindow.ignoreList = {};
+
+local animLoggerMaid = Maid.new();
+
+local function hookAnimLogger(entity: Instance, rootPart: Instance, humanoid: Instance, label: string): ()
+	local entityMaid = Maid.new();
+
+	entityMaid:GiveTask((entity :: any).Destroying:Connect(function(): ()
+		entityMaid:DoCleaning();
+	end));
+
+	entityMaid:GiveTask((humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
+		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or 'unknown';
+
+		if (animLoggerWindow.ignoreList[animId]) then return end;
+
+		local myRoot: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
+		if (myRoot and ((myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude > (library.flags.animLoggerMaxRange or 100)) then
+			return;
+		end;
+
+		animLoggerWindow:AddText({
+			text = `Animation <font color='#2ecc71'>{animId}</font> played from {label}`,
+			animationId = animId,
+		});
+	end));
+
+	animLoggerMaid:GiveTask(function(): ()
+		entityMaid:DoCleaning();
+	end);
+end;
+
+function functions.animLogger(toggle: boolean): ()
+	animLoggerWindow:SetVisible(toggle);
+
+	if (not toggle) then
+		animLoggerMaid:DoCleaning();
+		return;
+	end;
+
+	local liveFolder = workspace:WaitForChild('Live');
+
+	local function onEntityAdded(entity: Instance): ()
+		if (entity == LocalPlayer.Character) then return end;
+
+		local rootPart: Instance? = entity:WaitForChild('HumanoidRootPart', 10);
+		if (not rootPart) then return end;
+
+		local humanoid: Instance? = entity:WaitForChild('Humanoid', 10);
+		if (not humanoid) then return end;
+
+		hookAnimLogger(entity, rootPart :: Instance, humanoid :: Instance, `<font color='#3498db'>{entity.Name}</font>`);
+	end;
+
+	local function onStandAdded(stand: Instance): ()
+		local humanoid: Instance? = stand:WaitForChild('Humanoid', 10);
+		if (not humanoid) then return end;
+
+		local rootPart: Instance? = stand:FindFirstChild('HumanoidRootPart') or stand:WaitForChild('HumanoidRootPart', 10);
+		if (not rootPart) then return end;
+
+		hookAnimLogger(stand, rootPart :: Instance, humanoid :: Instance, `<font color='#e74c3c'>{stand.Name}</font> <font color='#9b59b6'>[STAND]</font>`);
+	end;
+
+	local standsFolder = workspace:FindFirstChild('Stands');
+
+	animLoggerMaid:GiveTask(liveFolder.ChildAdded:Connect(onEntityAdded));
+
+	for _, entity in liveFolder:GetChildren() do
+		task.spawn(onEntityAdded, entity);
+	end;
+
+	if (standsFolder) then
+		animLoggerMaid:GiveTask(standsFolder.ChildAdded:Connect(onStandAdded));
+
+		for _, stand in standsFolder:GetChildren() do
+			task.spawn(onStandAdded, stand);
+		end;
+	end;
+
+end;
+
+animLoggerWindow.OnClick:Connect(function(actionName: string, context: any): ()
+
+	if (actionName == 'Add To Ignore List' and not animLoggerWindow.ignoreList[context.animationId]) then
+		animLoggerWindow.ignoreList[context.animationId] = true;
+	elseif (actionName == 'Delete Log') then
+		context:Destroy();
+	elseif (actionName == 'Copy Animation Id') then
+		setclipboard(context.animationId);
+	elseif (actionName == 'Clear All') then
+		for _, v in animLoggerWindow.logs do
+			v.label:Destroy();
+		end;
+		table.clear(animLoggerWindow.logs);
+		table.clear(animLoggerWindow.allLogs);
+	end;
 end);
 
-if (not suc) then
-    if (debugMode) then
-        task.spawn(error, err);
-    end;
+library.OnKeyPress:Connect(function(input: InputObject, gpe: boolean): ()
+	if (gpe or not library.options.attachToBack) then return end;
 
-    ToastNotif.new({text = `Script has failed to setup moderator detection. Error Code 1.{err or -1}`});
-end;
+	local key = library.options.attachToBack.key;
+	if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
+		local hrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
+		local closest: BasePart?, closestDistance: number = nil, math.huge;
 
-local function isModerator(player): boolean
-    local suc, inGroup = pcall(player.IsInGroup, player, GROUP_ID);
-    if (not suc or not inGroup) then return false end;
+		if (not hrp) then return end;
 
-    local rankSuc, rank = pcall(player.GetRankInGroup, player, GROUP_ID);
-    if (not rankSuc) then return false end;
+		repeat
+			for _, entity in (workspace :: any).Live:GetChildren() do
+				local rootPart: BasePart? = entity:FindFirstChild('HumanoidRootPart') :: BasePart?;
+				if (not rootPart or rootPart == hrp) then continue end;
 
-    return rank >= MINIMUM_RANK;
-end;
+				local distance: number = ((rootPart :: BasePart).Position - (hrp :: BasePart).Position).Magnitude;
 
-local function onPlayerAdded(player)
-    if (player == LocalPlayer) then return end;
+				if (distance < ATTACH_MAX_RANGE and distance < closestDistance) then
+					closest, closestDistance = rootPart, distance;
+				end;
+			end;
 
-    local userId = player.UserId;
+			task.wait();
+		until (closest or input.UserInputState == Enum.UserInputState.End);
+		if (input.UserInputState == Enum.UserInputState.End) then return end;
 
-    if (library.flags.modNotifier and isModerator(player)) then
-        moderators[player] = true;
+		local lastGoalPos: Vector3? = nil;
 
-        loadSound('ModeratorJoin.mp3');
-        ToastNotif.new({
-            text = ('Moderator Detected [%s]'):format(player.Name),
-        });
+		maid.attachToBack = RunService.Heartbeat:Connect(function(): ()
+			local goalCF: CFrame = (closest :: BasePart).CFrame * CFrame.new(0, library.flags.attachToBackHeight, library.flags.attachToBackSpace);
 
-        if (library.flags.panicOnModeratorJoin and not FindFirstChild(LocalPlayer.Character, 'Danger')) then
-            LocalPlayer.Character.Communicate:FireServer({
-                ['Character'] = LocalPlayer.Character,
-                ['InputType'] = 'menu',
-                ['Enabled'] = true
-            });
-        end;
-    end;
-end;
+			if (lastGoalPos and (goalCF.Position - lastGoalPos :: Vector3).Magnitude < 0.5) then return end;
+			lastGoalPos = goalCF.Position;
 
-local function onPlayerRemoving(player)
-    if (player == LocalPlayer) then return end;
+			local distance: number = (goalCF.Position - (hrp :: BasePart).Position).Magnitude;
+			local tween: Tween = TweenService:Create(hrp, TweenInfo.new(distance / 100, Enum.EasingStyle.Linear), {
+				CFrame = goalCF
+			});
 
-    if (moderators[player]) then
-        ToastNotif.new({
-            text = ('Moderator Left [%s]'):format(player.Name),
-        });
+			tween:Play();
 
-        loadSound('ModeratorLeft.mp3');
-        moderators[player] = nil;
-    end;
-end;
-
-library.OnLoad:Connect(function()
-    Utility.listenToChildAdded(Players, onPlayerAdded);
-    Utility.listenToChildRemoving(Players, onPlayerRemoving);
+			maid.attachToBackTween = function(): ()
+				tween:Cancel();
+			end;
+		end);
+	end;
 end);
 
-local function tweenTeleport(rootPart, position, noWait)
-    local distance = (rootPart.Position - position).Magnitude;
-    local tween = TweenService:Create(rootPart, TweenInfo.new(distance / 120, Enum.EasingStyle.Linear), {
-        CFrame = CFrame.new(position)
-    });
+library.OnKeyRelease:Connect(function(input: InputObject): ()
+	if (not library.options.attachToBack) then return end;
+	local key = library.options.attachToBack.key;
 
-    tween:Play();
-
-    if (not noWait) then
-        tween.Completed:Wait();
-    end;
-
-    return tween;
-end;
-
-local function onCharacterAdded(character)
-    if (not character) then return end;
-
-    task.delay(1, function()
-        ReplicatedStorage.GetMouseHit.OnClientInvoke = function()
-            playerMouse = LocalPlayer:GetMouse();
-
-            local mouseHit = playerMouse.Hit;
-
-            if (library.flags.autoAimSpells) then
-                local target = Utility:getClosestCharacterWithEntityList(workspace.Live:GetChildren(), rayParams);
-                target = target and target.Character;
-
-                if (target and target.Head) then
-                    mouseHit = target.Head.CFrame;
-                end;
-            end;
-
-            return mouseHit;
-        end;
-    end);
-end;
-
-onCharacterAdded(LocalPlayer.Character);
-LocalPlayer.CharacterAdded:Connect(onCharacterAdded);
-
-local oldNamecall;
-
-oldNamecall = hookmetamethod(game, '__namecall', newcclosure(function(self, ...)
-    if (checkcaller()) then
-        return oldNamecall(self, ...);
-    end;
-
-    local method = getnamecallmethod();
-
-    if (method == 'Kick') then
-        return;
-    end;
-
-    if (method == 'FireServer' and self.Name == 'Communicate') then
-        local args = {...};
-
-        if (type(args[1]) == 'table' and args[1].InputType) then
-            local InputType = args[1].InputType;
-
-            if (library.flags.noFallDamage and InputType == 'Landed') then
-                args[1].StudsFallen = 0;
-                args[1].FallBrace = library.flags.legitNoFall or false;
-
-                return oldNamecall(self, unpack(args));
-            end;
-        end;
-    end;
-
-    return oldNamecall(self, ...);
-end));
-
-function functions.noStun(toggle: boolean): ()
-    if (not toggle) then
-        maid.noStun = nil;
-        return;
-    end;
-
-    local function removeStun(child)
-        if (child and child.Name == 'Stun') then
-            task.defer(function()
-                child:Destroy();
-            end);
-        end;
-    end;
-
-    for _, child in LocalPlayer.Character:GetChildren() do
-        removeStun(child);
-    end;
-
-    maid.noStun = LocalPlayer.Character.ChildAdded:Connect(removeStun);
-end;
-
-function functions.antiFire(toggle: boolean): ()
-    if (not toggle) then
-        maid.antiFire = nil;
-        return;
-    end;
-
-    local function removeFire(child)
-        if (child and child.Name == 'Burning') then
-            task.defer(function()
-                LocalPlayer.Character:WaitForChild('Communicate'):FireServer(unpack({{ Enabled = true,  Character = LocalPlayer.Character,  InputType = 'Dash'  }}));
-            end);
-        end;
-    end;
-
-    for _, child in LocalPlayer.Character:GetChildren() do
-        removeFire(child);
-    end;
-
-    maid.antiFire = LocalPlayer.Character.ChildAdded:Connect(removeFire);
-end;
-
-local mobs = {};
-
-local NetworkOneShot = {};
-NetworkOneShot.__index = NetworkOneShot;
-
-function NetworkOneShot.new(mob)
-    local self = setmetatable({}, NetworkOneShot);
-
-    self._maid = Maid.new();
-    self.char = mob;
-
-    self._maid:GiveTask(mob.Destroying:Connect(function()
-        self:Destroy();
-    end));
-
-    self._maid:GiveTask(Utility.listenToChildAdded(mob, function(obj)
-        if (obj.Name == 'HumanoidRootPart') then
-            self.hrp = obj;
-        end;
-    end));
-
-    mobs[mob] = self;
-    return self;
-end;
-
-function NetworkOneShot:Update(): ()
-    if (not self.hrp or not isnetworkowner(self.hrp) or not self.hrp.Parent or self.hrp.Parent.Parent ~= workspace.Live) then return end;
-    self.char:PivotTo(CFrame.new(self.hrp.Position.X, workspace.FallenPartsDestroyHeight - 100000, self.hrp.Position.Z));
-end;
-
-function NetworkOneShot:Destroy(): ()
-    self._maid:DoCleaning();
-
-    for i, v in next, mobs do
-        if (v ~= self) then continue; end;
-        mobs[i] = nil;
-    end;
-end;
-
-function NetworkOneShot:ClearAll(): ()
-    for _, v in next, mobs do
-        v:Destroy();
-    end;
-
-    table.clear(mobs);
-end;
-
-Utility.listenToChildAdded(workspace.Live, function(obj)
-    task.wait(0.2);
-    if (obj == LocalPlayer.Character) then return; end;
-    NetworkOneShot.new(obj);
+	if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
+		maid.attachToBack = nil;
+		maid.attachToBackTween = nil;
+	end;
 end);
-
-function functions.networkOneShot(t: boolean): ()
-    if (not t) then
-        maid.networkOneShot = nil;
-        maid.networkOneShot2 = nil;
-        return;
-    end;
-
-    maid.networkOneShot2 = RunService.Heartbeat:Connect(function()
-        sethiddenproperty(LocalPlayer, 'MaxSimulationRadius', math.huge);
-        sethiddenproperty(LocalPlayer, 'SimulationRadius', math.huge);
-    end);
-
-    maid.networkOneShot = task.spawn(function()
-        while (task.wait()) do
-            for _, mob in next, mobs do
-                mob:Update();
-            end;
-        end;
-    end);
-end;
-
-playerMods:AddToggle({
-    text = 'No Fall Damage',
-    tip = 'Removes fall damage for you',
-});
-
-playerMods:AddToggle({
-    text = 'Legit No Fall',
-    tip = ' Removes fall damage but still rolls'
-});
-
-playerMods:AddToggle({
-    text = 'No Stun',
-    tip = 'Makes it so you will not get stunned in combat',
-    callback = functions.noStun
-});
-
-playerMods:AddToggle({
-    text = 'No Fire Damage',
-    flag = 'Anti Fire',
-    tip = 'Prevent you from taking damage from fire.',
-    callback = functions.antiFire
-});
 
 localCheats:AddDivider('Movement');
 
 localCheats:AddToggle({
-    text = 'Fly',
-    callback = functions.fly
+	text = 'Fly',
+	callback = functions.fly
 });
 localCheats:AddSlider({
-    min = 16,
-    max = 250,
-    flag = 'Fly Hack Value',
-    textpos = 2
+	min = 16,
+	max = 250,
+	flag = 'Fly Hack Value',
+	textpos = 2
 });
 
 localCheats:AddToggle({
-    text = 'Speedhack',
-    callback = functions.speedHack
+	text = 'Speedhack',
+	callback = functions.speedHack
 });
 localCheats:AddSlider({
-    min = 16,
-    max = 250,
-    flag = 'Speed Hack Value',
-    textpos = 2
+	min = 16,
+	max = 250,
+	flag = 'Speed Hack Value',
+	textpos = 2
 });
 
 localCheats:AddToggle({
-    text = 'Infinite Jump',
-    callback = functions.infiniteJump
+	text = 'Infinite Jump',
+	callback = functions.infiniteJump
 });
 localCheats:AddSlider({
-    min = 50,
-    max = 250,
-    flag = 'Infinite Jump Height',
-    textpos = 2
-});
-
--- localCheats:AddToggle({
--- 	text = 'No Clip',
--- 	callback = functions.noClip
--- });
-
--- localCheats:AddToggle({
--- 	text = 'Disable When Knocked',
--- 	tip = 'Disables noclip when you get ragdolled',
--- 	flag = 'Disable No Clip When Knocked'
--- });
-
-localCheats:AddToggle({
-    text = 'Knocked Ownership',
-    tip = 'Allow you to fly/move while being knocked.',
-    callback = functions.knockedOwnership
-});
-
--- localCheats:AddToggle({
--- 	text = 'Click Destroy',
--- 	tip = 'Everything you click on will be destroyed (client sided)',
--- 	callback = functions.clickDestroy
--- });
-
-localCheats:AddBind({text = 'Go To Ground', callback = functions.goToGround, mode = 'hold', nomouse = true});
-
-localCheats:AddDivider('Gameplay-Assist');
-
-localCheats:AddToggle({
-    text = 'Auto Aim Spells',
-    tip = 'Automatically aims the spell (sagitta, pulso, etc) onto the nearest characters head.'
+	min = 50,
+	max = 250,
+	flag = 'Infinite Jump Height',
+	textpos = 2
 });
 
 localCheats:AddToggle({
-    text = 'Auto Sprint',
-    tip = 'Whenever you want to walk you sprint instead',
-    callback = functions.autoSprint
+	text = 'No Clip',
+	callback = functions.noClip
+});
+
+localCheats:AddToggle({
+	text = 'Click Destroy',
+	tip = 'Everything you click on will be destroyed (client sided)',
+	callback = functions.clickDestroy
+});
+
+localCheats:AddBind({ text = 'Go To Ground', callback = functions.goToGround, mode = 'hold', nomouse = true });
+
+localCheats:AddBind({
+	text = 'Lock On',
+	flag = 'Lock On Bind',
+	tip = 'toggles lock on to the closest player to your mouse',
+	mode = 'toggle',
+	nomouse = true,
+	callback = functions.lockOn
+});
+
+localCheats:AddList({
+	text = 'Lock On Aim Part',
+	values = {'Head', 'Torso'},
+	value = 'Head'
+});
+
+localCheats:AddToggle({
+	text = 'Lock On Check Team',
+	state = true
+});
+
+localCheats:AddSlider({
+	text = 'Lock On Max Distance',
+	value = 200,
+	min = 10,
+	max = 1000,
+	textpos = 2
+});
+
+localCheats:AddSlider({
+	text = 'Lock On Smoothness',
+	value = 1,
+	min = 1,
+	max = 20,
+	textpos = 2
 });
 
 localCheats:AddDivider('Combat Tweaks');
 
-localCheats:AddToggle({
-    text = 'One Shot Mobs',
-    tip = 'This feature randomly works sometimes and causes them to die, but it makes AP have issues',
-    callback = functions.networkOneShot
-});
-
 localCheats:AddBind({
-    text = 'Attach To Back',
-    tip = 'This attaches to the nearest entities back based on settings',
-    callback = functions.attachToBack,
+	text = 'Attach To Back',
+	tip = 'This attaches to the nearest entities back based on settings',
 });
 
 localCheats:AddSlider({
-    text = 'Attach To Back Height',
-    value = 0,
-    min = -100,
-    max = 100,
-    textpos = 2
+	text = 'Attach To Back Height',
+	value = 0,
+	min = -100,
+	max = 100,
+	textpos = 2
 });
 
 localCheats:AddSlider({
-    text = 'Attach To Back Space',
-    value = 2,
-    min = -100,
-    max = 100,
-    textpos = 2
+	text = 'Attach To Back Space',
+	value = 2,
+	min = -100,
+	max = 100,
+	textpos = 2
 });
 
-localCheats:AddBind({
-    text = 'Instant Log',
-    nomouse = true,
-    callback = function()
-        LocalPlayer.Character.Communicate:FireServer({
-            ['Character'] = LocalPlayer.Character,
-            ['InputType'] = 'menu',
-            ['Enabled'] = true
-        });
-    end
+gameplayAssist:AddToggle({
+	text = 'Anti Blind',
+	tip = 'stops krillin and misaka blind',
+	callback = functions.antiBlind
 });
 
-localCheats:AddButton({
-    text = 'Server Hop',
-    tip = 'Jumps to any other server, non region dependant',
-    callback = functions.serverHop
+gameplayAssist:AddToggle({
+	text = 'Anti Kick',
+	tip = 'blocks server-side kick calls via namecall hook',
+	callback = functions.antiKick
 });
 
-localCheats:AddButton({
-    text = 'Respawn',
-    tip = 'Kills the character prompting it to respawn',
-    callback = functions.respawn
+autoParrySection:AddToggle({
+	text = 'Auto Parry',
+	tip = 'blocks when nearby enemies play M1 animations',
+	callback = functions.autoParry
 });
 
-notifier:AddToggle({
-    text = 'Mod Notifier',
-    state = true
+autoParrySection:AddToggle({
+	text = 'Auto Parry Check Team',
+	tip = 'skip teammates when auto parrying',
+	state = true
 });
 
-notifier:AddToggle({
-    text = 'Panic on Moderator Join'
+autoParrySection:AddToggle({
+	text = 'Auto Parry Lock On',
+	tip = 'only parry the player you have locked on to',
+	state = false
 });
 
-notifier:AddToggle({
-    text = 'Moderator Sound Alert',
-    tip = 'Makes a sound when the mod joins',
-    state = true
+autoParrySection:AddSlider({
+	text = 'Radius',
+	tip = 'max distance to auto parry',
+	value = 15,
+	min = 5,
+	max = 50,
+	textpos = 2
 });
 
-if (game.PlaceId == DUNGEON_PLACE_ID) then
-    notifier:AddToggle({
-        text = 'Blessing Notifier',
-    });
-
-    notifier:AddToggle({
-        text = 'Race Reroll Notifier',
-    });
-end;
-
-notifier:AddToggle({
-    text = 'Player Proximity Check',
-    tip = 'Gives you a warning when a player is close to you',
-    callback = functions.playerProximityCheck
+autoParrySection:AddSlider({
+	text = 'Block Duration',
+	tip = 'how long to hold block in ms',
+	value = 150,
+	min = 50,
+	max = 500,
+	textpos = 2
 });
 
-local weatherParts = {'Rain', 'Snow'};
-local movedParts = {};
+autoParrySection:AddSlider({
+	text = 'Ping Compensation',
+	tip = 'percentage of ping to subtract from delay',
+	value = 100,
+	min = 0,
+	max = 100,
+	textpos = 2
+});
 
-function functions.disableShadows(t: boolean): ()
-    Lighting.GlobalShadows = not t;
-end;
+autoParrySection:AddToggle({
+	text = 'Auto Parry Custom Delay',
+	tip = 'use a fixed offset instead of ping-based compensation',
+	state = false
+});
 
-function functions.disableWeatherEffects(t: boolean): ()
-    if (not t) then
-        for part, _ in pairs(movedParts) do
-            if (part and part.Parent == ReplicatedFirst) then
-                part.Position = LocalPlayer.Character.Head.Position + Vector3.new(0, 10, 0);
-                part.Parent = Thrown;
-            end;
-        end;
+autoParrySection:AddSlider({
+	text = 'Auto Parry Custom Delay',
+	flag = 'Auto Parry Custom Delay Value',
+	tip = 'fixed delay offset in ms (added to raw timing)',
+	value = 0,
+	min = -200,
+	max = 200,
+	textpos = 2
+});
 
-        table.clear(movedParts);
-        return;
-    end;
+autoParrySection:AddToggle({
+	text = 'Animation Logger',
+	tip = 'opens a gui logger with copy/ignore buttons for finding M1 anim IDs',
+	callback = functions.animLogger
+});
 
-    for _, weatherName in weatherParts do
-        local weatherPart = Thrown:FindFirstChild(weatherName);
-        if (weatherPart) then
-            weatherPart.Parent = ReplicatedFirst;
-            movedParts[weatherPart] = true;
-        end;
-    end;
-end;
-
-for _, child in NPCFolder:GetChildren() do
-    if (child.Name == 'Purchasable') then
-        local PurchaseInfo = child.PurchaseInfo;
-        local ItemType = PurchaseInfo.ItemType;
-        local ItemName = PurchaseInfo.ItemName;
-
-        if (ItemType.Value == 'Armor') then
-            Armors[ItemName.Value] = true;
-        elseif (ItemType.Value == 'Weapon') then
-            Weapons[ItemName.Value] = true;
-        elseif (ItemType.Value == 'Item' or ItemType.Value == 'Trinket') then
-            Items[ItemName.Value] = true;
-        end;
-    else
-        if (not NPCs[child.Name]) then
-            NPCs[child.Name] = true;
-            CollectionService:AddTag(child, 'NPC');
-        end;
-    end;
-end;
-
-function functions.pickupItem(item, data): ()
-    local isSilver = data.isSilver;
-    local isChestLoot = data.isChestLoot;
-
-    if (not item) then return end;
-
-    if (isChestLoot) then
-        if (not item.Name:find('Chest') and item.Name ~= 'ChestGoldBar' and item.Name ~= 'ChestCoin') then return end;
-
-    elseif (isSilver) then
-        if (not item.Name:find('Dropped_')) then return end;
-
-        local hasSilver = item:GetAttribute('Silver') and item:GetAttribute('Silver') ~= 0;
-
-        if (not hasSilver) then return end;
-        if (library.flags.safePickupSilver and item:GetAttribute('Silver') >= 2000) then return end;
-
-    else
-        if (not item.Name:find('Dropped_')) then return end;
-
-        local hasSilver = item:GetAttribute('Silver') and item:GetAttribute('Silver') ~= 0;
-
-        if (hasSilver) then return end;
-    end;
-
-    local touchInterest = item:FindFirstChildWhichIsA('TouchTransmitter');
-    if (touchInterest) then
-        firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, 0);
-    end;
-end;
-
-maid.newThrownChild = Thrown.ChildAdded:Connect(function(child)
-    task.wait(0.05);
-
-    local hasSilver = child:GetAttribute('Silver') and child:GetAttribute('Silver') ~= 0;
-
-    if (library.flags.autoPickupSilver and hasSilver) then
-        functions.pickupItem(child, {
-            isSilver = true;
-        });
-    end;
-
-    if (library.flags.autoPickupBags and not hasSilver) then
-        functions.pickupItem(child, {
-            isSilver = false;
-        });
-    end;
-
-    if (library.flags.autoPickupChestLoot) then
-        functions.pickupItem(child, {
-            isChestLoot  = true;
-        });
-    end;
-end);
-
-automation:AddDivider('Pickup');
-
-automation:AddToggle({
-    text = 'Auto Pickup Bags',
-    tip = 'Automatically picks up any Bags that get dropped.',
-    callback = function(state: boolean): ()
-        if (state) then
-            for _, child in Thrown:GetChildren() do
-                local hasSilver = child:GetAttribute('Silver') and child:GetAttribute('Silver') ~= 0;
-                if (not hasSilver) then
-                    functions.pickupItem(child, {
-                        isSilver = false;
-                    });
-                end;
-            end;
-        end;
-    end
+autoParrySection:AddSlider({
+	text = 'Anim Logger Max Range',
+	tip = 'only log animations from entities within this distance',
+	value = 100,
+	min = 10,
+	max = 500,
+	textpos = 2
 });
 
 automation:AddToggle({
-    text = 'Auto Pickup Silver',
-    tip = 'Automatically picks up any silver that get dropped. [WARNING: THEY HAVE LOGS FOR SILVER PICKUPS]',
-    callback = function(state: boolean): ()
-        if (state) then
-            for _, child in Thrown:GetChildren() do
-                local hasSilver = child:GetAttribute('Silver') and child:GetAttribute('Silver') ~= 0;
-                if (hasSilver) then
-                    functions.pickupItem(child, {
-                        isSilver = true;
-                    });
-                end;
-            end;
-        end;
-    end;
+	text = 'Auto Kokushibo Blue Moon',
+	tip = 'automatically does the blue moon effect on kokushibo QTE',
+	callback = functions.autoKokushiboBlueMoon
 });
 
 automation:AddToggle({
-    text = 'Safe Pickup Silver',
-    tip = 'Safely picks up silver (under 2,000 silver because 2,000+ triggers logs)',
-    callback = function(state: boolean): ()
-        if (not library.flags.autoPickupSilver) then
-           ToastNotif.new({
-                text = 'This feature requires Auto Pickup Silver to be enabled!',
-                duration = 5
-            });
-        end;
-    end;
+	text = 'Nanami Auto Black Flash',
+	tip = 'auto clicks when the cutter crosses the goal on nanamis cut gui',
+	callback = functions.nanamiAutoBlackFlash
 });
 
 automation:AddToggle({
-    text = 'Auto Pickup Chest Loot',
-    tip = 'Automatically picks up any loot from chests',
-    callback = function(state: boolean): ()
-        if (state) then
-            for _, child in Thrown:GetChildren() do
-                if (child and child:IsA('BasePart') and child.Name:find('Chest')) then
-                    functions.pickupItem(child, {
-                        isChestLoot = true;
-                    });
-                end;
-            end;
-        end;
-    end;
+	text = 'Auto Zoom QTE',
+	tip = 'auto clicks when the camera zoom-out returns to normal FOV',
+	callback = functions.zoomAutoBlackFlash
 });
 
-function functions.buyItem(name: string): ()
-    for _, child in NPCFolder:GetChildren() do
-        if (child.Name == 'Purchasable') then
-            local PurchaseInfo = child.PurchaseInfo;
-            local ItemName = PurchaseInfo.ItemName;
-
-            if (ItemName.Value == name) then
-                fireclickdetector(child.ClickDetector);
-            end;
-        end;
-    end;
-end;
-
-function functions.interactWithNPC(name: string): ()
-    for _, child in NPCFolder:GetChildren() do
-        if (child.Name == name) then
-            fireclickdetector(child.ClickDetector);
-        end;
-    end;
-end;
-
-misc:AddDivider('Buyables');
-
-misc:AddList({
-    text = 'Select Armor',
-    tip = 'Select the Armor you wish to buy.',
-    values = Armors;
-    multiselect = false,
-    callback = function(name)
-        ArmorSelected = name;
-    end,
-});
-
-misc:AddButton({
-    text = 'Buy Armor',
-    tip = 'Buys the Armor you selected.',
-    callback = function()
-        functions.buyItem(ArmorSelected);
-    end,
-});
-
-misc:AddList({
-    text = 'Select Weapon',
-    tip = 'Select the Weapon you wish to buy.',
-    values = Weapons;
-    multiselect = false,
-    callback = function(name)
-        WeaponSelected = name;
-    end,
-});
-
-misc:AddButton({
-    text = 'Buy Weapon',
-    tip = 'Buys the Weapon you selected.',
-    callback = function()
-        functions.buyItem(WeaponSelected);
-    end,
-});
-
-misc:AddList({
-    text = 'Select Item',
-    tip = 'Select the Item you wish to buy.',
-    values = Items;
-    multiselect = false,
-    callback = function(name)
-        ItemSelected = name;
-    end,
-});
-
-misc:AddButton({
-    text = 'Buy Item',
-    tip = 'Buys the Item you selected.',
-    callback = function()
-        functions.buyItem(ItemSelected);
-    end,
-});
-
-misc:AddDivider('NPCs');
-
-misc:AddList({
-    text = 'Select NPC',
-    tip = 'Select the NPC you wish to interact with.',
-    values = NPCs;
-    multiselect = false,
-    callback = function(name)
-        NPCSelected = name;
-    end,
-});
-
-misc:AddButton({
-    text = 'Interact with NPC',
-    tip = 'Interacts with the NPC you selected.',
-    callback = function()
-        functions.interactWithNPC(NPCSelected);
-    end,
-});
-
-misc:AddDivider('Perfomance Improvements');
-
-misc:AddToggle({
-    text = 'Disable Shadows',
-    tip = 'Disabling all shadows adds a large bump to your FPS',
-    callback = functions.disableShadows
-});
-
-misc:AddToggle({
-    text = 'Disable Weather Effects',
-    tip = 'Disables Weather Effects because Rain and Snow tank your FPS',
-    callback = functions.disableWeatherEffects
-});
-
-function functions.fullBright(toggle: boolean): ()
-    if (not toggle) then
-        maid.fullBright = nil;
-        if (oldAmbient) then
-            Lighting.Ambient = oldAmbient;
-            Lighting.Brightness = oldBrightness;
-            oldAmbient = nil;
-            oldBrightness = nil;
-        end;
-        return;
-    end;
-
-    if (not maid.fullBright) then
-        oldAmbient = Lighting.Ambient;
-        oldBrightness = Lighting.Brightness;
-    end;
-
-    maid.fullBright = Lighting:GetPropertyChangedSignal('Ambient'):Connect(function()
-        Lighting.Ambient = Color3.fromRGB(255, 255, 255);
-        Lighting.Brightness = 1;
-    end);
-
-    Lighting.Ambient = Color3.fromRGB(255, 255, 255);
-    Lighting.Brightness = 1;
-end;
-
-visuals:AddToggle({
-    text = 'Full Bright',
-    callback = functions.fullBright
-});
-
-local areaNames = {
-    'Bossfight';
-    'Boxing Bar';
-    'Camp';
-    'Castle';
-    'Cliffs';
-    'DungeonEntrance';
-    'HideoutOrderly';
-    'Loading';
-    'SecretDoor';
-    'Sky Islands';
-    'Tavern';
-};
-
-playerClassesList = {
-    ['Brawler'] = {
-        ['Active'] = {'Body Grinder', 'Bruising Drop', 'Rib Crusher', 'Swift Kick'};
-    },
-
-    ['Greatsword'] = {
-        ['Active'] = {'Heart Thrust', 'Earth Shaker', 'Rising Cyclone'};
-    },
-
-    ['Assassin'] = {
-        ['Active'] = {'Death Bound', 'Raijin', 'Toxic Slice', 'True Trickery'};
-    },
-
-    ['Ronin'] = {
-        ['Active'] = {'Ruinous Burst', 'Favour from fang', 'Sly Shadow', 'Deep Slash'};
-    },
-
-    ['Bladesman'] = {
-        ['Active'] = {'Twin Slashes', 'Deadly Cascade', 'Deep Slash'};
-    },
-
-    ['Wraith'] = {
-        ['Active'] = {'Impulsing Staff', 'Midway Strike', 'Enchain', 'Rebound Haul', 'Destined Impact'};
-        ['Passive'] = {'Chain Link'};
-    },
-
-    ['Monk'] = {
-        ['Active'] = {'Spirit Palm', 'Loop Kicks', 'Ankle Breaker', 'Kickoff Leap'};
-    },
-
-    ['Lumen'] = {
-        ['Active'] = {'Protege Solum', 'Sagitta Lucem', 'Laqueus Lucis'};
-        ['Passive'] = {'Mage Training'};
-    },
-
-    ['Piandao'] = {
-        ['Active'] = {'Blink', 'Lightning Slash', 'AfterImage'};
-    }
-};
-
-Trinkets = {
-    {
-        ['Name'] = 'Goblet',
-        ['MeshId'] = 'rbxassetid://13116112'
-    },
-
-    {
-        ['Name'] = 'Amethyst',
-        ['MeshId'] = 'rbxassetid://%202877143560%20',
-        ['Color'] = Color3.fromRGB(167, 95, 209)
-    },
-
-    {
-        ['Name'] = 'Diamond',
-        ['MeshId'] = 'rbxassetid://%202877143560%20',
-        ['Color'] = Color3.fromRGB(248, 248, 248)
-    },
-
-    {
-        ['Name'] = 'Sapphire',
-        ['MeshId'] = 'rbxassetid://%202877143560%20',
-        ['Color'] = Color3.fromRGB(0, 0, 255)
-    },
-
-    {
-        ['Name'] = 'Pure Diamond',
-        ['MeshId'] = 'rbxassetid://%202877143560%20',
-        ['Color'] = Color3.fromRGB(18, 238, 212)
-    },
-
-    {
-        ['Name'] = 'Ruby',
-        ['MeshId'] = 'rbxassetid://%202877143560%20',
-        ['Color'] = Color3.fromRGB(255, 0, 0)
-    },
-
-    {
-        ['Name'] = 'Emerald',
-        ['MeshId'] = 'rbxassetid://%202877143560%20',
-        ['Color'] = Color3.fromRGB(31, 128, 29)
-    },
-
-    {
-        ['Name'] = 'Opal',
-        ['MeshType'] = 'Sphere'
-    },
-
-    {
-        ['Name'] = 'Scroll',
-        ['MeshId'] = 'rbxassetid://60791940'
-    },
-
-    {
-        ['Name'] = 'Ring',
-        ['MeshId'] = 'rbxassetid://%202637545558%20'
-    },
-};
-
-if (game.PlaceId == DUNGEON_PLACE_ID) then
-    Chests = {
-        {
-            ['Name'] = 'Trinket',
-        },
-
-        {
-            ['Name'] = 'Silver',
-        },
-
-        {
-            ['Name'] = 'Gold',
-        },
-
-        {
-            ['Name'] = 'Race Reroll',
-        },
-
-        {
-            ['Name'] = 'Chest Food',
-        },
-
-        {
-            ['Name'] = 'Blessing',
-        },
-    };
-else
-    Chests = {
-        {
-            ['Name'] = 'Chest Coin'
-        }
-    };
-end;
-
-Mobs = {
-    {
-        ['Name'] = 'Goblin';
-    },
-
-    {
-        ['Name'] = '#HITBOX_SIMULATION';
-    },
-
-    {
-        ['Name'] = 'Shock Orb';
-    },
-
-    {
-        ['Name'] = 'Hobo';
-    }
-};
-
---[[
-    CanOpen == serverSided boolean (to be able to open chest)
-    opened == serverSided folder (to detect if chest is already opened)
-]]
-
-function functions.getPlayerClass(player): string
-    if (not player) then return 'Freshie' end;
-    local Backpack = player.Backpack;
-    local classCounts = {};
-
-    for className, classData in pairs(playerClassesList) do
-        classCounts[className] = 0;
-
-        for _, activeName in ipairs(classData.Active) do
-            if (Backpack:FindFirstChild(activeName)) then
-                classCounts[className] = classCounts[className] + 1;
-            end;
-        end;
-    end;
-
-    local bestClass = 'Freshie';
-    local highestCount = 0;
-
-    for className, count in pairs(classCounts) do
-        if (count > highestCount) then
-            highestCount = count;
-            bestClass = className;
-        end;
-    end;
-
-    return highestCount > 0 and bestClass or 'Freshie';
-end;
-
-function functions.getTrinket(handle)
-    if (not handle) then return nil end;
-    local Mesh = handle:FindFirstChild('Mesh') or handle:FindFirstChildWhichIsA('SpecialMesh');
-    if (not Mesh) then return nil end;
-
-    local MeshId      = Mesh.MeshId;
-    local MeshType    = Mesh.MeshType.Name;
-    local HandleColor = handle.Color;
-
-    if (MeshType == 'Sphere') then
-        for _, trinket in Trinkets do
-            if (trinket.Name == 'Opal') then return trinket end;
-        end;
-    end;
-
-    for _, trinket in Trinkets do
-        if (trinket.MeshId and trinket.MeshId == MeshId) then
-            if (trinket.Color) then
-                if (HandleColor == trinket.Color) then
-                    return trinket;
-                end;
-            else
-                return trinket;
-            end;
-        end;
-    end;
-
-    local MeshIdNormal = tostring(MeshId):gsub('%D', '');
-    for _, trinket in ipairs(Trinkets) do
-        if (trinket.MeshId and tostring(trinket.MeshId):gsub('%D', '') == MeshIdNormal) then
-            return trinket;
-        end;
-    end;
-
-    return nil;
-end;
-
-local function formatMobName(mobName: string): string
-    if (not mobName:match('%.(.-)%d+')) then return mobName end;
-    local allMobLetters = mobName:match('%.(.-)%d+'):gsub('_', ' '):split(' ');
-
-    for i, v in next, allMobLetters do
-        local partialLetters = v:split('');
-        partialLetters[1] = partialLetters[1]:upper();
-
-        allMobLetters[i] = table.concat(partialLetters);
-    end;
-
-    return table.concat(allMobLetters, ' ');
-end;
-
-function EntityESP:Plugin()
-    local classText = '';
-
-    if (library.flags.showClass) then
-        local playerClass = functions.getPlayerClass(self._player);
-        classText = ` [{playerClass}]`;
-    end;
-
-    return {
-        text = classText,
-        playerName = self._playerName,
-    };
-end;
-
-function functions.onNewTrinketAdded(spawnPart, espConstructor): ()
-    if (spawnPart.Name ~= 'SPAWN') then return end;
-
-    local Handle = FindFirstChild(spawnPart, 'Handle');
-    if (not Handle) then return end;
-
-    local Trinket = functions.getTrinket(Handle);
-    if (not Trinket) then return end;
-
-    local code = [[
-        local Handle = ...;
-        return setmetatable({}, {
-            __index = function(_, p)
-                if (p == 'Position') then
-                    return Handle.Position;
-                end;
-            end,
-        });
-    ]];
-
-    local espObj = espConstructor.new({ code = code, vars = { Handle } }, Trinket.Name);
-
-    local connection;
-    connection = Handle:GetPropertyChangedSignal('Parent'):Connect(function()
-        if (not Handle.Parent) then
-            espObj:Destroy();
-            connection:Disconnect();
-        end;
-    end);
-end;
-
-function functions.onDroppedItemAdded(item, espConstructor): ()
-    if (not item or not item.Name:find('Dropped_')) then return end;
-
-    local itemName = item.Text.TextLabel.Text;
-
-    local itemObj;
-
-    if (item:IsA('BasePart') or item:IsA('MeshPart')) then
-        itemObj = espConstructor.new(item, itemName);
-    else
-        local code = [[
-            local item = ...;
-            return setmetatable({}, {
-                __index = function(_, p)
-                    if (p == 'Position') then
-                        return item.PrimaryPart and item.PrimaryPart.Position or item.WorldPivot.Position
-                    end;
-                end,
-            });
-        ]];
-
-        itemObj = espConstructor.new({code = code, vars = {item}}, itemName);
-    end;
-
-    local connection;
-    connection = item:GetPropertyChangedSignal('Parent'):Connect(function()
-        if (not item.Parent) then
-            itemObj:Destroy();
-            connection:Disconnect();
-        end;
-    end);
-end;
-
-function functions.onNewMobAdded(mob, espConstructor): ()
-    if (FindFirstChild(Players, mob.Name)) then return end;
-
-    local editedMobName;
-    local displayObject = mob;
-    local healthObject = mob;
-
-    if (mob.Name == 'generate') then
-        if (FindFirstChild(Thrown, 'Chest1')) then
-            editedMobName = 'Hobo';
-        end;
-    elseif (mob.Name == 'HITBOX_SIMULATION#') then
-        if (FindFirstChild(mob, 'CaveDungeon') and FindFirstChild(mob, 'IsNPC') and FindFirstChild(mob, 'NoRagdoll')) then
-            editedMobName = 'Shock Orb';
-            displayObject = FindFirstChild(Thrown, 'ShockOrb') or mob;
-        end;
-    end;
-
-    local code = [[
-        local mob, displayObject = ...;
-        local FindFirstChild = game.FindFirstChild;
-        local FindFirstChildWhichIsA = game.FindFirstChildWhichIsA;
-
-        return setmetatable({
-            FindFirstChildWhichIsA = function(_, ...)
-                -- Use original mob for humanoid (health)
-                return FindFirstChildWhichIsA(mob, ...);
-            end,
-        }, {
-            __index = function(_, p)
-                if (p == 'Position') then
-                    -- Use display object for position
-                    local mobRoot = FindFirstChild(displayObject, 'HumanoidRootPart');
-                    if (mobRoot) then
-                        return mobRoot and mobRoot.Position;
-                    else
-                        return displayObject.PrimaryPart and displayObject.PrimaryPart.Position;
-                    end;
-                end;
-            end,
-        })
-    ]];
-
-    local formattedName = formatMobName(editedMobName or mob.Name);
-    local mobEsp = espConstructor.new({code = code, vars = {healthObject, displayObject}}, formattedName);
-
-    local connection;
-    connection = mob:GetPropertyChangedSignal('Parent'):Connect(function()
-        if (not mob.Parent) then
-            connection:Disconnect();
-            mobEsp:Destroy();
-        end;
-    end);
-end;
-
-function functions.onNewChestAdded(chest, espConstructor): ()
-    if (not chest) then return end;
-    if (not chest.Name:find('Chest')) then return end;
-    if (chest.Name == 'ChestSIlver') then return end;
-    local chestName = chest.Name;
-
-    local isChestOpened = FindFirstChild(chest, 'Opened');
-    if (isChestOpened and library.flags.hideOpenedChests) then return end;
-
-    if (chestName == 'Chest1') then
-        local typeOfChest = FindFirstChild(chest, 'Silver') or FindFirstChild(chest, 'Trinket');
-
-        chestName = typeOfChest.Name or 'unknown type';
-    elseif (chestName == 'Chest2') then
-        chestName = 'Gold';
-    elseif (chestName == 'ChestFood') then
-        chestName = 'Chest Food';
-    elseif (chestName == 'ChestRR') then
-        chestName = 'Race Reroll';
-
-        if (library.flags.raceRerollNotifier) then
-            ToastNotif.new({
-                text = 'A Race Reroll has spawned!'
-            });
-        end;
-    elseif (chestName == 'Chest Coin') then
-        chestName = 'Chest Coin';
-    elseif (chestName == 'ChestBlue') then
-        chestName = 'Blessing';
-
-        if (library.flags.blessingNotifier) then
-            ToastNotif.new({
-                text = 'A Blessing has spawned!'
-            });
-        end;
-    end;
-
-    local chestObj;
-    if (chest:IsA('BasePart') or chest:IsA('MeshPart')) then
-        chestObj = espConstructor.new(chest, chestName);
-    else
-        local code = [[
-            local chest = ...;
-            return setmetatable({}, {
-                __index = function(_, p)
-                    if (p == 'Position') then
-                        return chest.PrimaryPart and chest.PrimaryPart.Position or chest.WorldPivot.Position
-                    end;
-                end,
-            });
-        ]];
-
-        chestObj = espConstructor.new({code = code, vars = {chest}}, chestName);
-    end;
-
-    local connection;
-    connection = chest:GetPropertyChangedSignal('Parent'):Connect(function()
-        if (not chest.Parent) then
-            chestObj:Destroy();
-            connection:Disconnect();
-        end;
-    end);
-
-    local connection2;
-    connection2 = chest.ChildAdded:Connect(function(child)
-        if (not chest.Parent) then
-            chestObj:Destroy();
-            connection:Disconnect();
-            connection2:Disconnect();
-        end;
-
-        if (library.flags.hideOpenedChests and child.Name == 'Opened') then
-            chestObj:Destroy();
-            connection:Disconnect();
-            connection2:Disconnect();
-        end;
-    end);
-end;
-
-function functions.onNewNpcAdded(npc, espConstructor): ()
-    local npcName = npc.Name;
-
-    local PurchaseInfo = FindFirstChild(npc, 'PurchaseInfo');
-    if (PurchaseInfo) then npcName = PurchaseInfo.ItemName.Value end;
-
-    local npcObj;
-    if (npc:IsA('BasePart') or npc:IsA('MeshPart')) then
-        npcObj = espConstructor.new(npc, npcName);
-    else
-        local code = [[
-            local npc = ...;
-            return setmetatable({}, {
-                __index = function(_, p)
-                    if (p == 'Position') then
-                        return npc.PrimaryPart and npc.PrimaryPart.Position or npc.WorldPivot.Position
-                    end;
-                end,
-            });
-        ]];
-
-        npcObj = espConstructor.new({code = code, vars = {npc}}, npcName);
-    end;
-
-    local connection;
-    connection = npc:GetPropertyChangedSignal('Parent'):Connect(function()
-        if (not npc.Parent) then
-            npcObj:Destroy();
-            connection:Disconnect();
-        end;
-    end);
-end;
-
-function Utility:renderOverload(data): ()
-    data.espSettings:AddToggle({
-        text = 'Show Class'
-    });
-
-    local function makeList(folder, section)
-        local seen = {};
-        local list = {};
-
-        if (typeof(folder) == 'table' and not folder.ClassName) then
-            for _, item in next, folder do
-                if (item.Name and not seen[item.Name]) then
-                    seen[item.Name] = true;
-                    table.insert(list, item.Name);
-                end;
-            end;
-        else
-            for _, instance in next, folder:GetChildren() do
-                if (seen[instance.Name]) then continue end;
-
-                seen[instance.Name] = true;
-                table.insert(list, instance.Name);
-            end;
-        end;
-
-        table.sort(list, function(a, b)
-            return a < b;
-        end);
-
-        return Utility.map(list, function(name)
-            local t = section:AddToggle({
-                text = name,
-                flag = `Show {name}`,
-                state = true
-            });
-
-            t:AddColor({
-                text = `{name} Color`,
-                color = Color3.fromRGB(255, 255, 255)
-            });
-
-            return t;
-        end);
-    end;
-
-    makeESP({
-        sectionName = 'Dropped Items',
-        type = 'childAdded',
-        args = Thrown,
-        callback = functions.onDroppedItemAdded,
-    });
-
-    makeESP({
-        sectionName = 'Trinkets',
-        type = 'descendantAdded',
-        args = workspace.TrinketSpawn,
-        noColorPicker = true,
-        callback = functions.onNewTrinketAdded,
-        onLoaded = function(section)
-            return {list = makeList(Trinkets, section)};
-        end,
-    });
-
-    makeESP({
-        sectionName = 'Mobs',
-        type = 'childAdded',
-        args = workspace.Live,
-        callback = functions.onNewMobAdded,
-        onLoaded = function(section)
-            section:AddToggle({
-                text = 'Show Health',
-                flag = 'Mobs Show Health'
-            });
-            return {list = makeList(Mobs, section)};
-        end
-    });
-
-    makeESP({
-        sectionName = 'Chests',
-        type = 'childAdded',
-        args = workspace.Thrown,
-        noColorPicker = true,
-        callback = functions.onNewChestAdded,
-        onLoaded = function(section)
-            section:AddToggle({
-                text = 'Hide Opened Chests';
-            });
-            return {list = makeList(Chests, section)};
-        end,
-    });
-
-    makeESP({
-        sectionName = 'Npcs',
-        type = 'childAdded',
-        args = workspace.NPCs,
-        noColorPicker = true,
-        callback = functions.onNewNpcAdded,
-        onLoaded = function(section)
-            return {list = makeList(workspace.NPCs, section)};
-        end,
-    });
+function Utility:renderOverload(data: any): ()
+	data.espSettings:AddToggle({
+		text = 'Show Mode',
+		tip = 'shows the mode/ultimate charge percentage on ESP text',
+	});
+
+	data.espSettings:AddToggle({
+		text = 'Show Mode Bar',
+		tip = 'renders a visual blue bar for mode charge next to the ESP box',
+	});
+
+	local function makeHiddenESP(obj: BasePart, espConstructor: any, label: string): ()
+		local espObj = espConstructor.new(obj, label);
+
+		if (obj.Transparency ~= 0) then
+			obj.Transparency = 0.5;
+		end;
+
+		if (obj.Transparency == 0) then
+			local transparencyConn: RBXScriptConnection;
+			transparencyConn = obj:GetPropertyChangedSignal('Transparency'):Connect(function(): ()
+				if (obj.Transparency ~= 0) then
+					obj.Transparency = 0.5;
+					transparencyConn:Disconnect();
+				end;
+			end);
+		end;
+
+		local parentConn: RBXScriptConnection;
+		parentConn = obj:GetPropertyChangedSignal('Parent'):Connect(function(): ()
+			if (not obj.Parent) then
+				espObj:Destroy();
+				parentConn:Disconnect();
+			end;
+		end);
+	end;
+
+	-- deidara mines get parented to workspace.Thrown as a unionoperation called 'Ball'
+	makeESP({
+		sectionName = 'Deidara Mines',
+		type = 'childAdded',
+		args = {workspace:WaitForChild('Thrown')},
+		callback = function(obj: Instance, espConstructor: any): ()
+			if (not obj:IsA('UnionOperation') or obj.Name ~= 'Ball') then return end;
+			makeHiddenESP(obj :: BasePart, espConstructor, 'Deidara Mine');
+		end,
+	});
+
+	-- raiden claymores get parented to workspace.ClearEachMatch as meshparts
+	makeESP({
+		sectionName = 'Raiden Claymores',
+		type = 'childAdded',
+		args = {workspace:WaitForChild('ClearEachMatch')},
+		callback = function(obj: Instance, espConstructor: any): ()
+			if (not obj:IsA('MeshPart')) then return end;
+			makeHiddenESP(obj :: BasePart, espConstructor, 'Claymore');
+		end,
+	});
 end;
