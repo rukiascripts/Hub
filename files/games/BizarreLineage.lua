@@ -55,24 +55,51 @@ local ATTACH_MAX_RANGE: number = 300;
 local localCheats = column1:AddSection('Local Cheats');
 local combat = column2:AddSection('Combat');
 
+-- known mob names sorted longest first so longer matches take priority
+local MOB_NAMES: {string} = {
+	'Corrupt Police Officer',
+	'Speedwagon Agent',
+	'Elite Mafia Member',
+	'Hamon Apprentice',
+	'Zombie Rudi von Stroheim',
+	'Samurai Master',
+	'Cultist Leader',
+	'Rogue Rock Human',
+	'Prison Escapee',
+	'Elite Vampire',
+	'Hamon Master',
+	'Boxing Coach',
+	'Mafia Member',
+	'Akira Otoishi',
+	'Delinquent',
+	'Trinket',
+	'Cultist',
+	'Vampire',
+	'Zombie',
+	'Boxer',
+	'Thief',
+	'Thug',
+	'rat',
+};
+
 --[[
-	strips the leading dot and trailing random id from mob names
-	e.g. ".Corrupt Police OfficerDGBMWX" -> "Corrupt Police Officer"
-	     ".Corrupt Police Officer0cHDEd" -> "Corrupt Police Officer"
+	strips the leading dot and matches against known mob names.
+	falls back to regex cleanup if no known name matches
 ]]
 local function formatMobName(mobName: string): string
 	-- strip leading dot
 	local stripped: string = mobName:match('^%.(.+)') or mobName;
 
-	-- the game appends a short random alphanumeric id (5-8 chars) directly
-	-- onto the last word with no separator. we split by space, then on the
-	-- last word we find where the real english part ends by looking for the
-	-- longest lowercase-ending prefix before the random junk
+	-- try to match a known mob name (longest first)
+	for _, name: string in MOB_NAMES do
+		if (stripped:sub(1, #name) == name) then
+			return name;
+		end;
+	end;
+
+	-- fallback: strip trailing mixed junk after last lowercase letter
 	local words: {string} = stripped:split(' ');
 	local lastWord: string = words[#words];
-
-	-- match everything up to and including the last lowercase letter,
-	-- discarding the trailing mixed-case/digit suffix
 	local cleaned: string? = lastWord:match('^(.-%l)%u');
 	if (cleaned and #cleaned >= 2) then
 		words[#words] = cleaned;
@@ -82,8 +109,13 @@ local function formatMobName(mobName: string): string
 end;
 
 local function onNewMobAdded(mob: Instance, espConstructor: any): ()
-	-- only care about entities that start with a dot
+	-- skip player characters and non-dot entities
 	if (not mob.Name:match('^%.')) then return end;
+
+	local formattedName: string = formatMobName(mob.Name);
+
+	-- check if this mob type is selected in the filter list
+	if (library.flags.mobFilter and not library.flags.mobFilter[formattedName]) then return end;
 
 	local code: string = [[
 		local mob = ...;
@@ -104,7 +136,6 @@ local function onNewMobAdded(mob: Instance, espConstructor: any): ()
 		})
 	]];
 
-	local formattedName: string = formatMobName(mob.Name);
 	local mobEsp = espConstructor.new({code = code, vars = {mob}}, formattedName);
 
 	local connection: RBXScriptConnection;
@@ -432,6 +463,12 @@ function Utility:renderOverload(data: any): ()
 			section:AddToggle({
 				text = 'Show Health',
 				flag = 'Mobs Show Health'
+			});
+
+			section:AddList({
+				text = 'Mob Filter',
+				multiselect = true,
+				values = MOB_NAMES,
 			});
 		end
 	});
