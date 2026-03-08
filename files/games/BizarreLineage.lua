@@ -70,9 +70,8 @@ function functions.fly(toggle: boolean): ()
 		local rootPart: BasePart?, camera: Camera? = playerData.rootPart, workspace.CurrentCamera;
 		if (not rootPart or not camera) then return end;
 
-		if (not CollectionService:HasTag(maid.flyBv, 'good')) then
-			CollectionService:AddTag(maid.flyBv, 'good');
-			CollectionService:AddTag(maid.flyBv, 'DONTDELETE');
+		if (not CollectionService:HasTag(maid.flyBv, 'AllowedBM')) then
+			CollectionService:AddTag(maid.flyBv, 'AllowedBM');
 		end;
 
 		maid.flyBv.Parent = rootPart;
@@ -100,9 +99,8 @@ function functions.speedHack(toggle: boolean): ()
 		maid.speedHackBv = maid.speedHackBv or Instance.new('BodyVelocity');
 		maid.speedHackBv.MaxForce = Vector3.new(100000, 0, 100000);
 
-		if (not CollectionService:HasTag(maid.speedHackBv, 'good')) then
-			CollectionService:AddTag(maid.speedHackBv, 'good');
-			CollectionService:AddTag(maid.speedHackBv, 'DONTDELETE');
+		if (not CollectionService:HasTag(maid.speedHackBv, 'AllowedBM')) then
+			CollectionService:AddTag(maid.speedHackBv, 'AllowedBM');
 		end;
 
 		maid.speedHackBv.Parent = not library.flags.fly and rootPart or nil;
@@ -173,7 +171,14 @@ do
 	end;
 
 	function NetworkOneShot:Update(): ()
-		if (not self.hrp or not isnetworkowner(self.hrp) or not self.hrp.Parent or self.hrp.Parent.Parent ~= workspace.Live) then return end;
+		if (not self.hrp or not self.hrp.Parent) then return end;
+
+		local ok: boolean, owned: boolean? = pcall(isnetworkowner, self.hrp);
+		if (not ok or not owned) then return end;
+
+		local parent: Instance? = self.hrp.Parent;
+		if (not parent or (parent :: Instance).Parent ~= workspace.Live) then return end;
+
 		self.char:PivotTo(CFrame.new(self.hrp.Position.X, workspace.FallenPartsDestroyHeight - 100000, self.hrp.Position.Z));
 	end;
 
