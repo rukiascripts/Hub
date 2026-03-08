@@ -34,7 +34,7 @@ CollectionService = cloneref(CollectionService);
 TweenService = cloneref(TweenService);
 
 local BLOCKED_PLACES: {[number]: string} = {
-	[14890802310] = 'Script will not run in menu!',
+	[1] = 'Script will not run in menu!',
 };
 
 local blockedMessage: string? = BLOCKED_PLACES[game.PlaceId];
@@ -163,8 +163,8 @@ do
 		end));
 
 		self._maid:GiveTask(Utility.listenToChildAdded(mob, function(obj: Instance): ()
-			if (obj.Name == 'HumanoidRootPart') then
-				self.hrp = obj;
+			if (obj.Name == 'HumanoidRootPart' and obj:IsA('BasePart')) then
+				self.hrp = obj :: BasePart;
 			end;
 		end));
 
