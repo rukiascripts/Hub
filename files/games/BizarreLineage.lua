@@ -55,6 +55,67 @@ local ATTACH_MAX_RANGE: number = 300;
 local localCheats = column1:AddSection('Local Cheats');
 local combat = column2:AddSection('Combat');
 
+--[[
+	strips the leading dot and trailing random id from mob names
+	e.g. ".Corrupt Police OfficerDGBMWX" -> "Corrupt Police Officer"
+	     ".Corrupt Police Officer0cHDEd" -> "Corrupt Police Officer"
+]]
+local function formatMobName(mobName: string): string
+	-- strip leading dot
+	local stripped: string = mobName:match('^%.(.+)') or mobName;
+
+	-- the game appends a short random alphanumeric id (5-8 chars) directly
+	-- onto the last word with no separator. we split by space, then on the
+	-- last word we find where the real english part ends by looking for the
+	-- longest lowercase-ending prefix before the random junk
+	local words: {string} = stripped:split(' ');
+	local lastWord: string = words[#words];
+
+	-- match everything up to and including the last lowercase letter,
+	-- discarding the trailing mixed-case/digit suffix
+	local cleaned: string? = lastWord:match('^(.-%l)%u');
+	if (cleaned and #cleaned >= 2) then
+		words[#words] = cleaned;
+	end;
+
+	return table.concat(words, ' ');
+end;
+
+local function onNewMobAdded(mob: Instance, espConstructor: any): ()
+	-- only care about entities that start with a dot
+	if (not mob.Name:match('^%.')) then return end;
+
+	local code: string = [[
+		local mob = ...;
+		local FindFirstChild = game.FindFirstChild;
+		local FindFirstChildWhichIsA = game.FindFirstChildWhichIsA;
+
+		return setmetatable({
+			FindFirstChildWhichIsA = function(_, ...)
+				return FindFirstChildWhichIsA(mob, ...);
+			end,
+		}, {
+			__index = function(_, p)
+				if (p == 'Position') then
+					local mobRoot = FindFirstChild(mob, 'HumanoidRootPart');
+					return mobRoot and mobRoot.Position;
+				end;
+			end,
+		})
+	]];
+
+	local formattedName: string = formatMobName(mob.Name);
+	local mobEsp = espConstructor.new({code = code, vars = {mob}}, formattedName);
+
+	local connection: RBXScriptConnection;
+	connection = mob:GetPropertyChangedSignal('Parent'):Connect(function(): ()
+		if (not mob.Parent) then
+			connection:Disconnect();
+			mobEsp:Destroy();
+		end;
+	end);
+end;
+
 function functions.fly(toggle: boolean): ()
 	if (not toggle) then
 		maid.flyHack = nil;
@@ -360,3 +421,18 @@ combat:AddToggle({
 	tip = 'claims network ownership and drops mobs below the kill plane',
 	callback = functions.networkOneShot
 });
+
+function Utility:renderOverload(data: any): ()
+	makeESP({
+		sectionName = 'Mobs',
+		type = 'childAdded',
+		args = workspace:WaitForChild('Live'),
+		callback = onNewMobAdded,
+		onLoaded = function(section: any): ()
+			section:AddToggle({
+				text = 'Show Health',
+				flag = 'Mobs Show Health'
+			});
+		end
+	});
+end;
