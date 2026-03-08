@@ -108,14 +108,28 @@ local function formatMobName(mobName: string): string
 	return table.concat(words, ' ');
 end;
 
+local function makeList(names: {string}, section: any): any
+	return Utility.map(names, function(name: string): any
+		local t = section:AddToggle({
+			text = name,
+			flag = `Show {name}`,
+			state = true
+		});
+
+		t:AddColor({
+			text = `{name} Color`,
+			color = Color3.fromRGB(255, 255, 255)
+		});
+
+		return t;
+	end);
+end;
+
 local function onNewMobAdded(mob: Instance, espConstructor: any): ()
 	-- skip player characters and non-dot entities
 	if (not mob.Name:match('^%.')) then return end;
 
 	local formattedName: string = formatMobName(mob.Name);
-
-	-- check if this mob type is selected in the filter list
-	if (library.flags.mobFilter and not library.flags.mobFilter[formattedName]) then return end;
 
 	local code: string = [[
 		local mob = ...;
@@ -458,18 +472,15 @@ function Utility:renderOverload(data: any): ()
 		sectionName = 'Mobs',
 		type = 'childAdded',
 		args = workspace:WaitForChild('Live'),
+		noColorPicker = true,
 		callback = onNewMobAdded,
-		onLoaded = function(section: any): ()
+		onLoaded = function(section: any): any
 			section:AddToggle({
 				text = 'Show Health',
 				flag = 'Mobs Show Health'
 			});
 
-			section:AddList({
-				text = 'Mob Filter',
-				multiselect = true,
-				values = MOB_NAMES,
-			});
+			return {list = makeList(MOB_NAMES, section)};
 		end
 	});
 end;
