@@ -51,20 +51,27 @@ local LocalPlayer: Player = Players.LocalPlayer;
 local maid = Maid.new();
 
 local ATTACH_MAX_RANGE: number = 300;
+local TRINKET_SCAN_INTERVAL: number = 0.5;
+local TRINKET_NAMES: {string} = {'Stand Arrow', 'Stone Mask'};
+local FARM_TICK_DELAY: number = 0.15;
 
 local localCheats = column1:AddSection('Local Cheats');
+local automation = column2:AddSection('Automation');
 local combat = column2:AddSection('Combat');
 
 -- known mob names sorted longest first so longer matches take priority
 local MOB_NAMES: {string} = {
 	'Corrupt Police Officer',
-	'Speedwagon Agent',
-	'Elite Mafia Member',
-	'Hamon Apprentice',
 	'Zombie Rudi von Stroheim',
+	'Elite Mafia Member',
+	'Dr. Bosconovitch',
+	'Miyamoto Musashi',
+	'Speedwagon Agent',
+	'Hamon Apprentice',
+	'Yoshikage Kira',
+	'Rogue Rock Human',
 	'Samurai Master',
 	'Cultist Leader',
-	'Rogue Rock Human',
 	'Prison Escapee',
 	'Elite Vampire',
 	'Hamon Master',
@@ -458,6 +465,215 @@ localCheats:AddSlider({
 	value = 2,
 	min = -100,
 	max = 100,
+	textpos = 2
+});
+
+-- auto farm trinkets (Stand Arrow / Stone Mask models in workspace)
+do
+	--[[
+		finds trinket models in workspace that have a matching child name.
+		returns the child part and its proximity prompt if found
+	]]
+	local function findTrinket(): (BasePart?, ProximityPrompt?)
+		for _, child: Instance in workspace:GetChildren() do
+			if (not child:IsA('Model')) then continue end;
+
+			for _, trinketName: string in TRINKET_NAMES do
+				local trinketPart: Instance? = child:FindFirstChild(trinketName);
+				if (not trinketPart or not trinketPart:IsA('BasePart')) then continue end;
+
+				local prompt: ProximityPrompt? = trinketPart:FindFirstChildWhichIsA('ProximityPrompt') :: ProximityPrompt?;
+				if (not prompt) then continue end;
+
+				return trinketPart :: BasePart, prompt :: ProximityPrompt;
+			end;
+		end;
+
+		return nil, nil;
+	end;
+
+	function functions.autoFarmTrinkets(toggle: boolean): ()
+		if (not toggle) then
+			maid.autoFarmTrinkets = nil;
+			return;
+		end;
+
+		maid.autoFarmTrinkets = task.spawn(function(): ()
+			while (library.flags.autoFarmTrinkets) do
+				local rootPart: BasePart? = Utility:getPlayerData().rootPart;
+				if (not rootPart) then
+					task.wait(TRINKET_SCAN_INTERVAL);
+					continue;
+				end;
+
+				local trinketPart: BasePart?, prompt: ProximityPrompt? = findTrinket();
+				if (not trinketPart or not prompt) then
+					task.wait(TRINKET_SCAN_INTERVAL);
+					continue;
+				end;
+
+				-- teleport underneath the trinket so we're hidden
+				(rootPart :: BasePart).CFrame = (trinketPart :: BasePart).CFrame * CFrame.new(0, -5, 0);
+
+				-- enable noclip so character clips through floor
+				if (not library.flags.noClip) then
+					library.options.noClip:SetState(true);
+				end;
+
+				task.wait(0.2);
+				fireproximityprompt(prompt :: ProximityPrompt); -- luau-lsp: executor global
+				task.wait(TRINKET_SCAN_INTERVAL);
+			end;
+		end);
+	end;
+end;
+
+-- auto farm mobs using BodyPosition/BodyGyro to hold position near target
+do
+	local liveFolder = workspace:WaitForChild('Live');
+
+	local function cleanupFarmMovers(): ()
+		maid.mobFarmBp = nil;
+		maid.mobFarmBg = nil;
+	end;
+
+	--[[
+		finds the closest alive mob in workspace.Live, skipping the local player.
+		returns the mob model and its HumanoidRootPart
+	]]
+	local function findClosestMob(rootPart: BasePart): (Model?, BasePart?)
+		local closest: BasePart? = nil;
+		local closestModel: Model? = nil;
+		local closestDist: number = math.huge;
+
+		for _, entity: Instance in liveFolder:GetChildren() do
+			if (entity == LocalPlayer.Character) then continue end;
+			if (not entity.Name:match('^%.')) then continue end;
+
+			local hrp: BasePart? = entity:FindFirstChild('HumanoidRootPart') :: BasePart?;
+			if (not hrp) then continue end;
+
+			local humanoid: Humanoid? = entity:FindFirstChildOfClass('Humanoid') :: Humanoid?;
+			if (not humanoid or (humanoid :: Humanoid).Health <= 0) then continue end;
+
+			local dist: number = ((hrp :: BasePart).Position - rootPart.Position).Magnitude;
+			if (dist < closestDist) then
+				closest, closestModel, closestDist = hrp :: BasePart, entity :: Model, dist;
+			end;
+		end;
+
+		return closestModel, closest;
+	end;
+
+	--[[
+		positions rootpart above or below target using BodyPosition/BodyGyro.
+		faces directly toward the mob (down if above, up if below)
+	]]
+	local function moveToMob(rootPart: BasePart, targetHrp: BasePart, heightOffset: number, spaceOffset: number): ()
+		local targetPos: Vector3 = targetHrp.Position;
+		local offsetPos: Vector3 = targetPos + Vector3.new(0, heightOffset, spaceOffset);
+
+		if (not maid.mobFarmBp) then
+			local bp: BodyPosition = Instance.new('BodyPosition');
+			bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge);
+			bp.D = 100;
+			bp.P = 10000;
+
+			if (not CollectionService:HasTag(bp, 'AllowedBM')) then
+				CollectionService:AddTag(bp, 'AllowedBM');
+			end;
+
+			bp.Parent = rootPart;
+			maid.mobFarmBp = bp;
+
+			local bg: BodyGyro = Instance.new('BodyGyro');
+			bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge);
+			bg.D = 50;
+			bg.P = 5000;
+
+			if (not CollectionService:HasTag(bg, 'AllowedBM')) then
+				CollectionService:AddTag(bg, 'AllowedBM');
+			end;
+
+			bg.Parent = rootPart;
+			maid.mobFarmBg = bg;
+		end;
+
+		maid.mobFarmBp.Position = offsetPos;
+		-- face directly toward the target (down if above, up if below)
+		maid.mobFarmBg.CFrame = CFrame.lookAt(offsetPos, targetPos);
+	end;
+
+	function functions.autoFarmMobs(toggle: boolean): ()
+		if (not toggle) then
+			maid.autoFarmMobs = nil;
+			cleanupFarmMovers();
+			return;
+		end;
+
+		maid.autoFarmMobs = task.spawn(function(): ()
+			while (library.flags.autoFarmMobs) do
+				local rootPart: BasePart? = Utility:getPlayerData().rootPart;
+				if (not rootPart) then
+					cleanupFarmMovers();
+					task.wait(0.5);
+					continue;
+				end;
+
+				local mob: Model?, mobHrp: BasePart? = findClosestMob(rootPart :: BasePart);
+				if (not mob or not mobHrp) then
+					cleanupFarmMovers();
+					task.wait(0.5);
+					continue;
+				end;
+
+				local humanoid: Humanoid? = (mob :: Model):FindFirstChildOfClass('Humanoid') :: Humanoid?;
+
+				repeat
+					moveToMob(rootPart :: BasePart, mobHrp :: BasePart, library.flags.mobFarmHeight, library.flags.mobFarmSpace);
+					task.wait(FARM_TICK_DELAY);
+				until (not library.flags.autoFarmMobs or not humanoid or (humanoid :: Humanoid).Health <= 0 or not (mobHrp :: BasePart).Parent);
+
+				cleanupFarmMovers();
+				task.wait(0.3);
+			end;
+		end);
+	end;
+end;
+
+automation:AddDivider('Trinket Farm');
+
+automation:AddToggle({
+	text = 'Auto Farm Trinkets',
+	tip = 'teleports to Stand Arrow / Stone Mask and fires the proximity prompt',
+	callback = functions.autoFarmTrinkets
+});
+
+automation:AddDivider('Mob Farm');
+
+automation:AddToggle({
+	text = 'Auto Farm Mobs',
+	tip = 'positions above/below the closest mob using BodyPosition',
+	callback = functions.autoFarmMobs
+});
+
+automation:AddSlider({
+	text = 'Mob Farm Height',
+	tip = 'positive = above (face down), negative = below (face up)',
+	flag = 'Mob Farm Height',
+	min = -50,
+	max = 50,
+	value = 10,
+	textpos = 2
+});
+
+automation:AddSlider({
+	text = 'Mob Farm Space',
+	tip = 'horizontal offset from the mob',
+	flag = 'Mob Farm Space',
+	min = -50,
+	max = 50,
+	value = 0,
 	textpos = 2
 });
 
