@@ -74,6 +74,17 @@ local function findChild(parent, ...)
     return current;
 end;
 
+-- ── Mouse Unlock ──
+
+local function withFreeMouse(callback)
+    local conn = RunService.RenderStepped:Connect(function()
+        UserInputService.MouseBehavior = Enum.MouseBehavior.Default;
+    end);
+    task.wait();
+    callback();
+    conn:Disconnect();
+end;
+
 -- ── Noclip & Position Hold ──
 
 local function enableNoclip()
@@ -173,7 +184,9 @@ end;
 local function panic()
     warn('[AutoFarm] Other player detected! Blocking and server hopping...');
 
-    BlockUtils:BlockRandomUser();
+    withFreeMouse(function()
+        BlockUtils:BlockRandomUser();
+    end);
 
     task.wait(1);
 
@@ -457,7 +470,9 @@ misc:AddButton({
     tip = 'Jumps to another server',
     callback = function()
         if (library:ShowConfirm('Are you sure you want to switch server?')) then
-            BlockUtils:BlockRandomUser();
+            withFreeMouse(function()
+                BlockUtils:BlockRandomUser();
+            end);
             local ok = pcall(serverHop);
             if (not ok) then
                 TeleportService:Teleport(PLACE_ID);
