@@ -1,7 +1,7 @@
 local Services = sharedRequire('utils/Services.lua');
 local library = sharedRequire('UILibrary.lua');
 local AltManagerAPI = sharedRequire('classes/AltManagerAPI.lua');
-	local Players, GuiService, HttpService, StarterGui, VirtualInputManager, CoreGui = Services:Get('Players', 'GuiService', 'HttpService', 'StarterGui', 'VirtualInputManager', 'CoreGui');
+	local Players, GuiService, HttpService, StarterGui, VirtualInputManager = Services:Get('Players', 'GuiService', 'HttpService', 'StarterGui', 'VirtualInputManager');
 	local LocalPlayer = Players.LocalPlayer;
 
 	local BlockUtils = {};
@@ -23,6 +23,23 @@ local AltManagerAPI = sharedRequire('classes/AltManagerAPI.lua');
 		return true;
 	end;
 
+	local function findChild(parent, ...)
+		local current = parent;
+		for _, name in {...} do
+			current = current and current:FindFirstChild(name);
+		end;
+		return current;
+	end;
+
+	local function clickAt(x, y, times)
+		for _ = 1, (times or 3) do
+			VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 1);
+			task.wait(0.05);
+			VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 1);
+			task.wait(0.1);
+		end;
+	end;
+
 	function BlockUtils:BlockUser(userId)
 		if(library.flags.useAltManagerToBlock and apiAccount) then
 			apiAccount:BlockUser(userId);
@@ -32,32 +49,36 @@ local AltManagerAPI = sharedRequire('classes/AltManagerAPI.lua');
 				apiAccount:UnblockEveryone();
 			end;
 		else
-			library.base.Enabled = false;
-
-			local blockedUserIds = StarterGui:GetCore('GetBlockedUserIds');
 			local playerToBlock = Instance.new('Player');
 			playerToBlock.UserId = tonumber(userId);
 
-			local lastList = #blockedUserIds;
-			GuiService:ClearError();
+			StarterGui:SetCore('PromptBlockPlayer', playerToBlock);
+			task.wait(0.5);
 
-			repeat
-				StarterGui:SetCore('PromptBlockPlayer', playerToBlock);
+			pcall(function()
+				local buttons = findChild(
+					game:GetService('CoreGui'),
+					'FoundationOverlay', 'SafeAreaFrame', 'BlockingModalScreen',
+					'BlockingModalContainerWrapper', 'BlockingModal', 'AlertModal',
+					'AlertContents', 'Footer', 'Buttons'
+				);
+				if (not buttons) then return; end;
 
-				local confirmButton = CoreGui.RobloxGui.PromptDialog.ContainerFrame:FindFirstChild('ConfirmButton');
-				if (not confirmButton) then break end;
+				local blockBtn;
+				for _ = 1, 20 do
+					blockBtn = buttons:FindFirstChild('3');
+					if (blockBtn) then break; end;
+					task.wait(0.25);
+				end;
+				if (not blockBtn) then return; end;
 
-				local btnPosition = confirmButton.AbsolutePosition + Vector2.new(40, 40);
+				local inset = GuiService:GetGuiInset();
+				local pos = blockBtn.AbsolutePosition;
+				local size = blockBtn.AbsoluteSize;
+				clickAt(pos.X + size.X / 2, pos.Y + size.Y / 2 + inset.Y, 5);
+			end);
 
-				VirtualInputManager:SendMouseButtonEvent(btnPosition.X, btnPosition.Y, 0, false, game, 1);
-				task.wait();
-				VirtualInputManager:SendMouseButtonEvent(btnPosition.X, btnPosition.Y, 0, true, game, 1);
-				task.wait();
-			until #StarterGui:GetCore('GetBlockedUserIds') ~= lastList;
-
-			task.wait(0.2);
-
-			library.base.Enabled = true;
+			task.wait(0.5);
 		end;
 	end;
 
