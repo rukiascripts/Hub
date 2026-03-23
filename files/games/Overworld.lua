@@ -4,9 +4,9 @@ local Services = sharedRequire('utils/Services.lua');
 local BlockUtils = sharedRequire('utils/BlockUtils.lua');
 local ToastNotif = sharedRequire('classes/ToastNotif.lua');
 
-local Players, RunService, UserInputService, HttpService, TweenService, VirtualInputManager, TeleportService, ReplicatedStorage, GuiService, StarterGui = Services:Get(
+local Players, RunService, UserInputService, HttpService, TweenService, VirtualInputManager, TeleportService, ReplicatedStorage, GuiService = Services:Get(
     'Players', 'RunService', 'UserInputService', 'HttpService', 'TweenService',
-    'VirtualInputManager', 'TeleportService', 'ReplicatedStorage', 'GuiService', 'StarterGui'
+    'VirtualInputManager', 'TeleportService', 'ReplicatedStorage', 'GuiService'
 );
 
 Players = cloneref(Players);
@@ -16,7 +16,6 @@ ReplicatedStorage = cloneref(ReplicatedStorage);
 TeleportService = cloneref(TeleportService);
 VirtualInputManager = cloneref(VirtualInputManager);
 GuiService = cloneref(GuiService);
-StarterGui = cloneref(StarterGui);
 
 local LocalPlayer = Players.LocalPlayer;
 local PlayerGui = LocalPlayer:WaitForChild('PlayerGui');
@@ -25,7 +24,6 @@ local maid = Maid.new();
 local column1, column2 = unpack(library.columns);
 
 local farms = column1:AddSection('Farms');
-local automation = column1:AddSection('Automation');
 local misc = column2:AddSection('Misc');
 
 local CONTAINER_PATH = workspace:WaitForChild('Containers'):WaitForChild('Lumbertown');
@@ -33,12 +31,11 @@ local PLACE_ID = game.PlaceId;
 local LANE_KEYS = { Lane1 = Enum.KeyCode.A, Lane2 = Enum.KeyCode.W, Lane3 = Enum.KeyCode.D };
 
 local lootedTimestamps = {};
-local farmConnection, lockpickConnection, noclipConnection, holdBv, playerWatchConnection;
 
 -- ── Helpers ──
 
 local function isRunning()
-    return library.flags.autoFarm;
+    return library.flags.autoFarmLumbertown;
 end;
 
 local function getRoot()
@@ -80,8 +77,8 @@ end;
 -- ── Noclip & Position Hold ──
 
 local function enableNoclip()
-    if (noclipConnection) then return; end;
-    noclipConnection = RunService.Stepped:Connect(function()
+    if (maid.noclip) then return; end;
+    maid.noclip = RunService.Stepped:Connect(function()
         local char = LocalPlayer.Character;
         if (not char) then return; end;
         for _, part in char:GetDescendants() do
@@ -93,25 +90,22 @@ local function enableNoclip()
 end;
 
 local function disableNoclip()
-    if (not noclipConnection) then return; end;
-    noclipConnection:Disconnect();
-    noclipConnection = nil;
+    maid.noclip = nil;
 end;
 
 local function holdPosition()
     local root = getRoot();
     if (not root) then return; end;
-    if (holdBv) then holdBv:Destroy(); end;
-    holdBv = Instance.new('BodyVelocity');
-    holdBv.MaxForce = Vector3.new(math.huge, math.huge, math.huge);
-    holdBv.Velocity = Vector3.zero;
-    holdBv.Parent = root;
+    maid.holdBv = nil;
+    local bv = Instance.new('BodyVelocity');
+    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge);
+    bv.Velocity = Vector3.zero;
+    bv.Parent = root;
+    maid.holdBv = bv;
 end;
 
 local function releasePosition()
-    if (not holdBv) then return; end;
-    holdBv:Destroy();
-    holdBv = nil;
+    maid.holdBv = nil;
 end;
 
 local function teleportTo(position, prompt)
@@ -174,51 +168,12 @@ local function serverHop()
     end;
 end;
 
--- ── Block & Panic ──
-
-local function blockUser(userId)
-    local playerToBlock = Instance.new('Player');
-    playerToBlock.UserId = tonumber(userId);
-
-    StarterGui:SetCore('PromptBlockPlayer', playerToBlock);
-    task.wait(0.5);
-
-    pcall(function()
-        local buttons = findChild(
-            game:GetService('CoreGui'),
-            'FoundationOverlay', 'SafeAreaFrame', 'BlockingModalScreen',
-            'BlockingModalContainerWrapper', 'BlockingModal', 'AlertModal',
-            'AlertContents', 'Footer', 'Buttons'
-        );
-        if (not buttons) then return; end;
-
-        local blockBtn;
-        for _ = 1, 20 do
-            blockBtn = buttons:FindFirstChild('3');
-            if (blockBtn) then break; end;
-            task.wait(0.25);
-        end;
-        if (not blockBtn) then return; end;
-
-        local inset = GuiService:GetGuiInset();
-        local pos = blockBtn.AbsolutePosition;
-        local size = blockBtn.AbsoluteSize;
-        clickAt(pos.X + size.X / 2, pos.Y + size.Y / 2 + inset.Y, 5);
-    end);
-
-    task.wait(0.5);
-end;
+-- ── Panic ──
 
 local function panic()
     warn('[AutoFarm] Other player detected! Blocking and server hopping...');
 
-    for _, player in Players:GetPlayers() do
-        if (player ~= LocalPlayer and not LocalPlayer:IsFriendsWith(player.UserId)) then
-            pcall(blockUser, player.UserId);
-            warn('[AutoFarm] Blocked ' .. player.Name);
-            break;
-        end;
-    end;
+    BlockUtils:BlockRandomUser();
 
     task.wait(1);
 
@@ -234,17 +189,15 @@ end;
 -- ── Player Watch ──
 
 local function startPlayerWatch()
-    if (playerWatchConnection) then return; end;
+    if (maid.playerWatch) then return; end;
     if (#Players:GetPlayers() > 1) then panic(); return; end;
-    playerWatchConnection = Players.PlayerAdded:Connect(function()
+    maid.playerWatch = Players.PlayerAdded:Connect(function()
         if (#Players:GetPlayers() > 1) then panic(); end;
     end);
 end;
 
 local function stopPlayerWatch()
-    if (not playerWatchConnection) then return; end;
-    playerWatchConnection:Disconnect();
-    playerWatchConnection = nil;
+    maid.playerWatch = nil;
 end;
 
 -- ── AutoLockpick ──
@@ -256,9 +209,7 @@ local function isNoteOverlapping(note, imageButton)
 end;
 
 local function stopAutoLockpick()
-    if (not lockpickConnection) then return; end;
-    lockpickConnection:Disconnect();
-    lockpickConnection = nil;
+    maid.lockpick = nil;
 end;
 
 local function startAutoLockpick()
@@ -270,7 +221,7 @@ local function startAutoLockpick()
 
     stopAutoLockpick();
 
-    lockpickConnection = RunService.Heartbeat:Connect(function()
+    maid.lockpick = RunService.Heartbeat:Connect(function()
         if (not isRunning() or not lockPickGui.Parent) then
             stopAutoLockpick();
             return;
@@ -437,18 +388,17 @@ local function farmItem(model)
 
     releasePosition();
 
-    local restockVal = model:FindFirstChild('RestockTime');
     lootedTimestamps[model] = os.clock();
 end;
 
 local function startFarm()
-    if (farmConnection) then return; end;
+    if (maid.farm) then return; end;
 
     if (library.flags.panicOnPlayerJoin) then
         startPlayerWatch();
     end;
 
-    farmConnection = task.spawn(function()
+    maid.farm = task.spawn(function()
         while (isRunning()) do
             local items = getValidItems();
 
@@ -473,7 +423,7 @@ local function stopFarm()
     stopPlayerWatch();
     disableNoclip();
     releasePosition();
-    farmConnection = nil;
+    maid.farm = nil;
 end;
 
 -- ── UI ──
