@@ -1,1018 +1,1900 @@
 local library = sharedRequire('UILibrary.lua');
+
+local AudioPlayer = sharedRequire('utils/AudioPlayer.lua');
+local makeESP = sharedRequire('utils/makeESP.lua');
+
+local Utility = sharedRequire('utils/Utility.lua');
 local Maid = sharedRequire('utils/Maid.lua');
+local AnalyticsAPI = sharedRequire('classes/AnalyticsAPI.lua');
+
 local Services = sharedRequire('utils/Services.lua');
-local BlockUtils = sharedRequire('utils/BlockUtils.lua');
+local createBaseESP = sharedRequire('utils/createBaseESP.lua');
+
+local EntityESP = sharedRequire('classes/EntityESP.lua');
+local ControlModule = sharedRequire('classes/ControlModule.lua');
 local ToastNotif = sharedRequire('classes/ToastNotif.lua');
 
-local Players, RunService, UserInputService, HttpService, TweenService, VirtualInputManager, TeleportService, ReplicatedStorage, GuiService = Services:Get(
-    'Players', 'RunService', 'UserInputService', 'HttpService', 'TweenService',
-    'VirtualInputManager', 'TeleportService', 'ReplicatedStorage', 'GuiService'
+local prettyPrint = sharedRequire('utils/prettyPrint.lua');
+local BlockUtils = sharedRequire('utils/BlockUtils.lua');
+local TextLogger = sharedRequire('classes/TextLogger.lua');
+local fromHex = sharedRequire('utils/fromHex.lua');
+local toCamelCase = sharedRequire('utils/toCamelCase.lua');
+local Webhook = sharedRequire('utils/Webhook.lua');
+
+if (game.PlaceId == 126222071643660) then
+    ToastNotif.new({
+        text = 'Script will not run in menu!',
+        duration = 5
+    });
+
+    task.delay(0.005, function()
+        library:Unload();
+    end);
+    return;
+end;
+
+local column1, column2 = unpack(library.columns);
+
+local functions = {};
+
+local Players, RunService, UserInputService, HttpService, CollectionService, MemStorageService, Lighting, TweenService, VirtualInputManager, ReplicatedFirst, TeleportService, ReplicatedStorage = Services:Get(
+    'Players',
+    'RunService',
+    'UserInputService',
+    'HttpService',
+    'CollectionService',
+    'MemStorageService',
+    'Lighting',
+    'TweenService',
+    'VirtualInputManager',
+    'ReplicatedFirst',
+    'TeleportService',
+    'ReplicatedStorage'
 );
 
 Players = cloneref(Players);
 RunService = cloneref(RunService);
 UserInputService = cloneref(UserInputService);
 ReplicatedStorage = cloneref(ReplicatedStorage);
+TweenService = cloneref(TweenService);
+CollectionService = cloneref(CollectionService);
 TeleportService = cloneref(TeleportService);
-VirtualInputManager = cloneref(VirtualInputManager);
-GuiService = cloneref(GuiService);
+Lighting = cloneref(Lighting);
 
 local LocalPlayer = Players.LocalPlayer;
-local PlayerGui = LocalPlayer:WaitForChild('PlayerGui');
+local playerMouse = LocalPlayer:GetMouse();
+
 local maid = Maid.new();
 
-local column1, column2 = unpack(library.columns);
-
-local farms = column1:AddSection('Farms');
+local localCheats = column1:AddSection('Local Cheats');
+local notifier = column1:AddSection('Notifier');
+local playerMods = column1:AddSection('Player Mods');
+local automation = column2:AddSection('Automation');
 local misc = column2:AddSection('Misc');
+local visuals = column2:AddSection('Visuals');
+local farms = column2:AddSection('Farms');
+local inventoryViewer = column2:AddSection('Inventory Viewer');
 
-local CONTAINER_PATH = workspace:WaitForChild('Containers'):WaitForChild('Lumbertown');
-local PLACE_ID = game.PlaceId;
-local LANE_KEYS = { Lane1 = Enum.KeyCode.A, Lane2 = Enum.KeyCode.W, Lane3 = Enum.KeyCode.D };
+local IsA = game.IsA;
+local FindFirstChild = game.FindFirstChild;
+local FindFirstChildWhichIsA = game.FindFirstChildWhichIsA;
+local IsDescendantOf = game.IsDescendantOf;
 
-local lootedTimestamps = {};
+local Trinkets = {};
+local playerClassesList = {};
 
--- ── Helpers ──
+local rayParams = RaycastParams.new();
+rayParams.FilterDescendantsInstances = {workspace.Live};
+rayParams.FilterType = Enum.RaycastFilterType.Blacklist;
 
-local function isRunning()
-    return library.flags.autoFarmLumbertown;
-end;
+local NPCFolder = workspace.NPCs;
 
-local function getRoot()
-    local char = LocalPlayer.Character;
-    return char and char:FindFirstChild('HumanoidRootPart');
-end;
+local Armors, Weapons, Items, NPCs = {}, {}, {}, {};
+local ArmorSelected, WeaponSelected, ItemSelected, NPCSelected;
 
-local function clickAt(x, y, times)
-    for _ = 1, (times or 3) do
-        VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 1);
-        task.wait(0.05);
-        VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 1);
-        task.wait(0.1);
-    end;
-end;
+local Thrown = workspace.Thrown;
+local Map    = workspace.Map;
 
-local function clickGui(guiButton, times)
-    local inset = GuiService:GetGuiInset();
-    local pos = guiButton.AbsolutePosition;
-    local size = guiButton.AbsoluteSize;
-    clickAt(pos.X + size.X / 2, pos.Y + size.Y / 2 + inset.Y, times);
-end;
+local oldAmbient, oldBrightness;
 
-local function pressKey(keyCode)
-    VirtualInputManager:SendKeyEvent(true, keyCode, false, game);
-    task.delay(0.05, function()
-        VirtualInputManager:SendKeyEvent(false, keyCode, false, game);
-    end);
-end;
+local BodyMoverTag = 'good';
 
-local function findChild(parent, ...)
-    local current = parent;
-    for _, name in {...} do
-        current = current and current:FindFirstChild(name);
-    end;
-    return current;
-end;
+local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
 
-local function dragGui(fromGui, toGui)
-    local inset = GuiService:GetGuiInset();
-    local fromPos = fromGui.AbsolutePosition;
-    local fromSize = fromGui.AbsoluteSize;
-    local toPos = toGui.AbsolutePosition;
-    local toSize = toGui.AbsoluteSize;
+local DUNGEON_PLACE_ID = 89371625020632;
 
-    local fx = fromPos.X + fromSize.X / 2;
-    local fy = fromPos.Y + fromSize.Y / 2 + inset.Y;
-    local tx = toPos.X + toSize.X / 2;
-    local ty = toPos.Y + toSize.Y / 2 + inset.Y;
+local inventoryLabels = {};
+local itemColors = {};
 
-    -- Move mouse to source, hold
-    mousemoveabs(fx, fy);
-    task.wait(0.5);
-    VirtualInputManager:SendMouseButtonEvent(fx, fy, 0, true, game, 1);
-    task.wait(0.53);
-    -- Move mouse to target
-    mousemoveabs(tx, ty);
-    task.wait(0.5);
-    -- Release at target
-    VirtualInputManager:SendMouseButtonEvent(tx, ty, 0, false, game, 1);
-    task.wait(0.5);
-end;
+itemColors[100] = Color3.new(0.76862699999999995, 1, 0);
+itemColors[9] = Color3.new(1, 0.90000000000000002, 0.10000000000000001);
+itemColors[10] = Color3.new(0, 1, 0);
+itemColors[11] = Color3.new(0.90000000000000002, 0, 1);
+itemColors[3] = Color3.new(0, 0.80000000000000004, 1);
+itemColors[8] = Color3.new(0.17254900000000001, 0.80000000000000004, 0.64313699999999996);
+itemColors[7] = Color3.new(0.2588, 0.6588, 0.3490); -- Regular Spell
+itemColors[6] = Color3.new(1, 0, 0);
+itemColors[4] = Color3.new(0.82745100000000005, 0.466667, 0.207843);
+itemColors[0] = Color3.new(1, 1, 1);
+itemColors[5] = Color3.new(0.33333299999999999, 0, 1);
+itemColors[999] = Color3.new(0.792156, 0.792156, 0.792156);
+itemColors[87] = Color3.new(0.235, 0.714, 0.961); -- God Spell
 
--- ── Mouse Unlock ──
-
-local function withFreeMouse(callback)
-    local conn = RunService.RenderStepped:Connect(function()
-        UserInputService.MouseBehavior = Enum.MouseBehavior.Default;
-    end);
-    task.wait();
-    callback();
-    conn:Disconnect();
-end;
-
--- ── Noclip & Position Hold ──
-
-local function enableNoclip()
-    if (maid.noclip) then return; end;
-    maid.noclip = RunService.Stepped:Connect(function()
-        local char = LocalPlayer.Character;
-        if (not char) then return; end;
-        for _, part in char:GetDescendants() do
-            if (part:IsA('BasePart')) then
-                part.CanCollide = false;
-            end;
+local function getToolType(tool): number
+    if (tool:FindFirstChild('PrimaryWeapon')) then
+        return 0;
+    elseif (tool:FindFirstChild('Skill') or tool:FindFirstChild('Activator')) then
+        return 8;
+    elseif (tool:FindFirstChild('Droppable')) then
+        return 6;
+    elseif (tool:FindFirstChild('Spell')) then
+        if (tool:FindFirstChild('Godspell')) then
+            return 87;
         end;
+        return 7;
+    elseif (tool:FindFirstChild('Trinket')) then
+        return 4;
+    elseif (tool:FindFirstChild('COWL')) then
+        return 100;
+    elseif (tool:FindFirstChild('Active') or tool.Parent.Name == 'Novachrono' or tool.Parent.Name == 'Muto\'s Blood') then
+        return 5;
+    elseif (tool:FindFirstChild('Schematic')) then
+        return 8;
+    elseif (tool:FindFirstChild('Ingredient')) then
+        return 10;
+    elseif (tool:FindFirstChild('SpellIngredient')) then
+        return 11;
+    elseif (tool:FindFirstChild('Item')) then
+        return 9;
+    end;
+
+    return 999;
+end;
+
+local function showPlayerInventory(player)
+    if (typeof(player) ~= 'Instance') then return end;
+
+    for _, v in next, inventoryLabels do
+        v.main:Destroy();
+    end;
+
+    inventoryLabels = {};
+
+    local playerItems = {};
+    local seen = {};
+    local seenJSON = {};
+
+    local function onBackpackChildAdded(tool)
+        debug.profilebegin('onBackpackChildAdded');
+        local toolName = tool:GetAttribute('DisplayName') or tool.Name:gsub('[^:]*:', ''):gsub('%$[^%$]*', '');
+        local toolType = getToolType(tool);
+        local weaponData = tool:FindFirstChild('WeaponData');
+
+        xpcall(function()
+            weaponData = seenJSON[weaponData] or HttpService:JSONDecode(weaponData.Value);
+        end, function()
+            weaponData = crypt.base64decode(weaponData.Value);
+            weaponData = weaponData:sub(1, #weaponData - 2);
+
+            weaponData = HttpService:JSONDecode(weaponData);
+        end);
+
+        if (typeof(weaponData) == 'table') then
+            table.foreach(weaponData, warn);
+            toolName = string.format('%s%s', toolName, (weaponData.Soulbound or weaponData.SoulBound) and ' [Soulbound]' or '');
+        end;
+
+        local exitingPlayerItem = seen[toolName];
+
+        if (exitingPlayerItem) then
+            exitingPlayerItem.quantity += 1;
+            return;
+        end;
+
+        local playerItem =  {
+            type = toolType,
+            toolName = toolName,
+            quantity = 1
+        };
+
+        table.insert(playerItems, playerItem);
+        seen[toolName] = playerItem;
+    end;
+
+    for _, tool in next, player.Backpack:GetChildren() do
+        task.spawn(onBackpackChildAdded, tool);
+    end;
+
+    table.sort(playerItems, function(a, b)
+        return a.type < b.type;
+    end);
+
+    for _, v in next, playerItems do
+        v.text = ('<font color="#%s">%s [x%d]</font>'):format(itemColors[v.type]:ToHex(), v.toolName, v.quantity);
+        table.insert(inventoryLabels, inventoryViewer:AddLabel(v.text));
+    end;
+end;
+
+inventoryViewer:AddList({
+    text = 'Player',
+    tip = 'Player to watch inventory for',
+    playerOnly = true,
+    skipflag = true,
+    callback = showPlayerInventory
+});
+
+function functions.speedHack(toggle: boolean): ()
+    if (not toggle) then
+        maid.speedHack = nil;
+        maid.speedHackBv = nil;
+
+        return;
+    end;
+
+    maid.speedHack = RunService.Heartbeat:Connect(function()
+        local playerData = Utility:getPlayerData();
+        local humanoid, rootPart = playerData.humanoid, playerData.primaryPart;
+        if (not humanoid or not rootPart) then return end;
+
+        if (library.flags.fly) then
+            maid.speedHackBv = nil;
+            return;
+        end;
+
+        maid.speedHackBv = maid.speedHackBv or Instance.new('BodyVelocity');
+        maid.speedHackBv.MaxForce = Vector3.new(100000, 0, 100000);
+
+        if (not CollectionService:HasTag(maid.speedHackBv, 'good')) then
+            CollectionService:AddTag(maid.speedHackBv, 'good');
+            CollectionService:AddTag(maid.speedHackBv, 'DONTDELETE');
+        end;
+
+        maid.speedHackBv.Parent = not library.flags.fly and rootPart or nil;
+        maid.speedHackBv.Velocity = (humanoid.MoveDirection.Magnitude ~= 0 and humanoid.MoveDirection or gethiddenproperty(humanoid, 'WalkDirection')) * library.flags.speedHackValue;
     end);
 end;
 
-local function disableNoclip()
-    maid.noclip = nil;
+
+function functions.fly(toggle: boolean): ()
+    if (not toggle) then
+        maid.flyHack = nil;
+        maid.flyBv = nil;
+
+        return;
+    end;
+
+    maid.flyBv = Instance.new('BodyVelocity');
+    maid.flyBv.MaxForce = Vector3.new(math.huge, math.huge, math.huge);
+
+    maid.flyHack = RunService.Heartbeat:Connect(function()
+        local playerData = Utility:getPlayerData();
+        local rootPart, camera = playerData.rootPart, workspace.CurrentCamera;
+        if (not rootPart or not camera) then return end;
+
+        if (not CollectionService:HasTag(maid.flyBv, 'good')) then
+            CollectionService:AddTag(maid.flyBv, 'good');
+            CollectionService:AddTag(maid.flyBv, 'DONTDELETE');
+        end;
+
+        maid.flyBv.Parent = rootPart;
+        maid.flyBv.Velocity = camera.CFrame:VectorToWorldSpace(ControlModule:GetMoveVector() * library.flags.flyHackValue);
+    end);
 end;
 
-local function holdPosition()
-    local root = getRoot();
-    if (not root) then return; end;
-    maid.holdBv = nil;
-    local bv = Instance.new('BodyVelocity');
-    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge);
-    bv.Velocity = Vector3.zero;
-    bv.Parent = root;
-    maid.holdBv = bv;
+
+function functions.noKillBricks(toggle: boolean): ()
+    for i, v in next, killBricks do
+        v.part.Parent = not toggle and v.oldParent or nil;
+    end;
 end;
 
-local function releasePosition()
-    maid.holdBv = nil;
+function functions.infiniteJump(toggle: boolean): ()
+    if (not toggle) then return end;
+
+    repeat
+        local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+        if (rootPart and UserInputService:IsKeyDown(Enum.KeyCode.Space)) then
+            rootPart.Velocity = Vector3.new(rootPart.Velocity.X, library.flags.infiniteJumpHeight, rootPart.Velocity.Z);
+        end;
+        task.wait(0.1);
+    until not library.flags.infiniteJump;
 end;
 
-local function teleportTo(position)
-    local root = getRoot();
-    if (not root) then return; end;
-    enableNoclip();
-    root.CFrame = CFrame.new(position);
-    holdPosition();
+function functions.goToGround(): ()
+    local params = RaycastParams.new();
+    params.FilterDescendantsInstances = {workspace.Live, workspace.NPCs};
+    params.FilterType = Enum.RaycastFilterType.Blacklist;
+
+    local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+
+    if (not myRootPart or not myRootPart.Parent) then return end;
+
+    local floor = workspace:Raycast(myRootPart.Position, Vector3.new(0, -1000, 0), params);
+    if (not floor or not floor.Instance) then return end;
+
+    myRootPart.CFrame *= CFrame.new(0, -(myRootPart.Position.Y - floor.Position.Y) + 3, 0);
+    myRootPart.Velocity *= Vector3.new(1, 0, 1);
 end;
 
--- ── Server Hop ──
+library.OnKeyPress:Connect(function(input, gpe)
+    if (gpe or not library.options.attachToBack) then return end;
 
-local AllIDs = {};
-local foundAnything = '';
-local actualHour = os.date('!*t').hour;
+    local key = library.options.attachToBack.key;
+    if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
+        local myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+        local closest, closestDistance = nil, math.huge;
 
-pcall(function()
-    AllIDs = HttpService:JSONDecode(readfile('server-hop-temp.json'));
+        if (not myRootPart) then return end;
+
+        repeat
+            for _, entity in next, workspace.Live:GetChildren() do
+                local rootPart = entity:FindFirstChild('HumanoidRootPart');
+                if (not rootPart or rootPart == myRootPart) then continue end;
+
+                local distance = (rootPart.Position - myRootPart.Position).magnitude;
+
+                if (distance < 300 and distance < closestDistance) then
+                    closest, closestDistance = rootPart, distance;
+                end;
+            end;
+
+            task.wait();
+        until closest or input.UserInputState == Enum.UserInputState.End;
+        if (input.UserInputState == Enum.UserInputState.End) then return end;
+
+        maid.attachToBack = RunService.Heartbeat:Connect(function()
+            local goalCF = closest.CFrame * CFrame.new(0, library.flags.attachToBackHeight, library.flags.attachToBackSpace);
+
+            local distance = (goalCF.Position - myRootPart.Position).Magnitude;
+            local tweenInfo = TweenInfo.new(distance / 100, Enum.EasingStyle.Linear);
+
+            local tween = TweenService:Create(myRootPart, tweenInfo, {
+                CFrame = goalCF
+            });
+
+            tween:Play();
+
+            maid.attachToBackTween = function()
+                tween:Cancel();
+            end;
+        end);
+    end;
 end);
 
-if (#AllIDs == 0) then
-    table.insert(AllIDs, actualHour);
-    pcall(function() writefile('server-hop-temp.json', HttpService:JSONEncode(AllIDs)); end);
-end;
+library.OnKeyRelease:Connect(function(input)
+    if (not library.options.attachToBack) then return end;
+    local key = library.options.attachToBack.key;
 
-local function serverHop()
-    local cursor = foundAnything ~= '' and ('&cursor=' .. foundAnything) or '';
-    local url = 'https://games.roblox.com/v1/games/' .. PLACE_ID .. '/servers/Public?sortOrder=Asc&limit=100' .. cursor;
-    local site = HttpService:JSONDecode(game:HttpGet(url));
-
-    if (site.nextPageCursor and site.nextPageCursor ~= 'null') then
-        foundAnything = site.nextPageCursor;
+    if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
+        maid.attachToBack = nil;
+        maid.attachToBackTween = nil;
     end;
+end);
 
-    local num = 0;
-    for _, v in site.data do
-        local ID    = tostring(v.id);
-        local possible = true;
+function functions.noClip(toggle: boolean): ()
+    if (not toggle) then
+        maid.noClip = nil;
 
-        if (tonumber(v.maxPlayers) > tonumber(v.playing)) then
-            for _, existing in AllIDs do
-                if (num == 0 and tonumber(actualHour) ~= tonumber(existing)) then
-                    pcall(function() delfile('server-hop-temp.json'); end);
-                    AllIDs = { actualHour };
-                elseif (num ~= 0 and ID == tostring(existing)) then
-                    possible = false;
-                end;
-                num += 1;
-            end;
+        local humanoid = Utility:getPlayerData().humanoid;
+        if (not humanoid) then return end;
 
-            if (possible) then
-                table.insert(AllIDs, ID);
-                pcall(function() writefile('server-hop-temp.json', HttpService:JSONEncode(AllIDs)); end);
-                task.wait();
-                pcall(TeleportService.TeleportToPlaceInstance, TeleportService, PLACE_ID, ID, LocalPlayer);
-                task.wait(4);
-            end;
-        end;
-    end;
-end;
+        humanoid:ChangeState('Physics');
+        task.wait();
+        humanoid:ChangeState('RunningNoPhysics');
 
--- ── Panic ──
-
-local function panic()
-    warn('[AutoFarm] Other player detected! Blocking and rejoining...');
-
-    task.spawn(function()
-        withFreeMouse(function()
-            BlockUtils:BlockRandomUser();
-        end);
-    end);
-
-    task.wait(1);
-    TeleportService:Teleport(PLACE_ID);
-    task.wait(3);
-    local success, err = pcall(function()
-        TeleportService:Teleport(PLACE_ID);
-    end);
-
-    if (not success) then
-        warn('[AutoFarm] Teleport failed: ' .. tostring(err));
-        serverHop();
-    end;
-end;
-
--- ── Player Watch ──
-
-local function startPlayerWatch()
-    if (maid.playerWatch) then return; end;
-    if (#Players:GetPlayers() > 1) then panic(); return; end;
-    maid.playerWatch = Players.PlayerAdded:Connect(function()
-        if (#Players:GetPlayers() > 1) then panic(); end;
-    end);
-end;
-
-local function stopPlayerWatch()
-    maid.playerWatch = nil;
-end;
-
--- ── AutoLockpick ──
-
-local function isNoteOverlapping(note, imageButton)
-    local notePos = note.AbsolutePosition.Y + note.AbsoluteSize.Y / 2;
-    local btnTop = imageButton.AbsolutePosition.Y;
-    return notePos >= btnTop and notePos <= btnTop + imageButton.AbsoluteSize.Y;
-end;
-
-local function stopAutoLockpick()
-    maid.lockpick = nil;
-end;
-
-local function startAutoLockpick()
-    local lockPickGui = PlayerGui:FindFirstChild('LockPicking') or PlayerGui:WaitForChild('LockPicking', 5);
-    if (not lockPickGui) then return; end;
-
-    local mainFrame = lockPickGui:FindFirstChild('MainFrame');
-    if (not mainFrame) then return; end;
-
-    stopAutoLockpick();
-
-    maid.lockpick = RunService.Heartbeat:Connect(function()
-        if (not isRunning() or not lockPickGui.Parent) then
-            stopAutoLockpick();
-            return;
-        end;
-        if (not mainFrame.Visible) then return; end;
-
-        for laneName, keyCode in LANE_KEYS do
-            local lane = mainFrame:FindFirstChild(laneName);
-            if (not lane) then continue; end;
-
-            local imageButton = lane:FindFirstChild('ImageButton');
-            if (not imageButton) then continue; end;
-
-            for _, child in lane:GetChildren() do
-                if (child.Name == 'Note' and isNoteOverlapping(child, imageButton)) then
-                    pressKey(keyCode);
-                    break;
-                end;
-            end;
-        end;
-    end);
-end;
-
-local function startLockpicking()
-    local lockPickGui = PlayerGui:FindFirstChild('LockPicking') or PlayerGui:WaitForChild('LockPicking', 5);
-    if (not lockPickGui) then return; end;
-
-    local textButton = findChild(lockPickGui, 'MainFrame', 'Controls', 'StartButton', 'TextButton');
-    if (textButton) then
-        task.wait(0.3);
-        clickGui(textButton, 3);
-    end;
-
-    startAutoLockpick();
-end;
-
--- ── Inventory & Selling ──
-
-local function isInventoryFull()
-    local slotsFolder = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Inventory', 'Frame', 'Backpack', 'Slots');
-    if (not slotsFolder) then return false; end;
-
-    for i = 1, 32 do
-        local slot = slotsFolder:FindFirstChild(tostring(i));
-        if (not slot or slot:GetAttribute('Populated') ~= true) then
-            return false;
-        end;
-    end;
-
-    return true;
-end;
-
-local function sellStolenItems()
-    warn('[AutoFarm] Inventory full, selling stolen items...');
-
-    local shadySam = findChild(workspace, 'Npc', 'IdleNPC', 'Shady Sam');
-    if (not shadySam) then warn('[AutoFarm] Shady Sam not found'); return; end;
-
-    local samPart = shadySam.PrimaryPart or shadySam:FindFirstChildWhichIsA('BasePart');
-    local root = getRoot();
-    if (not samPart or not root) then return; end;
-
-    enableNoclip();
-    root.CFrame = CFrame.new(samPart.Position + Vector3.new(0, 0, -5));
-    holdPosition();
-    task.wait(0.5);
-    if (not isRunning()) then return; end;
-
-    local clientEvents = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents');
-    if (not clientEvents) then return; end;
-
-    clientEvents:WaitForChild('OpenShop'):FireServer('Shady Sam');
-    task.wait(1.5);
-    if (not isRunning()) then return; end;
-
-    local shopFrame = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Shop');
-    if (not shopFrame or not shopFrame.Visible) then
-        warn('[AutoFarm] Shop did not open, retrying...');
-        clientEvents:WaitForChild('OpenShop'):FireServer('Shady Sam');
-        task.wait(2);
-        if (not isRunning()) then return; end;
-        shopFrame = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Shop');
-        if (not shopFrame or not shopFrame.Visible) then
-            warn('[AutoFarm] Shop failed to open');
-            return;
-        end;
-    end;
-
-    withFreeMouse(function()
-        local sellTab = findChild(shopFrame, 'Main', 'Tabs', 'Sell');
-        if (sellTab) then
-            task.wait(0.2);
-            clickGui(sellTab, 5);
-        end;
-    end);
-    task.wait(0.5);
-    if (not isRunning()) then return; end;
-
-    local shopSlots = findChild(shopFrame, 'Main', 'Content', 'SlotsUI', 'Shop', 'ShopSlots');
-    if (shopSlots) then
-        local transaction = {};
-        for _, child in shopSlots:GetChildren() do
-            if (not child:IsA('ImageButton')) then continue; end;
-
-            local encoded = child:GetAttribute('ItemEncode');
-            if (not encoded) then continue; end;
-
-            local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
-            if (ok and data.Ownership == 'Steal') then
-                table.insert(transaction, { data.Name, data.Quantity, data.UID });
-            end;
-        end;
-
-        if (#transaction > 0) then
-            clientEvents:WaitForChild('ShopTransact'):InvokeServer({
-                ShopId = 'Shady Sam',
-                Type = 'Sell',
-                transaction = transaction,
-            });
-        else
-            warn('[AutoFarm] No stolen items to sell');
-        end;
-    end;
-
-    task.wait(2);
-    warn('[AutoFarm] Selling complete, resuming farm');
-end;
-
--- ── AutoFarm Core ──
-
-local function getValidItems()
-    local items = {};
-    for _, child in CONTAINER_PATH:GetChildren() do
-        if (not child:IsA('Model') or not child:GetAttribute('DropTable')) then continue; end;
-
-        local restockVal = child:FindFirstChild('RestockTime');
-        local restockDuration = restockVal and restockVal.Value or 60;
-        local lastLooted = lootedTimestamps[child];
-
-        if (not lastLooted or (os.clock() - lastLooted) >= restockDuration) then
-            table.insert(items, child);
-        end;
-    end;
-    return items;
-end;
-
-local function findProximityPrompt(model)
-    for _, desc in model:GetDescendants() do
-        if (desc:IsA('ProximityPrompt')) then return desc; end;
-    end;
-    return nil;
-end;
-
-local function timedOut(startTime, duration)
-    return ((os.clock() - startTime) >= duration);
-end;
-
-local function farmItem(model)
-    if (not isRunning()) then return; end;
-    local startTime = os.clock();
-    local TIMEOUT = math.random(10, 15);
-
-    if (isInventoryFull()) then sellStolenItems(); end;
-    if (not isRunning()) then return; end;
-
-    local prompt = findProximityPrompt(model);
-    if (not prompt) then
-        lootedTimestamps[model] = os.clock();
         return;
     end;
 
-    local primaryPart = model.PrimaryPart or model:FindFirstChildWhichIsA('BasePart');
-    if (not primaryPart) then return; end;
+    maid.noClip = RunService.Stepped:Connect(function()
+        debug.profilebegin('noclip');
 
-    teleportTo(primaryPart.Position);
+        local myCharacterParts = Utility:getPlayerData().parts;
+        local isKnocked = LocalPlayer.Character:FindFirstChild('Knocked') or LocalPlayer.Character:FindFirstChild('Ragdolled') or LocalPlayer.Character:FindFirstChild('ActuallyRagdolled');
+        local disableNoClipWhenKnocked = library.flags.disableNoClipWhenKnocked;
 
-    task.wait(0.5);
-    if (not isRunning()) then return; end;
-
-    local isLocked = model:GetAttribute('Locked');
-    fireproximityprompt(prompt);
-    task.wait(0.5);
-    if (not isRunning()) then return; end;
-
-    local containerUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container');
-
-    if (isLocked and model:GetAttribute('Locked')) then
-        if (containerUI and containerUI.Visible) then
-            lootedTimestamps[model] = os.clock();
-            return;
-        end;
-
-        startLockpicking();
-
-        while (isRunning() and model:GetAttribute('Locked')) do
-            if (timedOut(startTime, TIMEOUT)) then
-                warn('[AutoFarm] Lockpick timeout');
-                stopAutoLockpick();
-                releasePosition();
-                lootedTimestamps[model] = os.clock();
-                return;
-            end;
-            task.wait(0.2);
-        end;
-        stopAutoLockpick();
-    end;
-
-    task.wait(1);
-
-    containerUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container');
-    if (not containerUI or not containerUI.Visible) then
-        warn('[AutoFarm] Container UI not open, waiting... attempting to trigger prompt again');
-        fireproximityprompt(prompt);
-        while (isRunning()) do
-            if (timedOut(startTime, TIMEOUT)) then
-                warn('[AutoFarm] Container UI timeout');
-                releasePosition();
-                lootedTimestamps[model] = os.clock();
-                return;
-            end;
-
-            task.wait(0.5);
-
-            containerUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container');
-
-            if (containerUI and containerUI.Visible) then
-                break;
-            end;
-        end;
-    end;
-
-    local moveItem = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents', 'MoveItem');
-    local containerSlots = containerUI and findChild(containerUI, 'Container', 'Slots');
-    if (moveItem and containerSlots) then
-        local goldOnly = library.flags.onlyPickupGold;
-        local backpackSlots = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Inventory', 'Frame', 'Backpack', 'Slots');
-
-        local function findBackpackSlot(itemName)
-            if (not backpackSlots) then return nil; end;
-            local emptySlot = nil;
-            for _, bpSlot in backpackSlots:GetChildren() do
-                if (not bpSlot:IsA('ImageButton')) then continue; end;
-                if (not bpSlot:GetAttribute('Populated')) then
-                    if (not emptySlot) then emptySlot = tonumber(bpSlot.Name); end;
-                    continue;
-                end;
-                local bpEncoded = bpSlot:GetAttribute('ItemEncode');
-                if (not bpEncoded) then continue; end;
-                local bpOk, bpData = pcall(HttpService.JSONDecode, HttpService, bpEncoded);
-                if (bpOk and bpData.Name == itemName) then
-                    return tonumber(bpSlot.Name);
-                end;
-            end;
-            return emptySlot;
-        end;
-
-        local function isGold(itemName)
-            return (string.find(itemName, 'Gold') ~= nil);
-        end;
-
-        for _, slot in containerSlots:GetChildren() do
-            if (not slot:IsA('ImageButton') or not slot:GetAttribute('Populated')) then continue; end;
-
-            local encoded = slot:GetAttribute('ItemEncode');
-            if (not encoded) then continue; end;
-
-            local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
-            if (not ok or not data) then continue; end;
-
-            if (goldOnly) then
-                if (not isGold(data.Name)) then continue; end;
+        for _, v in next, myCharacterParts do
+            if (disableNoClipWhenKnocked) then
+                v.CanCollide = not not isKnocked;
             else
-                if (not isGold(data.Name) and data.Ownership ~= 'NPC') then continue; end;
+                v.CanCollide = false;
             end;
-
-            local fromIndex = tonumber(slot.Name);
-            if (not fromIndex) then continue; end;
-
-            local toIndex = findBackpackSlot(data.Name);
-            if (not toIndex) then continue; end;
-
-            moveItem:FireServer({
-                FromIndex = fromIndex,
-                FromData = 'Container',
-                ToIndex = toIndex,
-                ToData = 'Backpack',
-                ItemInfo = {
-                    Ownership = data.Ownership,
-                    Quantity = data.Quantity,
-                    Name = data.Name,
-                    UID = data.UID,
-                },
-            });
-
-            task.wait(0.15);
         end;
-    else
-        warn('[AutoFarm] Could not find container slots or MoveItem remote');
-    end;
-
-    releasePosition();
-
-    lootedTimestamps[model] = os.clock();
-end;
-
-local function startAntiRagdoll()
-    if (maid.antiRagdoll) then return; end;
-    maid.antiRagdoll = task.spawn(function()
-        while (isRunning()) do
-            pressKey(Enum.KeyCode.Space);
-            task.wait(7);
-        end;
+        debug.profileend();
     end);
 end;
 
-local function stopAntiRagdoll()
-    maid.antiRagdoll = nil;
-end;
-
-local function startFarm()
-    if (maid.farm) then return; end;
-
-    if (library.flags.panicOnPlayerJoin) then
-        startPlayerWatch();
-    end;
-
-    startAntiRagdoll();
-
-    maid.farm = task.spawn(function()
-        while (isRunning()) do
-            local items = getValidItems();
-
-            if (#items == 0) then
-                warn('[AutoFarm] All loot collected, rejoining...');
-                panic();
-                return;
-            end;
-
-            for _, item in items do
-                if (not isRunning()) then break; end;
-                farmItem(item);
-                task.wait(0.5);
-            end;
-
-            task.wait(1);
-        end;
-    end);
-end;
-
-local function stopFarm()
-    stopAutoLockpick();
-    stopPlayerWatch();
-    stopAntiRagdoll();
-    disableNoclip();
-    releasePosition();
-    maid.farm = nil;
-end;
-
--- ── Ore Farm ──
-
-local function isOreFarming()
-    return library.flags.autoMineOre;
-end;
-
-local function findPickaxeSlot()
-    local hotbarSlots = findChild(PlayerGui, 'ScreenGui', 'Frame', 'Hotbar', 'Slots');
-    if (not hotbarSlots) then return nil, nil; end;
-
-    for _, slot in hotbarSlots:GetChildren() do
-        if (not slot:IsA('ImageButton')) then continue; end;
-        local encoded = slot:GetAttribute('ItemEncode');
-        if (not encoded) then continue; end;
-        local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
-        if (ok and string.find(data.Name, 'Pickaxe')) then
-            return slot, data;
-        end;
-    end;
-    return nil, nil;
-end;
-
-local function needsRepair()
-    local _, data = findPickaxeSlot();
-    if (not data) then return false; end;
-    return data.Durability and data.Durability <= 40;
-end;
-
-local function repairPickaxe()
-    warn('[OreFarm] Repairing pickaxe...');
-
-    local anvils = workspace:WaitForChild('Stations'):WaitForChild('Runtime');
-    local anvilPart = nil;
-    local anvilPrompt = nil;
-    for _, child in anvils:GetChildren() do
-        if (child.Name ~= 'Anvil') then continue; end;
-        local prompt = findProximityPrompt(child);
-        if (prompt) then
-            anvilPart = child:IsA('BasePart') and child or child:FindFirstChildWhichIsA('BasePart');
-            anvilPrompt = prompt;
-            break;
-        end;
-    end;
-
-    if (not anvilPart or not anvilPrompt) then
-        warn('[OreFarm] No anvil found');
+function functions.knockedOwnership(toggle: boolean): ()
+    if (not toggle) then
+        maid.knockedOwnership = nil;
         return;
     end;
 
-    teleportTo(anvilPart.Position);
-    task.wait(1.5);
-    fireproximityprompt(anvilPrompt);
-    if (not isOreFarming()) then return; end;
-
-    local _, data = findPickaxeSlot();
-    if (not data) then return; end;
-
-    local requestRepair = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents', 'RequestRepair');
-    requestRepair:FireServer(
-        data.UID, -- pickaxe id
-        '2'-- repair type (1 = normal, 2 = gold)
-    );
-
-
-    -- fireproximityprompt(anvilPrompt);
-    -- task.wait(1);
-    -- if (not isOreFarming()) then return; end;
-
-    -- local anvilUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'MaterialProcess', 'Anvil');
-    -- if (not anvilUI) then
-    --     warn('[OreFarm] Anvil UI not found');
-    --     releasePosition();
-    --     return;
-    -- end;
-
-    -- local pickaxeSlot = findPickaxeSlot();
-    -- local repairSlot = findChild(anvilUI, 'Frame', 'Slots', 'Slot');
-    -- if (not pickaxeSlot or not repairSlot) then
-    --     warn('[OreFarm] Could not find pickaxe slot or repair slot');
-    --     releasePosition();
-    --     return;
-    -- end;
-
-    -- withFreeMouse(function()
-    --     dragGui(pickaxeSlot, repairSlot);
-    -- end);
-    -- task.wait(0.5);
-    -- if (not isOreFarming()) then return; end;
-
-    -- local goldButton = findChild(anvilUI, 'ActionFrame', 'GoldButton');
-    -- if (goldButton) then
-    --     withFreeMouse(function()
-    --         clickGui(goldButton, 3);
-    --     end);
-    -- end;
-    -- task.wait(0.15);
-
-    -- local repairButton = anvilUI:FindFirstChild('RepairButton');
-    -- if (repairButton) then
-    --     withFreeMouse(function()
-    --         clickGui(repairButton, 3);
-    --     end);
-    -- end;
-
-    task.wait(1.5);
-    releasePosition();
-    warn('[OreFarm] Repair complete');
-end;
-
-local function sellOreItems()
-    warn('[OreFarm] Selling items...');
-
-    local shopPart;
-    for _, proxParts in workspace.Prox do
-        if (proxParts.Name ~= 'ShopPart') then continue; end;
-        if (proxPart:GetAttribute('Id') == 'Max') then
-            shopPart = proxParts;
-            break;
-        end;
-    end;
-
-    if (not shopPart) then warn('[OreFarm] ShopPart not found'); return; end;
-
-    local shopPrompt = findProximityPrompt(shopPart);
-    local shopPartPos = shopPart:IsA('BasePart') and shopPart or shopPart:FindFirstChildWhichIsA('BasePart');
-    if (not shopPartPos) then shopPartPos = shopPart; end;
-
-    teleportTo(shopPartPos.Position);
-    task.wait(0.5);
-    if (not isOreFarming()) then return; end;
-
-    if (shopPrompt) then
-        fireproximityprompt(shopPrompt);
-    end;
-    task.wait(1.5);
-    if (not isOreFarming()) then return; end;
-
-    local shopFrame = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Shop');
-    if (not shopFrame or not shopFrame.Visible) then
-        warn('[OreFarm] Shop did not open');
-        releasePosition();
-        return;
-    end;
-
-    withFreeMouse(function()
-        local sellTab = findChild(shopFrame, 'Main', 'Tabs', 'Sell');
-        if (sellTab) then
-            task.wait(0.2);
-            clickGui(sellTab, 5);
-        end;
-    end);
-    task.wait(0.5);
-    if (not isOreFarming()) then return; end;
-
-    local shopSlots = findChild(shopFrame, 'Main', 'Content', 'SlotsUI', 'Shop', 'ShopSlots');
-    if (shopSlots) then
-        local transaction = {};
-        for _, child in shopSlots:GetChildren() do
-            if (not child:IsA('ImageButton')) then continue; end;
-
-            local encoded = child:GetAttribute('ItemEncode');
-            if (not encoded) then continue; end;
-
-            local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
-            if (not ok) then continue; end;
-
-            if (not string.find(data.Name, 'Pickaxe')) then
-                table.insert(transaction, { data.Name, data.Quantity, data.UID });
+    if (LocalPlayer.Character:FindFirstChild('Knocked')) then
+        for _, newChild in LocalPlayer.Character:GetChildren() do
+            if (newChild.Name == 'Ragdolled' or newChild.Name == 'ActuallyRagdolled') then
+                newChild:Destroy();
             end;
         end;
 
-        if (#transaction > 0) then
-            local clientEvents = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents');
-            if (clientEvents) then
-                clientEvents:WaitForChild('ShopTransact'):InvokeServer({
-                    ShopId = 'Max',
-                    Type = 'Sell',
-                    transaction = transaction,
+        LocalPlayer.Character.Knocked:Destroy();
+    end;
+
+    maid.knockedOwnership = LocalPlayer.Character.ChildAdded:Connect(function(child)
+        if (child.Name == 'Knocked') then
+            for _, newChild in LocalPlayer.Character:GetChildren() do
+                if (newChild.Name == 'Ragdolled' or newChild.Name == 'ActuallyRagdolled') then
+                    newChild:Destroy();
+                end;
+            end;
+            child:Destroy();
+        end;
+    end);
+end;
+
+function functions.clickDestroy(toggle: boolean): ()
+    if (not toggle) then
+        maid.clickDestroy = nil;
+        return;
+    end;
+
+    maid.clickDestroy = UserInputService.InputBegan:Connect(function(input, gpe)
+        if (input.UserInputType ~= Enum.UserInputType.MouseButton1 or gpe) then return end;
+
+        local target = playerMouse.Target;
+        if (not target or target:IsA('Terrain')) then return end;
+
+        target:Destroy();
+    end);
+end;
+
+function functions.serverHop(bypass): ()
+    if (bypass or library:ShowConfirm('Are you sure you want to switch server?')) then
+        library:UpdateConfig();
+
+        BlockUtils:BlockRandomUser();
+        TeleportService:Teleport(89371625020632);
+    end;
+end;
+
+function functions.respawn(bypass): ()
+    if (bypass or library:ShowConfirm('Are you sure you want to respawn?')) then
+        LocalPlayer.Character.Humanoid.Health = 0;
+    end;
+end;
+
+function functions.playerProximityCheck(toggle: boolean): ()
+    if (not toggle) then
+        maid.proximityCheck = nil;
+        return;
+    end;
+
+    local notifSend = setmetatable({}, {
+        __mode = 'k';
+    });
+
+    myRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart');
+
+    maid.proximityCheck = RunService.Heartbeat:Connect(function()
+        if (not myRootPart) then return end;
+
+        for _, v in next, Players:GetPlayers() do
+            local rootPart = v.Character and v.Character.PrimaryPart;
+            if (not rootPart or v == LocalPlayer) then continue end;
+
+            local distance = (myRootPart.Position - rootPart.Position).Magnitude;
+
+            if (distance < 400 and not table.find(notifSend, rootPart)) then
+                table.insert(notifSend, rootPart);
+                ToastNotif.new({
+                    text = string.format('%s is nearby [%d]', v.Name, distance),
+                    duration = 30
+                });
+            elseif (distance > 600 and table.find(notifSend, rootPart)) then
+                table.remove(notifSend, table.find(notifSend, rootPart));
+                ToastNotif.new({
+                    text = string.format('%s is no longer nearby [%d]', v.Name, distance),
+                    duration = 30
                 });
             end;
         end;
-    end;
-
-    releasePosition();
-    task.wait(1);
-    warn('[OreFarm] Selling complete');
+    end);
 end;
 
-local function mineAllRocks()
-    local rocksFolder = workspace:WaitForChild('Mineable Rocks', 10);
-    rocksFolder = rocksFolder and rocksFolder:WaitForChild('Green Biome', 10);
-    if (not rocksFolder) then warn('[OreFarm] Rocks folder not found'); return false; end;
 
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait();
-    local HOTBAR_KEYCODES = {
-        [1] = Enum.KeyCode.One, [2] = Enum.KeyCode.Two, [3] = Enum.KeyCode.Three,
-        [4] = Enum.KeyCode.Four, [5] = Enum.KeyCode.Five, [6] = Enum.KeyCode.Six,
-        [7] = Enum.KeyCode.Seven, [8] = Enum.KeyCode.Eight, [9] = Enum.KeyCode.Nine,
-    };
-
-    local pickaxe = char:FindFirstChild('Stone Pickaxe') or char:FindFirstChild('Silver Pickaxe') or char:FindFirstChild('Iron Pickaxe');
-    if (not pickaxe) then
-        local slot = findPickaxeSlot();
-        if (slot) then
-            local slotNum = tonumber(slot.Name);
-            local keyCode = slotNum and HOTBAR_KEYCODES[slotNum];
-            if (keyCode) then
-                warn('[OreFarm] Equipping pickaxe from hotbar slot ' .. slotNum);
-                pressKey(keyCode);
-                task.wait(1);
-                char = LocalPlayer.Character;
-                if (char) then pickaxe = char:FindFirstChild('Stone Pickaxe') or char:FindFirstChild('Silver Pickaxe') or char:FindFirstChild('Iron Pickaxe'); end;
-            end;
-        end;
-        if (not pickaxe) then warn('[OreFarm] Pickaxe not found'); return false; end;
+function functions.autoSprint(toggle: boolean): ()
+    if (not toggle) then
+        maid.autoSprint = nil;
+        return;
     end;
+    maid.autoSprint = true;
 
-    local repCore = ReplicatedStorage:WaitForChild('RepStore_CORE', 10);
-    local harvestTrigger = repCore and repCore:WaitForChild('Events', 10);
-    harvestTrigger = harvestTrigger and harvestTrigger:WaitForChild('HarvestTrigger', 10);
-    if (not harvestTrigger) then warn('[OreFarm] HarvestTrigger not found'); return false; end;
-
-    for _, rockMound in rocksFolder:GetChildren() do
-        if (not isOreFarming()) then return; end;
-        if (rockMound.Name ~= 'Rock Mound') then continue; end;
-
-        local mineableRocks = {};
-         for _, mesh in rockMound:GetDescendants() do
-            if (mesh:IsA('MeshPart') and (mesh:GetAttribute('Mineable') or mesh.Name == 'Mineable Rock')) then
-                if (library.flags.onlyMineTin) then
-                    if (mesh:FindFirstChild('Tin')) then
-                        table.insert(mineableRocks, mesh);
-                    end;
-                else
-                    table.insert(mineableRocks, mesh);
-                end;
+    maid.sprintLoop = UserInputService.InputBegan:Connect(function(input, gpe)
+        if (gpe) then return end;
+        if (input.KeyCode == Enum.KeyCode.W) then
+            local remote = LocalPlayer.Character:FindFirstChild('Communicate');
+            if (remote) then
+                remote:FireServer({
+                    ['InputType'] = 'Sprinting',
+                    ['Enabled'] = true
+                });
             end;
-        end;
-
-        warn('[OreFarm] Rock Mound has ' .. #mineableRocks .. ' mineable rocks');
-        if (#mineableRocks == 0) then continue; end;
-
-        for _, rock in mineableRocks do
-            if (not isOreFarming()) then return; end;
-            if (not rock.Parent or rock.Transparency == 1) then continue; end;
-
-            if (isInventoryFull()) then
-                sellOreItems();
-                if (not isOreFarming()) then return; end;
-            end;
-
-            if (needsRepair()) then
-                repairPickaxe();
-                char = LocalPlayer.Character;
-                if (not char) then return; end;
-                pickaxe = char:FindFirstChild('Stone Pickaxe') or char:FindFirstChild('Silver Pickaxe') or char:FindFirstChild('Iron Pickaxe');
-                if (not pickaxe) then return; end;
-            end;
-
-            teleportTo(rock.Position);
-            task.wait(0.5);
-
-            local mineStart = os.clock();
-            while (isOreFarming() and (os.clock() - mineStart) < 15) do
-                if (rock.Transparency == 1 or not rock.Parent) then break; end;
-                if (needsRepair()) then break; end;
-
-                for _, mesh in mineableRocks do
-                    if (mesh.Parent and mesh.Transparency ~= 1) then
-                        harvestTrigger:FireServer(mesh, pickaxe);
-                    end;
-                end;
-
-                task.wait(0.5);
-            end;
-        end;
-    end;
-
-    return true;
-end;
-
-local function startOreFarm()
-    if (maid.oreFarm) then return; end;
-
-    if (library.flags.panicOnPlayerJoin) then
-        startPlayerWatch();
-    end;
-
-    startAntiRagdoll();
-
-    maid.oreFarm = task.spawn(function()
-        while (isOreFarming()) do
-            local mined = mineAllRocks();
-            if (not isOreFarming()) then break; end;
-
-            if (not mined) then
-                warn('[OreFarm] Mining failed, retrying in 5 seconds...');
-                task.wait(5);
-                continue;
-            end;
-
-            warn('[OreFarm] All rocks mined, selling before rejoin...');
-            sellOreItems();
-            if (not isOreFarming()) then break; end;
-
-            if (needsRepair()) then
-                repairPickaxe();
-            end;
-
-            warn('[OreFarm] All rocks mined, rejoining...');
-            panic();
-            return;
         end;
     end);
 end;
 
-local function stopOreFarm()
-    stopPlayerWatch();
-    stopAntiRagdoll();
-    disableNoclip();
-    releasePosition();
-    maid.oreFarm = nil;
+local myChatLogs = {};
+
+local assetsList = {'ModeratorJoin.mp3', 'ModeratorLeft.mp3'};
+local audios = {};
+
+local apiEndpoint = 'https://rukiascripts.xyz/';
+
+for i, v in next, assetsList do
+	audios[v] = AudioPlayer.new({
+		url = `{apiEndpoint}{v}`,
+		volume = 10,
+		forcedAudio = true
+	});
 end;
 
--- ── UI ──
+local function loadSound(soundName: string): ()
+	if ((soundName == 'ModeratorJoin.mp3' or soundName == 'ModeratorLeft.mp3') and not library.flags.modNotifier) then
+		return;
+	end;
 
-farms:AddToggle({
-    text = 'Auto Farm Lumbertown',
-    tip = 'Automatically farms containers in Lumbertown. Lockpicks, loots, and sells stolen items.',
-    callback = function(state: boolean): ()
-        if (state) then
-            startFarm();
-        else
-            stopFarm();
+	audios[soundName]:Play();
+end;
+
+_G.loadSound = loadSound;
+
+local setCameraSubject;
+local isInDanger;
+
+local moderators = {};
+
+-- Y am I hardcoding this?
+
+local GROUP_ID = 475163115;
+local MINIMUM_RANK = 252;
+
+local suc, err = pcall(function()
+    for _, player in ipairs(Players:GetPlayers()) do
+        player:GetRankInGroup(GROUP_ID);
+    end;
+end);
+
+if (not suc) then
+    if (debugMode) then
+        task.spawn(error, err);
+    end;
+
+    ToastNotif.new({text = `Script has failed to setup moderator detection. Error Code 1.{err or -1}`});
+end;
+
+local function isModerator(player): boolean
+    local suc, inGroup = pcall(player.IsInGroup, player, GROUP_ID);
+    if (not suc or not inGroup) then return false end;
+
+    local rankSuc, rank = pcall(player.GetRankInGroup, player, GROUP_ID);
+    if (not rankSuc) then return false end;
+
+    return rank >= MINIMUM_RANK;
+end;
+
+local function onPlayerAdded(player)
+    if (player == LocalPlayer) then return end;
+
+    local userId = player.UserId;
+
+    if (library.flags.modNotifier and isModerator(player)) then
+        moderators[player] = true;
+
+        loadSound('ModeratorJoin.mp3');
+        ToastNotif.new({
+            text = ('Moderator Detected [%s]'):format(player.Name),
+        });
+
+        if (library.flags.panicOnModeratorJoin and not FindFirstChild(LocalPlayer.Character, 'Danger')) then
+            LocalPlayer.Character.Communicate:FireServer({
+                ['Character'] = LocalPlayer.Character,
+                ['InputType'] = 'menu',
+                ['Enabled'] = true
+            });
         end;
-    end
-});
+    end;
+end;
 
-farms:AddToggle({
-    text = 'Only Pickup Gold',
-    tip = 'Only loots Gold from containers, skips everything else',
-});
+local function onPlayerRemoving(player)
+    if (player == LocalPlayer) then return end;
 
-farms:AddDivider('Mining')
+    if (moderators[player]) then
+        ToastNotif.new({
+            text = ('Moderator Left [%s]'):format(player.Name),
+        });
 
-farms:AddToggle({
-    text = 'Auto Mine Ore',
-    tip = 'Mines rocks in Green Biome, auto repairs pickaxe, sells loot, and rejoins when done.',
-    callback = function(state: boolean): ()
-        if (state) then
-            startOreFarm();
-        else
-            stopOreFarm();
+        loadSound('ModeratorLeft.mp3');
+        moderators[player] = nil;
+    end;
+end;
+
+library.OnLoad:Connect(function()
+    Utility.listenToChildAdded(Players, onPlayerAdded);
+    Utility.listenToChildRemoving(Players, onPlayerRemoving);
+end);
+
+local function tweenTeleport(rootPart, position, noWait)
+    local distance = (rootPart.Position - position).Magnitude;
+    local tween = TweenService:Create(rootPart, TweenInfo.new(distance / 120, Enum.EasingStyle.Linear), {
+        CFrame = CFrame.new(position)
+    });
+
+    tween:Play();
+
+    if (not noWait) then
+        tween.Completed:Wait();
+    end;
+
+    return tween;
+end;
+
+local function onCharacterAdded(character)
+    if (not character) then return end;
+
+    task.delay(1, function()
+        ReplicatedStorage.GetMouseHit.OnClientInvoke = function()
+            playerMouse = LocalPlayer:GetMouse();
+
+            local mouseHit = playerMouse.Hit;
+
+            if (library.flags.autoAimSpells) then
+                local target = Utility:getClosestCharacterWithEntityList(workspace.Live:GetChildren(), rayParams);
+                target = target and target.Character;
+
+                if (target and target.Head) then
+                    mouseHit = target.Head.CFrame;
+                end;
+            end;
+
+            return mouseHit;
         end;
-    end
-});
+    end);
+end;
 
-farms:AddToggle({
-    text = 'Only Mine Tin',
-    tip = 'Only mines Tin rocks, skips everything else',
-});
+onCharacterAdded(LocalPlayer.Character);
+LocalPlayer.CharacterAdded:Connect(onCharacterAdded);
 
+local oldNamecall;
 
-farms:AddToggle({
-    text = 'Panic on Player Join',
-    tip = 'Blocks a random player and server hops when someone joins',
-    callback = function(state: boolean): ()
-        if (state) then
-            startPlayerWatch();
-        else
-            stopPlayerWatch();
+oldNamecall = hookmetamethod(game, '__namecall', newcclosure(function(self, ...)
+    if (checkcaller()) then
+        return oldNamecall(self, ...);
+    end;
+
+    local method = getnamecallmethod();
+
+    if (method == 'Kick') then
+        return;
+    end;
+
+    if (method == 'FireServer' and self.Name == 'Communicate') then
+        local args = {...};
+
+        if (type(args[1]) == 'table' and args[1].InputType) then
+            local InputType = args[1].InputType;
+
+            if (library.flags.noFallDamage and InputType == 'Landed') then
+                args[1].StudsFallen = 0;
+                args[1].FallBrace = library.flags.legitNoFall or false;
+
+                return oldNamecall(self, unpack(args));
+            end;
         end;
-    end
-});
+    end;
 
-misc:AddButton({
-    text = 'Server Hop',
-    tip = 'Jumps to another server',
-    callback = function()
-        if (library:ShowConfirm('Are you sure you want to switch server?')) then
-            withFreeMouse(function()
-                BlockUtils:BlockRandomUser();
+    return oldNamecall(self, ...);
+end));
+
+function functions.noStun(toggle: boolean): ()
+    if (not toggle) then
+        maid.noStun = nil;
+        return;
+    end;
+
+    local function removeStun(child)
+        if (child and child.Name == 'Stun') then
+            task.defer(function()
+                child:Destroy();
             end);
-            local ok = pcall(serverHop);
-            if (not ok) then
-                TeleportService:Teleport(PLACE_ID);
+        end;
+    end;
+
+    for _, child in LocalPlayer.Character:GetChildren() do
+        removeStun(child);
+    end;
+
+    maid.noStun = LocalPlayer.Character.ChildAdded:Connect(removeStun);
+end;
+
+function functions.antiFire(toggle: boolean): ()
+    if (not toggle) then
+        maid.antiFire = nil;
+        return;
+    end;
+
+    local function removeFire(child)
+        if (child and child.Name == 'Burning') then
+            task.defer(function()
+                LocalPlayer.Character:WaitForChild('Communicate'):FireServer(unpack({{ Enabled = true,  Character = LocalPlayer.Character,  InputType = 'Dash'  }}));
+            end);
+        end;
+    end;
+
+    for _, child in LocalPlayer.Character:GetChildren() do
+        removeFire(child);
+    end;
+
+    maid.antiFire = LocalPlayer.Character.ChildAdded:Connect(removeFire);
+end;
+
+local mobs = {};
+
+local NetworkOneShot = {};
+NetworkOneShot.__index = NetworkOneShot;
+
+function NetworkOneShot.new(mob)
+    local self = setmetatable({}, NetworkOneShot);
+
+    self._maid = Maid.new();
+    self.char = mob;
+
+    self._maid:GiveTask(mob.Destroying:Connect(function()
+        self:Destroy();
+    end));
+
+    self._maid:GiveTask(Utility.listenToChildAdded(mob, function(obj)
+        if (obj.Name == 'HumanoidRootPart') then
+            self.hrp = obj;
+        end;
+    end));
+
+    mobs[mob] = self;
+    return self;
+end;
+
+function NetworkOneShot:Update(): ()
+    if (not self.hrp or not isnetworkowner(self.hrp) or not self.hrp.Parent or self.hrp.Parent.Parent ~= workspace.Live) then return end;
+    self.char:PivotTo(CFrame.new(self.hrp.Position.X, workspace.FallenPartsDestroyHeight - 100000, self.hrp.Position.Z));
+end;
+
+function NetworkOneShot:Destroy(): ()
+    self._maid:DoCleaning();
+
+    for i, v in next, mobs do
+        if (v ~= self) then continue; end;
+        mobs[i] = nil;
+    end;
+end;
+
+function NetworkOneShot:ClearAll(): ()
+    for _, v in next, mobs do
+        v:Destroy();
+    end;
+
+    table.clear(mobs);
+end;
+
+Utility.listenToChildAdded(workspace.Live, function(obj)
+    task.wait(0.2);
+    if (obj == LocalPlayer.Character) then return; end;
+    NetworkOneShot.new(obj);
+end);
+
+function functions.networkOneShot(t: boolean): ()
+    if (not t) then
+        maid.networkOneShot = nil;
+        maid.networkOneShot2 = nil;
+        return;
+    end;
+
+    maid.networkOneShot2 = RunService.Heartbeat:Connect(function()
+        sethiddenproperty(LocalPlayer, 'MaxSimulationRadius', math.huge);
+        sethiddenproperty(LocalPlayer, 'SimulationRadius', math.huge);
+    end);
+
+    maid.networkOneShot = task.spawn(function()
+        while (task.wait()) do
+            for _, mob in next, mobs do
+                mob:Update();
+            end;
+        end;
+    end);
+end;
+
+playerMods:AddToggle({
+    text = 'No Fall Damage',
+    tip = 'Removes fall damage for you',
+});
+
+playerMods:AddToggle({
+    text = 'Legit No Fall',
+    tip = ' Removes fall damage but still rolls'
+});
+
+playerMods:AddToggle({
+    text = 'No Stun',
+    tip = 'Makes it so you will not get stunned in combat',
+    callback = functions.noStun
+});
+
+playerMods:AddToggle({
+    text = 'No Fire Damage',
+    flag = 'Anti Fire',
+    tip = 'Prevent you from taking damage from fire.',
+    callback = functions.antiFire
+});
+
+localCheats:AddDivider('Movement');
+
+localCheats:AddToggle({
+    text = 'Fly',
+    callback = functions.fly
+});
+localCheats:AddSlider({
+    min = 16,
+    max = 250,
+    flag = 'Fly Hack Value',
+    textpos = 2
+});
+
+localCheats:AddToggle({
+    text = 'Speedhack',
+    callback = functions.speedHack
+});
+localCheats:AddSlider({
+    min = 16,
+    max = 250,
+    flag = 'Speed Hack Value',
+    textpos = 2
+});
+
+localCheats:AddToggle({
+    text = 'Infinite Jump',
+    callback = functions.infiniteJump
+});
+localCheats:AddSlider({
+    min = 50,
+    max = 250,
+    flag = 'Infinite Jump Height',
+    textpos = 2
+});
+
+-- localCheats:AddToggle({
+-- 	text = 'No Clip',
+-- 	callback = functions.noClip
+-- });
+
+-- localCheats:AddToggle({
+-- 	text = 'Disable When Knocked',
+-- 	tip = 'Disables noclip when you get ragdolled',
+-- 	flag = 'Disable No Clip When Knocked'
+-- });
+
+localCheats:AddToggle({
+    text = 'Knocked Ownership',
+    tip = 'Allow you to fly/move while being knocked.',
+    callback = functions.knockedOwnership
+});
+
+-- localCheats:AddToggle({
+-- 	text = 'Click Destroy',
+-- 	tip = 'Everything you click on will be destroyed (client sided)',
+-- 	callback = functions.clickDestroy
+-- });
+
+localCheats:AddBind({text = 'Go To Ground', callback = functions.goToGround, mode = 'hold', nomouse = true});
+
+localCheats:AddDivider('Gameplay-Assist');
+
+localCheats:AddToggle({
+    text = 'Auto Aim Spells',
+    tip = 'Automatically aims the spell (sagitta, pulso, etc) onto the nearest characters head.'
+});
+
+localCheats:AddToggle({
+    text = 'Auto Sprint',
+    tip = 'Whenever you want to walk you sprint instead',
+    callback = functions.autoSprint
+});
+
+localCheats:AddDivider('Combat Tweaks');
+
+localCheats:AddToggle({
+    text = 'One Shot Mobs',
+    tip = 'This feature randomly works sometimes and causes them to die, but it makes AP have issues',
+    callback = functions.networkOneShot
+});
+
+localCheats:AddBind({
+    text = 'Attach To Back',
+    tip = 'This attaches to the nearest entities back based on settings',
+    callback = functions.attachToBack,
+});
+
+localCheats:AddSlider({
+    text = 'Attach To Back Height',
+    value = 0,
+    min = -100,
+    max = 100,
+    textpos = 2
+});
+
+localCheats:AddSlider({
+    text = 'Attach To Back Space',
+    value = 2,
+    min = -100,
+    max = 100,
+    textpos = 2
+});
+
+localCheats:AddBind({
+    text = 'Instant Log',
+    nomouse = true,
+    callback = function()
+        LocalPlayer.Character.Communicate:FireServer({
+            ['Character'] = LocalPlayer.Character,
+            ['InputType'] = 'menu',
+            ['Enabled'] = true
+        });
+    end
+});
+
+localCheats:AddButton({
+    text = 'Server Hop',
+    tip = 'Jumps to any other server, non region dependant',
+    callback = functions.serverHop
+});
+
+localCheats:AddButton({
+    text = 'Respawn',
+    tip = 'Kills the character prompting it to respawn',
+    callback = functions.respawn
+});
+
+notifier:AddToggle({
+    text = 'Mod Notifier',
+    state = true
+});
+
+notifier:AddToggle({
+    text = 'Panic on Moderator Join'
+});
+
+notifier:AddToggle({
+    text = 'Moderator Sound Alert',
+    tip = 'Makes a sound when the mod joins',
+    state = true
+});
+
+if (game.PlaceId == DUNGEON_PLACE_ID) then
+    notifier:AddToggle({
+        text = 'Blessing Notifier',
+    });
+
+    notifier:AddToggle({
+        text = 'Race Reroll Notifier',
+    });
+end;
+
+notifier:AddToggle({
+    text = 'Player Proximity Check',
+    tip = 'Gives you a warning when a player is close to you',
+    callback = functions.playerProximityCheck
+});
+
+local weatherParts = {'Rain', 'Snow'};
+local movedParts = {};
+
+function functions.disableShadows(t: boolean): ()
+    Lighting.GlobalShadows = not t;
+end;
+
+function functions.disableWeatherEffects(t: boolean): ()
+    if (not t) then
+        for part, _ in pairs(movedParts) do
+            if (part and part.Parent == ReplicatedFirst) then
+                part.Position = LocalPlayer.Character.Head.Position + Vector3.new(0, 10, 0);
+                part.Parent = Thrown;
+            end;
+        end;
+
+        table.clear(movedParts);
+        return;
+    end;
+
+    for _, weatherName in weatherParts do
+        local weatherPart = Thrown:FindFirstChild(weatherName);
+        if (weatherPart) then
+            weatherPart.Parent = ReplicatedFirst;
+            movedParts[weatherPart] = true;
+        end;
+    end;
+end;
+
+for _, child in NPCFolder:GetChildren() do
+    if (child.Name == 'Purchasable') then
+        local PurchaseInfo = child.PurchaseInfo;
+        local ItemType = PurchaseInfo.ItemType;
+        local ItemName = PurchaseInfo.ItemName;
+
+        if (ItemType.Value == 'Armor') then
+            Armors[ItemName.Value] = true;
+        elseif (ItemType.Value == 'Weapon') then
+            Weapons[ItemName.Value] = true;
+        elseif (ItemType.Value == 'Item' or ItemType.Value == 'Trinket') then
+            Items[ItemName.Value] = true;
+        end;
+    else
+        if (not NPCs[child.Name]) then
+            NPCs[child.Name] = true;
+            CollectionService:AddTag(child, 'NPC');
+        end;
+    end;
+end;
+
+function functions.pickupItem(item, data): ()
+    local isSilver = data.isSilver;
+    local isChestLoot = data.isChestLoot;
+
+    if (not item) then return end;
+
+    if (isChestLoot) then
+        if (not item.Name:find('Chest') and item.Name ~= 'ChestGoldBar' and item.Name ~= 'ChestCoin') then return end;
+
+    elseif (isSilver) then
+        if (not item.Name:find('Dropped_')) then return end;
+
+        local hasSilver = item:GetAttribute('Silver') and item:GetAttribute('Silver') ~= 0;
+
+        if (not hasSilver) then return end;
+        if (library.flags.safePickupSilver and item:GetAttribute('Silver') >= 2000) then return end;
+
+    else
+        if (not item.Name:find('Dropped_')) then return end;
+
+        local hasSilver = item:GetAttribute('Silver') and item:GetAttribute('Silver') ~= 0;
+
+        if (hasSilver) then return end;
+    end;
+
+    local touchInterest = item:FindFirstChildWhichIsA('TouchTransmitter');
+    if (touchInterest) then
+        firetouchinterest(LocalPlayer.Character.HumanoidRootPart, item, 0);
+    end;
+end;
+
+maid.newThrownChild = Thrown.ChildAdded:Connect(function(child)
+    task.wait(0.05);
+
+    local hasSilver = child:GetAttribute('Silver') and child:GetAttribute('Silver') ~= 0;
+
+    if (library.flags.autoPickupSilver and hasSilver) then
+        functions.pickupItem(child, {
+            isSilver = true;
+        });
+    end;
+
+    if (library.flags.autoPickupBags and not hasSilver) then
+        functions.pickupItem(child, {
+            isSilver = false;
+        });
+    end;
+
+    if (library.flags.autoPickupChestLoot) then
+        functions.pickupItem(child, {
+            isChestLoot  = true;
+        });
+    end;
+end);
+
+automation:AddDivider('Pickup');
+
+automation:AddToggle({
+    text = 'Auto Pickup Bags',
+    tip = 'Automatically picks up any Bags that get dropped.',
+    callback = function(state: boolean): ()
+        if (state) then
+            for _, child in Thrown:GetChildren() do
+                local hasSilver = child:GetAttribute('Silver') and child:GetAttribute('Silver') ~= 0;
+                if (not hasSilver) then
+                    functions.pickupItem(child, {
+                        isSilver = false;
+                    });
+                end;
             end;
         end;
     end
 });
 
+automation:AddToggle({
+    text = 'Auto Pickup Silver',
+    tip = 'Automatically picks up any silver that get dropped. [WARNING: THEY HAVE LOGS FOR SILVER PICKUPS]',
+    callback = function(state: boolean): ()
+        if (state) then
+            for _, child in Thrown:GetChildren() do
+                local hasSilver = child:GetAttribute('Silver') and child:GetAttribute('Silver') ~= 0;
+                if (hasSilver) then
+                    functions.pickupItem(child, {
+                        isSilver = true;
+                    });
+                end;
+            end;
+        end;
+    end;
+});
 
-task.delay(5, function()
-    library:Close();
-end);
+automation:AddToggle({
+    text = 'Safe Pickup Silver',
+    tip = 'Safely picks up silver (under 2,000 silver because 2,000+ triggers logs)',
+    callback = function(state: boolean): ()
+        if (not library.flags.autoPickupSilver) then
+           ToastNotif.new({
+                text = 'This feature requires Auto Pickup Silver to be enabled!',
+                duration = 5
+            });
+        end;
+    end;
+});
+
+automation:AddToggle({
+    text = 'Auto Pickup Chest Loot',
+    tip = 'Automatically picks up any loot from chests',
+    callback = function(state: boolean): ()
+        if (state) then
+            for _, child in Thrown:GetChildren() do
+                if (child and child:IsA('BasePart') and child.Name:find('Chest')) then
+                    functions.pickupItem(child, {
+                        isChestLoot = true;
+                    });
+                end;
+            end;
+        end;
+    end;
+});
+
+function functions.buyItem(name: string): ()
+    for _, child in NPCFolder:GetChildren() do
+        if (child.Name == 'Purchasable') then
+            local PurchaseInfo = child.PurchaseInfo;
+            local ItemName = PurchaseInfo.ItemName;
+
+            if (ItemName.Value == name) then
+                fireclickdetector(child.ClickDetector);
+            end;
+        end;
+    end;
+end;
+
+function functions.interactWithNPC(name: string): ()
+    for _, child in NPCFolder:GetChildren() do
+        if (child.Name == name) then
+            fireclickdetector(child.ClickDetector);
+        end;
+    end;
+end;
+
+misc:AddDivider('Buyables');
+
+misc:AddList({
+    text = 'Select Armor',
+    tip = 'Select the Armor you wish to buy.',
+    values = Armors;
+    multiselect = false,
+    callback = function(name)
+        ArmorSelected = name;
+    end,
+});
+
+misc:AddButton({
+    text = 'Buy Armor',
+    tip = 'Buys the Armor you selected.',
+    callback = function()
+        functions.buyItem(ArmorSelected);
+    end,
+});
+
+misc:AddList({
+    text = 'Select Weapon',
+    tip = 'Select the Weapon you wish to buy.',
+    values = Weapons;
+    multiselect = false,
+    callback = function(name)
+        WeaponSelected = name;
+    end,
+});
+
+misc:AddButton({
+    text = 'Buy Weapon',
+    tip = 'Buys the Weapon you selected.',
+    callback = function()
+        functions.buyItem(WeaponSelected);
+    end,
+});
+
+misc:AddList({
+    text = 'Select Item',
+    tip = 'Select the Item you wish to buy.',
+    values = Items;
+    multiselect = false,
+    callback = function(name)
+        ItemSelected = name;
+    end,
+});
+
+misc:AddButton({
+    text = 'Buy Item',
+    tip = 'Buys the Item you selected.',
+    callback = function()
+        functions.buyItem(ItemSelected);
+    end,
+});
+
+misc:AddDivider('NPCs');
+
+misc:AddList({
+    text = 'Select NPC',
+    tip = 'Select the NPC you wish to interact with.',
+    values = NPCs;
+    multiselect = false,
+    callback = function(name)
+        NPCSelected = name;
+    end,
+});
+
+misc:AddButton({
+    text = 'Interact with NPC',
+    tip = 'Interacts with the NPC you selected.',
+    callback = function()
+        functions.interactWithNPC(NPCSelected);
+    end,
+});
+
+misc:AddDivider('Perfomance Improvements');
+
+misc:AddToggle({
+    text = 'Disable Shadows',
+    tip = 'Disabling all shadows adds a large bump to your FPS',
+    callback = functions.disableShadows
+});
+
+misc:AddToggle({
+    text = 'Disable Weather Effects',
+    tip = 'Disables Weather Effects because Rain and Snow tank your FPS',
+    callback = functions.disableWeatherEffects
+});
+
+function functions.fullBright(toggle: boolean): ()
+    if (not toggle) then
+        maid.fullBright = nil;
+        if (oldAmbient) then
+            Lighting.Ambient = oldAmbient;
+            Lighting.Brightness = oldBrightness;
+            oldAmbient = nil;
+            oldBrightness = nil;
+        end;
+        return;
+    end;
+
+    if (not maid.fullBright) then
+        oldAmbient = Lighting.Ambient;
+        oldBrightness = Lighting.Brightness;
+    end;
+
+    maid.fullBright = Lighting:GetPropertyChangedSignal('Ambient'):Connect(function()
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255);
+        Lighting.Brightness = 1;
+    end);
+
+    Lighting.Ambient = Color3.fromRGB(255, 255, 255);
+    Lighting.Brightness = 1;
+end;
+
+visuals:AddToggle({
+    text = 'Full Bright',
+    callback = functions.fullBright
+});
+
+local areaNames = {
+    'Bossfight';
+    'Boxing Bar';
+    'Camp';
+    'Castle';
+    'Cliffs';
+    'DungeonEntrance';
+    'HideoutOrderly';
+    'Loading';
+    'SecretDoor';
+    'Sky Islands';
+    'Tavern';
+};
+
+playerClassesList = {
+    ['Brawler'] = {
+        ['Active'] = {'Body Grinder', 'Bruising Drop', 'Rib Crusher', 'Swift Kick'};
+    },
+
+    ['Greatsword'] = {
+        ['Active'] = {'Heart Thrust', 'Earth Shaker', 'Rising Cyclone'};
+    },
+
+    ['Assassin'] = {
+        ['Active'] = {'Death Bound', 'Raijin', 'Toxic Slice', 'True Trickery'};
+    },
+
+    ['Ronin'] = {
+        ['Active'] = {'Ruinous Burst', 'Favour from fang', 'Sly Shadow', 'Deep Slash'};
+    },
+
+    ['Bladesman'] = {
+        ['Active'] = {'Twin Slashes', 'Deadly Cascade', 'Deep Slash'};
+    },
+
+    ['Wraith'] = {
+        ['Active'] = {'Impulsing Staff', 'Midway Strike', 'Enchain', 'Rebound Haul', 'Destined Impact'};
+        ['Passive'] = {'Chain Link'};
+    },
+
+    ['Monk'] = {
+        ['Active'] = {'Spirit Palm', 'Loop Kicks', 'Ankle Breaker', 'Kickoff Leap'};
+    },
+
+    ['Lumen'] = {
+        ['Active'] = {'Protege Solum', 'Sagitta Lucem', 'Laqueus Lucis'};
+        ['Passive'] = {'Mage Training'};
+    },
+
+    ['Piandao'] = {
+        ['Active'] = {'Blink', 'Lightning Slash', 'AfterImage'};
+    }
+};
+
+Trinkets = {
+    {
+        ['Name'] = 'Goblet',
+        ['MeshId'] = 'rbxassetid://13116112'
+    },
+
+    {
+        ['Name'] = 'Amethyst',
+        ['MeshId'] = 'rbxassetid://%202877143560%20',
+        ['Color'] = Color3.fromRGB(167, 95, 209)
+    },
+
+    {
+        ['Name'] = 'Diamond',
+        ['MeshId'] = 'rbxassetid://%202877143560%20',
+        ['Color'] = Color3.fromRGB(248, 248, 248)
+    },
+
+    {
+        ['Name'] = 'Sapphire',
+        ['MeshId'] = 'rbxassetid://%202877143560%20',
+        ['Color'] = Color3.fromRGB(0, 0, 255)
+    },
+
+    {
+        ['Name'] = 'Pure Diamond',
+        ['MeshId'] = 'rbxassetid://%202877143560%20',
+        ['Color'] = Color3.fromRGB(18, 238, 212)
+    },
+
+    {
+        ['Name'] = 'Ruby',
+        ['MeshId'] = 'rbxassetid://%202877143560%20',
+        ['Color'] = Color3.fromRGB(255, 0, 0)
+    },
+
+    {
+        ['Name'] = 'Emerald',
+        ['MeshId'] = 'rbxassetid://%202877143560%20',
+        ['Color'] = Color3.fromRGB(31, 128, 29)
+    },
+
+    {
+        ['Name'] = 'Opal',
+        ['MeshType'] = 'Sphere'
+    },
+
+    {
+        ['Name'] = 'Scroll',
+        ['MeshId'] = 'rbxassetid://60791940'
+    },
+
+    {
+        ['Name'] = 'Ring',
+        ['MeshId'] = 'rbxassetid://%202637545558%20'
+    },
+};
+
+if (game.PlaceId == DUNGEON_PLACE_ID) then
+    Chests = {
+        {
+            ['Name'] = 'Trinket',
+        },
+
+        {
+            ['Name'] = 'Silver',
+        },
+
+        {
+            ['Name'] = 'Gold',
+        },
+
+        {
+            ['Name'] = 'Race Reroll',
+        },
+
+        {
+            ['Name'] = 'Chest Food',
+        },
+
+        {
+            ['Name'] = 'Blessing',
+        },
+    };
+else
+    Chests = {
+        {
+            ['Name'] = 'Chest Coin'
+        }
+    };
+end;
+
+Mobs = {
+    {
+        ['Name'] = 'Goblin';
+    },
+
+    {
+        ['Name'] = '#HITBOX_SIMULATION';
+    },
+
+    {
+        ['Name'] = 'Shock Orb';
+    },
+
+    {
+        ['Name'] = 'Hobo';
+    }
+};
+
+--[[
+    CanOpen == serverSided boolean (to be able to open chest)
+    opened == serverSided folder (to detect if chest is already opened)
+]]
+
+function functions.getPlayerClass(player): string
+    if (not player) then return 'Freshie' end;
+    local Backpack = player.Backpack;
+    local classCounts = {};
+
+    for className, classData in pairs(playerClassesList) do
+        classCounts[className] = 0;
+
+        for _, activeName in ipairs(classData.Active) do
+            if (Backpack:FindFirstChild(activeName)) then
+                classCounts[className] = classCounts[className] + 1;
+            end;
+        end;
+    end;
+
+    local bestClass = 'Freshie';
+    local highestCount = 0;
+
+    for className, count in pairs(classCounts) do
+        if (count > highestCount) then
+            highestCount = count;
+            bestClass = className;
+        end;
+    end;
+
+    return highestCount > 0 and bestClass or 'Freshie';
+end;
+
+function functions.getTrinket(handle)
+    if (not handle) then return nil end;
+    local Mesh = handle:FindFirstChild('Mesh') or handle:FindFirstChildWhichIsA('SpecialMesh');
+    if (not Mesh) then return nil end;
+
+    local MeshId      = Mesh.MeshId;
+    local MeshType    = Mesh.MeshType.Name;
+    local HandleColor = handle.Color;
+
+    if (MeshType == 'Sphere') then
+        for _, trinket in Trinkets do
+            if (trinket.Name == 'Opal') then return trinket end;
+        end;
+    end;
+
+    for _, trinket in Trinkets do
+        if (trinket.MeshId and trinket.MeshId == MeshId) then
+            if (trinket.Color) then
+                if (HandleColor == trinket.Color) then
+                    return trinket;
+                end;
+            else
+                return trinket;
+            end;
+        end;
+    end;
+
+    local MeshIdNormal = tostring(MeshId):gsub('%D', '');
+    for _, trinket in ipairs(Trinkets) do
+        if (trinket.MeshId and tostring(trinket.MeshId):gsub('%D', '') == MeshIdNormal) then
+            return trinket;
+        end;
+    end;
+
+    return nil;
+end;
+
+local function formatMobName(mobName: string): string
+    if (not mobName:match('%.(.-)%d+')) then return mobName end;
+    local allMobLetters = mobName:match('%.(.-)%d+'):gsub('_', ' '):split(' ');
+
+    for i, v in next, allMobLetters do
+        local partialLetters = v:split('');
+        partialLetters[1] = partialLetters[1]:upper();
+
+        allMobLetters[i] = table.concat(partialLetters);
+    end;
+
+    return table.concat(allMobLetters, ' ');
+end;
+
+function EntityESP:Plugin()
+    local classText = '';
+
+    if (library.flags.showClass) then
+        local playerClass = functions.getPlayerClass(self._player);
+        classText = ` [{playerClass}]`;
+    end;
+
+    return {
+        text = classText,
+        playerName = self._playerName,
+    };
+end;
+
+function functions.onNewTrinketAdded(spawnPart, espConstructor): ()
+    if (spawnPart.Name ~= 'SPAWN') then return end;
+
+    local Handle = FindFirstChild(spawnPart, 'Handle');
+    if (not Handle) then return end;
+
+    local Trinket = functions.getTrinket(Handle);
+    if (not Trinket) then return end;
+
+    local code = [[
+        local Handle = ...;
+        return setmetatable({}, {
+            __index = function(_, p)
+                if (p == 'Position') then
+                    return Handle.Position;
+                end;
+            end,
+        });
+    ]];
+
+    local espObj = espConstructor.new({ code = code, vars = { Handle } }, Trinket.Name);
+
+    local connection;
+    connection = Handle:GetPropertyChangedSignal('Parent'):Connect(function()
+        if (not Handle.Parent) then
+            espObj:Destroy();
+            connection:Disconnect();
+        end;
+    end);
+end;
+
+function functions.onDroppedItemAdded(item, espConstructor): ()
+    if (not item or not item.Name:find('Dropped_')) then return end;
+
+    local itemName = item.Text.TextLabel.Text;
+
+    local itemObj;
+
+    if (item:IsA('BasePart') or item:IsA('MeshPart')) then
+        itemObj = espConstructor.new(item, itemName);
+    else
+        local code = [[
+            local item = ...;
+            return setmetatable({}, {
+                __index = function(_, p)
+                    if (p == 'Position') then
+                        return item.PrimaryPart and item.PrimaryPart.Position or item.WorldPivot.Position
+                    end;
+                end,
+            });
+        ]];
+
+        itemObj = espConstructor.new({code = code, vars = {item}}, itemName);
+    end;
+
+    local connection;
+    connection = item:GetPropertyChangedSignal('Parent'):Connect(function()
+        if (not item.Parent) then
+            itemObj:Destroy();
+            connection:Disconnect();
+        end;
+    end);
+end;
+
+function functions.onNewMobAdded(mob, espConstructor): ()
+    if (FindFirstChild(Players, mob.Name)) then return end;
+
+    local editedMobName;
+    local displayObject = mob;
+    local healthObject = mob;
+
+    if (mob.Name == 'generate') then
+        if (FindFirstChild(Thrown, 'Chest1')) then
+            editedMobName = 'Hobo';
+        end;
+    elseif (mob.Name == 'HITBOX_SIMULATION#') then
+        if (FindFirstChild(mob, 'CaveDungeon') and FindFirstChild(mob, 'IsNPC') and FindFirstChild(mob, 'NoRagdoll')) then
+            editedMobName = 'Shock Orb';
+            displayObject = FindFirstChild(Thrown, 'ShockOrb') or mob;
+        end;
+    end;
+
+    local code = [[
+        local mob, displayObject = ...;
+        local FindFirstChild = game.FindFirstChild;
+        local FindFirstChildWhichIsA = game.FindFirstChildWhichIsA;
+
+        return setmetatable({
+            FindFirstChildWhichIsA = function(_, ...)
+                -- Use original mob for humanoid (health)
+                return FindFirstChildWhichIsA(mob, ...);
+            end,
+        }, {
+            __index = function(_, p)
+                if (p == 'Position') then
+                    -- Use display object for position
+                    local mobRoot = FindFirstChild(displayObject, 'HumanoidRootPart');
+                    if (mobRoot) then
+                        return mobRoot and mobRoot.Position;
+                    else
+                        return displayObject.PrimaryPart and displayObject.PrimaryPart.Position;
+                    end;
+                end;
+            end,
+        })
+    ]];
+
+    local formattedName = formatMobName(editedMobName or mob.Name);
+    local mobEsp = espConstructor.new({code = code, vars = {healthObject, displayObject}}, formattedName);
+
+    local connection;
+    connection = mob:GetPropertyChangedSignal('Parent'):Connect(function()
+        if (not mob.Parent) then
+            connection:Disconnect();
+            mobEsp:Destroy();
+        end;
+    end);
+end;
+
+function functions.onNewChestAdded(chest, espConstructor): ()
+    if (not chest) then return end;
+    if (not chest.Name:find('Chest')) then return end;
+    if (chest.Name == 'ChestSIlver') then return end;
+    local chestName = chest.Name;
+
+    local isChestOpened = FindFirstChild(chest, 'Opened');
+    if (isChestOpened and library.flags.hideOpenedChests) then return end;
+
+    if (chestName == 'Chest1') then
+        local typeOfChest = FindFirstChild(chest, 'Silver') or FindFirstChild(chest, 'Trinket');
+
+        chestName = typeOfChest.Name or 'unknown type';
+    elseif (chestName == 'Chest2') then
+        chestName = 'Gold';
+    elseif (chestName == 'ChestFood') then
+        chestName = 'Chest Food';
+    elseif (chestName == 'ChestRR') then
+        chestName = 'Race Reroll';
+
+        if (library.flags.raceRerollNotifier) then
+            ToastNotif.new({
+                text = 'A Race Reroll has spawned!'
+            });
+        end;
+    elseif (chestName == 'Chest Coin') then
+        chestName = 'Chest Coin';
+    elseif (chestName == 'ChestBlue') then
+        chestName = 'Blessing';
+
+        if (library.flags.blessingNotifier) then
+            ToastNotif.new({
+                text = 'A Blessing has spawned!'
+            });
+        end;
+    end;
+
+    local chestObj;
+    if (chest:IsA('BasePart') or chest:IsA('MeshPart')) then
+        chestObj = espConstructor.new(chest, chestName);
+    else
+        local code = [[
+            local chest = ...;
+            return setmetatable({}, {
+                __index = function(_, p)
+                    if (p == 'Position') then
+                        return chest.PrimaryPart and chest.PrimaryPart.Position or chest.WorldPivot.Position
+                    end;
+                end,
+            });
+        ]];
+
+        chestObj = espConstructor.new({code = code, vars = {chest}}, chestName);
+    end;
+
+    local connection;
+    connection = chest:GetPropertyChangedSignal('Parent'):Connect(function()
+        if (not chest.Parent) then
+            chestObj:Destroy();
+            connection:Disconnect();
+        end;
+    end);
+
+    local connection2;
+    connection2 = chest.ChildAdded:Connect(function(child)
+        if (not chest.Parent) then
+            chestObj:Destroy();
+            connection:Disconnect();
+            connection2:Disconnect();
+        end;
+
+        if (library.flags.hideOpenedChests and child.Name == 'Opened') then
+            chestObj:Destroy();
+            connection:Disconnect();
+            connection2:Disconnect();
+        end;
+    end);
+end;
+
+function functions.onNewNpcAdded(npc, espConstructor): ()
+    local npcName = npc.Name;
+
+    local PurchaseInfo = FindFirstChild(npc, 'PurchaseInfo');
+    if (PurchaseInfo) then npcName = PurchaseInfo.ItemName.Value end;
+
+    local npcObj;
+    if (npc:IsA('BasePart') or npc:IsA('MeshPart')) then
+        npcObj = espConstructor.new(npc, npcName);
+    else
+        local code = [[
+            local npc = ...;
+            return setmetatable({}, {
+                __index = function(_, p)
+                    if (p == 'Position') then
+                        return npc.PrimaryPart and npc.PrimaryPart.Position or npc.WorldPivot.Position
+                    end;
+                end,
+            });
+        ]];
+
+        npcObj = espConstructor.new({code = code, vars = {npc}}, npcName);
+    end;
+
+    local connection;
+    connection = npc:GetPropertyChangedSignal('Parent'):Connect(function()
+        if (not npc.Parent) then
+            npcObj:Destroy();
+            connection:Disconnect();
+        end;
+    end);
+end;
+
+function Utility:renderOverload(data): ()
+    data.espSettings:AddToggle({
+        text = 'Show Class'
+    });
+
+    local function makeList(folder, section)
+        local seen = {};
+        local list = {};
+
+        if (typeof(folder) == 'table' and not folder.ClassName) then
+            for _, item in next, folder do
+                if (item.Name and not seen[item.Name]) then
+                    seen[item.Name] = true;
+                    table.insert(list, item.Name);
+                end;
+            end;
+        else
+            for _, instance in next, folder:GetChildren() do
+                if (seen[instance.Name]) then continue end;
+
+                seen[instance.Name] = true;
+                table.insert(list, instance.Name);
+            end;
+        end;
+
+        table.sort(list, function(a, b)
+            return a < b;
+        end);
+
+        return Utility.map(list, function(name)
+            local t = section:AddToggle({
+                text = name,
+                flag = `Show {name}`,
+                state = true
+            });
+
+            t:AddColor({
+                text = `{name} Color`,
+                color = Color3.fromRGB(255, 255, 255)
+            });
+
+            return t;
+        end);
+    end;
+
+    makeESP({
+        sectionName = 'Dropped Items',
+        type = 'childAdded',
+        args = Thrown,
+        callback = functions.onDroppedItemAdded,
+    });
+
+    makeESP({
+        sectionName = 'Trinkets',
+        type = 'descendantAdded',
+        args = workspace.TrinketSpawn,
+        noColorPicker = true,
+        callback = functions.onNewTrinketAdded,
+        onLoaded = function(section)
+            return {list = makeList(Trinkets, section)};
+        end,
+    });
+
+    makeESP({
+        sectionName = 'Mobs',
+        type = 'childAdded',
+        args = workspace.Live,
+        callback = functions.onNewMobAdded,
+        onLoaded = function(section)
+            section:AddToggle({
+                text = 'Show Health',
+                flag = 'Mobs Show Health'
+            });
+            return {list = makeList(Mobs, section)};
+        end
+    });
+
+    makeESP({
+        sectionName = 'Chests',
+        type = 'childAdded',
+        args = workspace.Thrown,
+        noColorPicker = true,
+        callback = functions.onNewChestAdded,
+        onLoaded = function(section)
+            section:AddToggle({
+                text = 'Hide Opened Chests';
+            });
+            return {list = makeList(Chests, section)};
+        end,
+    });
+
+    makeESP({
+        sectionName = 'Npcs',
+        type = 'childAdded',
+        args = workspace.NPCs,
+        noColorPicker = true,
+        callback = functions.onNewNpcAdded,
+        onLoaded = function(section)
+            return {list = makeList(workspace.NPCs, section)};
+        end,
+    });
+end;
