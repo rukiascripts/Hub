@@ -410,8 +410,19 @@ local function farmItem(model)
     end;
 
     task.wait(1);
+
+    containerUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container');
+    if (not containerUI or not containerUI.Visible) then
+        warn('[AutoFarm] Container UI not open, waiting...');
+        for _ = 1, 10 do
+            task.wait(0.5);
+            containerUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container');
+            if (containerUI and containerUI.Visible) then break; end;
+        end;
+    end;
+
     local moveItem = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents', 'MoveItem');
-    local containerSlots = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container', 'Container', 'Slots');
+    local containerSlots = containerUI and findChild(containerUI, 'Container', 'Slots');
     if (moveItem and containerSlots) then
         local goldOnly = library.flags.onlyPickupGold;
         for _, slot in containerSlots:GetChildren() do
@@ -427,6 +438,8 @@ local function farmItem(model)
             moveItem:FireServer({ FromIndex = tonumber(slot.Name), FromData = 'Container' });
             task.wait(0.15);
         end;
+    else
+        warn('[AutoFarm] Could not find container slots or MoveItem remote');
     end;
 
     releasePosition();
