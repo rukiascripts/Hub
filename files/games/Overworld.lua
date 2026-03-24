@@ -654,45 +654,56 @@ local function repairPickaxe()
     task.wait(0.5);
     if (not isOreFarming()) then return; end;
 
-    fireproximityprompt(anvilPrompt);
-    task.wait(1);
-    if (not isOreFarming()) then return; end;
+    local _, data = findPickaxeSlot();
+    if (not data) then return; end;
 
-    local anvilUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'MaterialProcess', 'Anvil');
-    if (not anvilUI) then
-        warn('[OreFarm] Anvil UI not found');
-        releasePosition();
-        return;
-    end;
 
-    local pickaxeSlot = findPickaxeSlot();
-    local repairSlot = findChild(anvilUI, 'Frame', 'Slots', 'Slot');
-    if (not pickaxeSlot or not repairSlot) then
-        warn('[OreFarm] Could not find pickaxe slot or repair slot');
-        releasePosition();
-        return;
-    end;
+    local requestRepair = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents', 'RequestRepair');
+    requestRepair:FireServer({
+        data.UID, -- pickaxe id
+        '2'-- repair type (1 = normal, 2 = gold)
+    })
 
-    withFreeMouse(function()
-        dragGui(pickaxeSlot, repairSlot);
-    end);
-    task.wait(0.5);
-    if (not isOreFarming()) then return; end;
 
-    local goldButton = findChild(anvilUI, 'ActionFrame', 'GoldButton');
-    if (goldButton) then
-        withFreeMouse(function()
-            clickGui(goldButton, 3);
-        end);
-    end;
-    task.wait(0.15);
+    -- fireproximityprompt(anvilPrompt);
+    -- task.wait(1);
+    -- if (not isOreFarming()) then return; end;
 
-    local repairButton = anvilUI:FindFirstChild('RepairButton');
-    if (repairButton) then
-        withFreeMouse(function()
-            clickGui(repairButton, 3);
-        end);
-    end;
+    -- local anvilUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'MaterialProcess', 'Anvil');
+    -- if (not anvilUI) then
+    --     warn('[OreFarm] Anvil UI not found');
+    --     releasePosition();
+    --     return;
+    -- end;
+
+    -- local pickaxeSlot = findPickaxeSlot();
+    -- local repairSlot = findChild(anvilUI, 'Frame', 'Slots', 'Slot');
+    -- if (not pickaxeSlot or not repairSlot) then
+    --     warn('[OreFarm] Could not find pickaxe slot or repair slot');
+    --     releasePosition();
+    --     return;
+    -- end;
+
+    -- withFreeMouse(function()
+    --     dragGui(pickaxeSlot, repairSlot);
+    -- end);
+    -- task.wait(0.5);
+    -- if (not isOreFarming()) then return; end;
+
+    -- local goldButton = findChild(anvilUI, 'ActionFrame', 'GoldButton');
+    -- if (goldButton) then
+    --     withFreeMouse(function()
+    --         clickGui(goldButton, 3);
+    --     end);
+    -- end;
+    -- task.wait(0.15);
+
+    -- local repairButton = anvilUI:FindFirstChild('RepairButton');
+    -- if (repairButton) then
+    --     withFreeMouse(function()
+    --         clickGui(repairButton, 3);
+    --     end);
+    -- end;
 
     task.wait(6);
     releasePosition();
