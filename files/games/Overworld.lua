@@ -430,7 +430,8 @@ local function farmItem(model)
 
     containerUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container');
     if (not containerUI or not containerUI.Visible) then
-        warn('[AutoFarm] Container UI not open, waiting...');
+        warn('[AutoFarm] Container UI not open, waiting... attempting to trigger prompt again');
+        fireproximityprompt(prompt);
         while (isRunning()) do
             if (timedOut(startTime, TIMEOUT)) then
                 warn('[AutoFarm] Container UI timeout');
