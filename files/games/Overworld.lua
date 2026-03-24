@@ -293,8 +293,17 @@ end;
 -- ── Inventory & Selling ──
 
 local function isInventoryFull()
-    local slot32 = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Inventory', 'Frame', 'Backpack', 'Slots', '32');
-    return slot32 and slot32:GetAttribute('Populated') == true;
+    local slotsFolder = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Inventory', 'Frame', 'Backpack', 'Slots');
+    if (not slotsFolder) then return false; end;
+
+    for i = 1, 32 do
+        local slot = slotsFolder:FindFirstChild(tostring(i));
+        if (not slot or slot:GetAttribute('Populated') ~= true) then
+            return false;
+        end;
+    end;
+
+    return true;
 end;
 
 local function sellStolenItems()
