@@ -947,10 +947,7 @@ farms:AddToggle({
     tip = 'Only loots Gold from containers, skips everything else',
 });
 
-farms:AddToggle({
-    text = 'Only Mine Tin',
-    tip = 'Only mines Tin rocks, skips everything else',
-});
+farms:AddDivider('Mining')
 
 farms:AddToggle({
     text = 'Auto Mine Ore',
@@ -962,6 +959,11 @@ farms:AddToggle({
             stopOreFarm();
         end;
     end
+});
+
+farms:AddToggle({
+    text = 'Only Mine Tin',
+    tip = 'Only mines Tin rocks, skips everything else',
 });
 
 farms:AddToggle({
