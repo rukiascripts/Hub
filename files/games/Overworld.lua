@@ -372,8 +372,14 @@ local function findProximityPrompt(model)
     return nil;
 end;
 
+local function timedOut(startTime, duration)
+    return ((os.clock() - startTime) >= duration);
+end;
+
 local function farmItem(model)
     if (not isRunning()) then return; end;
+    local startTime = os.clock();
+    local TIMEOUT = math.random(10, 15);
 
     if (isInventoryFull()) then sellStolenItems(); end;
     if (not isRunning()) then return; end;
@@ -388,6 +394,7 @@ local function farmItem(model)
     if (not primaryPart) then return; end;
 
     teleportTo(primaryPart.Position);
+
     task.wait(0.5);
     if (not isRunning()) then return; end;
 
@@ -405,7 +412,17 @@ local function farmItem(model)
         end;
 
         startLockpicking();
-        while (isRunning() and model:GetAttribute('Locked')) do task.wait(0.2); end;
+
+        while (isRunning() and model:GetAttribute('Locked')) do
+            if (timedOut(startTime, TIMEOUT)) then
+                warn('[AutoFarm] Lockpick timeout');
+                stopAutoLockpick();
+                releasePosition();
+                lootedTimestamps[model] = os.clock();
+                return;
+            end;
+            task.wait(0.2);
+        end;
         stopAutoLockpick();
     end;
 
@@ -414,10 +431,21 @@ local function farmItem(model)
     containerUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container');
     if (not containerUI or not containerUI.Visible) then
         warn('[AutoFarm] Container UI not open, waiting...');
-        for _ = 1, 10 do
+        while (isRunning()) do
+            if (timedOut(startTime, TIMEOUT)) then
+                warn('[AutoFarm] Container UI timeout');
+                releasePosition();
+                lootedTimestamps[model] = os.clock();
+                return;
+            end;
+
             task.wait(0.5);
+
             containerUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container');
-            if (containerUI and containerUI.Visible) then break; end;
+
+            if (containerUI and containerUI.Visible) then
+                break;
+            end;
         end;
     end;
 
