@@ -88,15 +88,15 @@ local function dragGui(fromGui, toGui)
 
     -- Move mouse to source, hold
     mousemoveabs(fx, fy);
-    task.wait(0.15);
+    task.wait(0.5);
     VirtualInputManager:SendMouseButtonEvent(fx, fy, 0, true, game, 1);
-    task.wait(0.15);
+    task.wait(0.53);
     -- Move mouse to target
     mousemoveabs(tx, ty);
-    task.wait(0.15);
+    task.wait(0.5);
     -- Release at target
     VirtualInputManager:SendMouseButtonEvent(tx, ty, 0, false, game, 1);
-    task.wait(0.15);
+    task.wait(0.5);
 end;
 
 -- ── Mouse Unlock ──
