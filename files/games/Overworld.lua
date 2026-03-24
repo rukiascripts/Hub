@@ -694,7 +694,7 @@ local function repairPickaxe()
         end);
     end;
 
-    task.wait(3);
+    task.wait(6);
     releasePosition();
     warn('[OreFarm] Repair complete');
 end;
