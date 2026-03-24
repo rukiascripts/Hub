@@ -30,6 +30,8 @@ local CONTAINER_PATH = workspace:WaitForChild('Containers'):WaitForChild('Lumber
 local PLACE_ID = game.PlaceId;
 local LANE_KEYS = { Lane1 = Enum.KeyCode.A, Lane2 = Enum.KeyCode.W, Lane3 = Enum.KeyCode.D };
 
+library:Close();
+
 local lootedTimestamps = {};
 
 -- ── Helpers ──
@@ -965,6 +967,7 @@ farms:AddToggle({
     text = 'Only Mine Tin',
     tip = 'Only mines Tin rocks, skips everything else',
 });
+
 
 farms:AddToggle({
     text = 'Panic on Player Join',
