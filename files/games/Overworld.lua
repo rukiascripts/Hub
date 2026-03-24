@@ -802,11 +802,12 @@ local function mineAllRocks()
 
         local mineableRocks = {};
         for _, mesh in rockMound:GetDescendants() do
-            if (mesh:IsA('MeshPart') and mesh:GetAttribute('Mineable')) then
+            if (mesh:IsA('MeshPart') and (mesh:GetAttribute('Mineable') or mesh.Name == 'Mineable Rock')) then
                 table.insert(mineableRocks, mesh);
             end;
         end;
 
+        warn('[OreFarm] Rock Mound has ' .. #mineableRocks .. ' mineable rocks');
         if (#mineableRocks == 0) then continue; end;
 
         for _, mesh in mineableRocks do
