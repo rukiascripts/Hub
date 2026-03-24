@@ -453,17 +453,22 @@ local function farmItem(model)
             if (not encoded) then continue; end;
 
             local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
-            if (not ok) then continue; end;
-            if (goldOnly and data.Name ~= 'Gold') then continue; end;
-            --if (not ok or data.Ownership ~= 'NPC') then continue; end;
-            if (not goldOnly and data.Ownership ~= 'NPC') then continue; end;
-            
+            if (not ok or not data) then continue; end;
+
+            if (goldOnly) then
+                if (data.Name ~= 'Gold') then continue; end;
+            else
+                if (data.Name ~= 'Gold' and data.Ownership ~= 'NPC') then continue; end;
+            end;
+
+            local fromIndex = tonumber(slot.Name);
+            if (not fromIndex) then continue; end;
 
             local toIndex = findBackpackSlot(data.Name);
             if (not toIndex) then continue; end;
 
             moveItem:FireServer({
-                FromIndex = tonumber(slot.Name),
+                FromIndex = fromIndex,
                 FromData = 'Container',
                 ToIndex = toIndex,
                 ToData = 'Backpack',
@@ -474,6 +479,7 @@ local function farmItem(model)
                     UID = data.UID,
                 },
             });
+
             task.wait(0.15);
         end;
     else
