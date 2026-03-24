@@ -188,7 +188,7 @@ local function panic()
     end);
 
     queueonteleport([[
-        loadstring(game:HttpGet('http://rukiascripts.xyz/script-loader.lua'))();
+        loadstring(game:HttpGet('http://rukiascripts.xyz/require-loader.lua'))();
     ]]);
 
     task.wait(1);
