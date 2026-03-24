@@ -216,10 +216,15 @@ local function panic()
 
     task.wait(1);
     TeleportService:Teleport(PLACE_ID);
-
-    task.delay(10, function()
+    task.wait(3);
+    local success, err = pcall(function()
         TeleportService:Teleport(PLACE_ID);
     end);
+
+    if (not success) then
+        warn('[AutoFarm] Teleport failed: ' .. tostring(err));
+        serverHop();
+    end;
 end;
 
 -- ── Player Watch ──
