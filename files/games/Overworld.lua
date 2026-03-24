@@ -205,7 +205,12 @@ end;
 
 -- ── Panic ──
 
+local isTeleporting = false;
+
 local function panic()
+    if (isTeleporting) then return; end;
+    isTeleporting = true;
+
     warn('[AutoFarm] Other player detected! Blocking and rejoining...');
 
     task.spawn(function()
@@ -215,7 +220,24 @@ local function panic()
     end);
 
     task.wait(1);
-    TeleportService:Teleport(PLACE_ID);
+
+    local success, err = pcall(function()
+        TeleportService:Teleport(PLACE_ID);
+    end);
+
+    if (not success) then
+        warn('[AutoFarm] Teleport failed: ' .. tostring(err));
+
+        task.wait(3);
+
+        local retrySuccess, retryErr = pcall(function()
+            TeleportService:Teleport(PLACE_ID);
+        end);
+
+        if (not retrySuccess) then
+            warn('[AutoFarm] Retry teleport failed: ' .. tostring(retryErr));
+        end;
+    end;
 end;
 
 -- ── Player Watch ──
@@ -724,7 +746,15 @@ end;
 local function sellOreItems()
     warn('[OreFarm] Selling items...');
 
-    local shopPart = findChild(workspace, 'Prox', 'ShopPart');
+    local shopPart;
+    for _, proxParts in workspace.Prox do
+        if (proxParts.Name ~= 'ShopPart') then continue; end;
+        if (proxPart:GetAttribute('Id') == 'Max') then
+            shopPart = proxParts;
+            break;
+        end;
+    end;
+
     if (not shopPart) then warn('[OreFarm] ShopPart not found'); return; end;
 
     local shopPrompt = findProximityPrompt(shopPart);
