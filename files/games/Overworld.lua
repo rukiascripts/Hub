@@ -453,8 +453,11 @@ local function farmItem(model)
             if (not encoded) then continue; end;
 
             local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
-            if (not ok or data.Ownership ~= 'NPC') then continue; end;
+            if (not ok) then continue; end;
             if (goldOnly and data.Name ~= 'Gold') then continue; end;
+            --if (not ok or data.Ownership ~= 'NPC') then continue; end;
+            if (not goldOnly and data.Ownership ~= 'NPC') then continue; end;
+            
 
             local toIndex = findBackpackSlot(data.Name);
             if (not toIndex) then continue; end;
