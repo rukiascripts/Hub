@@ -651,7 +651,7 @@ local function repairPickaxe()
     end;
 
     teleportTo(anvilPart.Position);
-    task.wait(0.5);
+    task.wait(1);
     if (not isOreFarming()) then return; end;
 
     local _, data = findPickaxeSlot();
@@ -659,10 +659,11 @@ local function repairPickaxe()
 
 
     local requestRepair = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents', 'RequestRepair');
-    requestRepair:FireServer({
+    
+    requestRepair:FireServer(
         data.UID, -- pickaxe id
         '2'-- repair type (1 = normal, 2 = gold)
-    })
+    );
 
 
     -- fireproximityprompt(anvilPrompt);
