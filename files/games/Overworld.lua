@@ -415,8 +415,22 @@ local function farmItem(model)
 
     task.wait(1);
     local moveItem = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents', 'MoveItem');
-    if (moveItem) then
-        moveItem:FireServer({ FromIndex = 'ALL', FromData = 'Container' });
+    local containerSlots = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container', 'Container', 'Slots');
+    if (moveItem and containerSlots) then
+        local goldOnly = library.flags.onlyPickupGold;
+        for _, slot in containerSlots:GetChildren() do
+            if (not slot:IsA('ImageButton') or not slot:GetAttribute('Populated')) then continue; end;
+
+            local encoded = slot:GetAttribute('ItemEncode');
+            if (not encoded) then continue; end;
+
+            local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
+            if (not ok or data.Ownership ~= 'NPC') then continue; end;
+            if (goldOnly and data.Name ~= 'Gold') then continue; end;
+
+            moveItem:FireServer({ FromIndex = tonumber(slot.Name), FromData = 'Container' });
+            task.wait(0.15);
+        end;
     end;
 
     releasePosition();
@@ -452,8 +466,9 @@ local function startFarm()
             local items = getValidItems();
 
             if (#items == 0) then
-                task.wait(1);
-                continue;
+                warn('[AutoFarm] All loot collected, rejoining...');
+                panic();
+                return;
             end;
 
             for _, item in items do
@@ -488,6 +503,11 @@ farms:AddToggle({
             stopFarm();
         end;
     end
+});
+
+farms:AddToggle({
+    text = 'Only Pickup Gold',
+    tip = 'Only loots Gold from containers, skips everything else',
 });
 
 farms:AddToggle({
