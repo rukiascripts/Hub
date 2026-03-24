@@ -782,7 +782,7 @@ local function mineAllRocks()
         [7] = Enum.KeyCode.Seven, [8] = Enum.KeyCode.Eight, [9] = Enum.KeyCode.Nine,
     };
 
-    local pickaxe = char:FindFirstChild('Stone Pickaxe');
+    local pickaxe = char:FindFirstChild('Stone Pickaxe') or char:FindFirstChild('Silver Pickaxe') or char:FindFirstChild('Iron Pickaxe');
     if (not pickaxe) then
         local slot = findPickaxeSlot();
         if (slot) then
@@ -793,7 +793,7 @@ local function mineAllRocks()
                 pressKey(keyCode);
                 task.wait(1);
                 char = LocalPlayer.Character;
-                if (char) then pickaxe = char:FindFirstChild('Stone Pickaxe'); end;
+                if (char) then pickaxe = char:FindFirstChild('Stone Pickaxe') or char:FindFirstChild('Silver Pickaxe') or char:FindFirstChild('Iron Pickaxe'); end;
             end;
         end;
         if (not pickaxe) then warn('[OreFarm] Pickaxe not found'); return false; end;
