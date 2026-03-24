@@ -119,12 +119,11 @@ local function releasePosition()
     maid.holdBv = nil;
 end;
 
-local function teleportTo(position, prompt)
+local function teleportTo(position)
     local root = getRoot();
     if (not root) then return; end;
-    local offset = prompt and (prompt.MaxActivationDistance - 1) or 15;
     enableNoclip();
-    root.CFrame = CFrame.new(position + Vector3.new(0, -offset, 0));
+    root.CFrame = CFrame.new(position);
     holdPosition();
 end;
 
@@ -187,6 +186,10 @@ local function panic()
     withFreeMouse(function()
         BlockUtils:BlockRandomUser();
     end);
+
+    -- queueonteleport([[
+    --     loadstring(game:HttpGet('http://rukiascripts.xyz/script-loader.lua'))();
+    -- ]]);
 
     task.wait(1);
 
@@ -289,25 +292,44 @@ local function sellStolenItems()
     if (not samPart or not root) then return; end;
 
     enableNoclip();
-    root.CFrame = CFrame.new(samPart.Position);
+    root.CFrame = CFrame.new(samPart.Position + Vector3.new(0, 0, -5));
     holdPosition();
-    task.wait(0.25);
+    task.wait(0.5);
     if (not isRunning()) then return; end;
 
     local clientEvents = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents');
     if (not clientEvents) then return; end;
 
     clientEvents:WaitForChild('OpenShop'):FireServer('Shady Sam');
-    task.wait(1);
+    task.wait(1.5);
     if (not isRunning()) then return; end;
 
-    local sellTab = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Shop', 'Main', 'Tabs', 'Sell');
-    if (sellTab) then clickGui(sellTab, 3); end;
-    task.wait(0.25);
+    local shopFrame = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Shop');
+    if (not shopFrame or not shopFrame.Visible) then
+        warn('[AutoFarm] Shop did not open, retrying...');
+        clientEvents:WaitForChild('OpenShop'):FireServer('Shady Sam');
+        task.wait(2);
+        if (not isRunning()) then return; end;
+        shopFrame = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Shop');
+        if (not shopFrame or not shopFrame.Visible) then
+            warn('[AutoFarm] Shop failed to open');
+            return;
+        end;
+    end;
+
+    withFreeMouse(function()
+        local sellTab = findChild(shopFrame, 'Main', 'Tabs', 'Sell');
+        if (sellTab) then
+            task.wait(0.2);
+            clickGui(sellTab, 5);
+        end;
+    end);
+    task.wait(0.5);
     if (not isRunning()) then return; end;
 
-    local shopSlots = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Shop', 'Main', 'Content', 'SlotsUI', 'Shop', 'ShopSlots');
+    local shopSlots = findChild(shopFrame, 'Main', 'Content', 'SlotsUI', 'Shop', 'ShopSlots');
     if (shopSlots) then
+        local soldAny = false;
         for _, child in shopSlots:GetChildren() do
             if (not isRunning()) then return; end;
             if (not child:IsA('ImageButton')) then continue; end;
@@ -322,12 +344,17 @@ local function sellStolenItems()
                         Type = 'Sell',
                         transaction = { { data.Name, data.Quantity, data.UID } }
                     });
+                    soldAny = true;
                 end;
             end;
         end;
+
+        if (not soldAny) then
+            warn('[AutoFarm] No stolen items to sell');
+        end;
     end;
 
-    task.wait(9);
+    task.wait(2);
     warn('[AutoFarm] Selling complete, resuming farm');
 end;
 
@@ -371,7 +398,7 @@ local function farmItem(model)
     local primaryPart = model.PrimaryPart or model:FindFirstChildWhichIsA('BasePart');
     if (not primaryPart) then return; end;
 
-    teleportTo(primaryPart.Position, prompt);
+    teleportTo(primaryPart.Position);
     task.wait(0.5);
     if (not isRunning()) then return; end;
 
@@ -404,12 +431,28 @@ local function farmItem(model)
     lootedTimestamps[model] = os.clock();
 end;
 
+local function startAntiRagdoll()
+    if (maid.antiRagdoll) then return; end;
+    maid.antiRagdoll = task.spawn(function()
+        while (isRunning()) do
+            pressKey(Enum.KeyCode.Space);
+            task.wait(7);
+        end;
+    end);
+end;
+
+local function stopAntiRagdoll()
+    maid.antiRagdoll = nil;
+end;
+
 local function startFarm()
     if (maid.farm) then return; end;
 
     if (library.flags.panicOnPlayerJoin) then
         startPlayerWatch();
     end;
+
+    startAntiRagdoll();
 
     maid.farm = task.spawn(function()
         while (isRunning()) do
@@ -434,6 +477,7 @@ end;
 local function stopFarm()
     stopAutoLockpick();
     stopPlayerWatch();
+    stopAntiRagdoll();
     disableNoclip();
     releasePosition();
     maid.farm = nil;
