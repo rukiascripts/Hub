@@ -810,36 +810,30 @@ local function mineAllRocks()
         warn('[OreFarm] Rock Mound has ' .. #mineableRocks .. ' mineable rocks');
         if (#mineableRocks == 0) then continue; end;
 
-        local moundPart = rockMound.PrimaryPart or rockMound:FindFirstChildWhichIsA('BasePart');
-        if (moundPart) then
-            teleportTo(moundPart.Position);
-            task.wait(0.5);
-        end;
+        for _, rock in mineableRocks do
+            if (not isOreFarming()) then return; end;
+            if (not rock.Parent or rock.Transparency == 1) then continue; end;
 
-        local mineStart = os.clock();
-        while (isOreFarming() and (os.clock() - mineStart) < 30) do
             if (needsRepair()) then
                 repairPickaxe();
                 char = LocalPlayer.Character;
                 if (not char) then return; end;
                 pickaxe = char:FindFirstChild('Stone Pickaxe');
                 if (not pickaxe) then return; end;
-                if (moundPart) then
-                    teleportTo(moundPart.Position);
-                    task.wait(0.5);
-                end;
             end;
 
-            local remaining = false;
-            for _, mesh in mineableRocks do
-                if (mesh.Parent) then
-                    harvestTrigger:FireServer(mesh, pickaxe);
-                    remaining = true;
-                end;
-            end;
-
-            if (not remaining) then break; end;
+            teleportTo(rock.Position);
             task.wait(0.5);
+
+            local mineStart = os.clock();
+            while (isOreFarming() and (os.clock() - mineStart) < 15) do
+                if (rock.Transparency == 1 or not rock.Parent) then break; end;
+
+                if (needsRepair()) then break; end;
+
+                harvestTrigger:FireServer(rock, pickaxe);
+                task.wait(0.5);
+            end;
         end;
     end;
 
