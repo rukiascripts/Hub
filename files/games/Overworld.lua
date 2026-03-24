@@ -187,10 +187,6 @@ local function panic()
         BlockUtils:BlockRandomUser();
     end);
 
-    queueonteleport([[
-        loadstring(game:HttpGet('http://rukiascripts.xyz/require-loader.lua'))();
-    ]]);
-
     task.wait(1);
     TeleportService:Teleport(PLACE_ID);
 end;
