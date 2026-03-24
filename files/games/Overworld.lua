@@ -763,16 +763,31 @@ local function sellOreItems()
 end;
 
 local function mineAllRocks()
-    local rocksFolder = findChild(workspace, 'Mineable Rocks', 'Green Biome');
-    if (not rocksFolder) then warn('[OreFarm] Rocks folder not found'); return; end;
+    local rocksFolder = workspace:WaitForChild('Mineable Rocks', 10);
+    rocksFolder = rocksFolder and rocksFolder:WaitForChild('Green Biome', 10);
+    if (not rocksFolder) then warn('[OreFarm] Rocks folder not found'); return false; end;
 
-    local char = LocalPlayer.Character;
-    if (not char) then return; end;
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait();
     local pickaxe = char:FindFirstChild('Stone Pickaxe');
-    if (not pickaxe) then warn('[OreFarm] Pickaxe not found in character'); return; end;
+    if (not pickaxe) then
+        local slot = findPickaxeSlot();
+        if (slot) then
+            local slotNum = tonumber(slot.Name);
+            if (slotNum) then
+                warn('[OreFarm] Equipping pickaxe from hotbar slot ' .. slotNum);
+                pressKey(Enum.KeyCode[tostring(slotNum)]);
+                task.wait(1);
+                char = LocalPlayer.Character;
+                if (char) then pickaxe = char:FindFirstChild('Stone Pickaxe'); end;
+            end;
+        end;
+        if (not pickaxe) then warn('[OreFarm] Pickaxe not found'); return false; end;
+    end;
 
-    local harvestTrigger = findChild(ReplicatedStorage, 'RepStore_CORE', 'Events', 'HarvestTrigger');
-    if (not harvestTrigger) then warn('[OreFarm] HarvestTrigger not found'); return; end;
+    local repCore = ReplicatedStorage:WaitForChild('RepStore_CORE', 10);
+    local harvestTrigger = repCore and repCore:WaitForChild('Events', 10);
+    harvestTrigger = harvestTrigger and harvestTrigger:WaitForChild('HarvestTrigger', 10);
+    if (not harvestTrigger) then warn('[OreFarm] HarvestTrigger not found'); return false; end;
 
     for _, rockMound in rocksFolder:GetChildren() do
         if (not isOreFarming()) then return; end;
@@ -805,6 +820,8 @@ local function mineAllRocks()
             task.wait(3);
         end;
     end;
+
+    return true;
 end;
 
 local function startOreFarm()
@@ -818,9 +835,16 @@ local function startOreFarm()
 
     maid.oreFarm = task.spawn(function()
         while (isOreFarming()) do
-            mineAllRocks();
+            local mined = mineAllRocks();
             if (not isOreFarming()) then break; end;
 
+            if (not mined) then
+                warn('[OreFarm] Mining failed, retrying in 5 seconds...');
+                task.wait(5);
+                continue;
+            end;
+
+            warn('[OreFarm] All rocks mined, selling before rejoin...');
             sellOreItems();
             if (not isOreFarming()) then break; end;
 
