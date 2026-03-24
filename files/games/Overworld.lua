@@ -626,7 +626,7 @@ end;
 local function needsRepair()
     local _, data = findPickaxeSlot();
     if (not data) then return false; end;
-    return data.Durability and data.Durability <= 10;
+    return data.Durability and data.Durability <= 25;
 end;
 
 local function repairPickaxe()
@@ -821,6 +821,11 @@ local function mineAllRocks()
         for _, rock in mineableRocks do
             if (not isOreFarming()) then return; end;
             if (not rock.Parent or rock.Transparency == 1) then continue; end;
+
+            if (isInventoryFull()) then
+                sellOreItems();
+                if (not isOreFarming()) then return; end;
+            end;
 
             if (needsRepair()) then
                 repairPickaxe();
