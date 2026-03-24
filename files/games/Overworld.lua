@@ -86,9 +86,15 @@ local function dragGui(fromGui, toGui)
     local tx = toPos.X + toSize.X / 2;
     local ty = toPos.Y + toSize.Y / 2 + inset.Y;
 
+    -- Hold
     VirtualInputManager:SendMouseButtonEvent(fx, fy, 0, true, game, 1);
     task.wait(0.15);
+    -- Move to target
+    VirtualInputManager:SendMouseButtonEvent(tx, ty, 0, true, game, 1);
+    task.wait(0.15);
+    -- Release
     VirtualInputManager:SendMouseButtonEvent(tx, ty, 0, false, game, 1);
+    task.wait(0.15);
 end;
 
 -- ── Mouse Unlock ──
@@ -671,22 +677,22 @@ local function repairPickaxe()
     task.wait(0.5);
     if (not isOreFarming()) then return; end;
 
-    local repairButton = anvilUI:FindFirstChild('RepairButton');
-    if (repairButton) then
-        withFreeMouse(function()
-            clickGui(repairButton, 3);
-        end);
-    end;
-    task.wait(0.5);
-
     local goldButton = findChild(anvilUI, 'ActionFrame', 'GoldButton');
     if (goldButton) then
         withFreeMouse(function()
             clickGui(goldButton, 3);
         end);
     end;
+    task.wait(0.15);
 
-    task.wait(6);
+    local repairButton = anvilUI:FindFirstChild('RepairButton');
+    if (repairButton) then
+        withFreeMouse(function()
+            clickGui(repairButton, 3);
+        end);
+    end;
+
+    task.wait(3);
     releasePosition();
     warn('[OreFarm] Repair complete');
 end;
@@ -828,10 +834,14 @@ local function mineAllRocks()
             local mineStart = os.clock();
             while (isOreFarming() and (os.clock() - mineStart) < 15) do
                 if (rock.Transparency == 1 or not rock.Parent) then break; end;
-
                 if (needsRepair()) then break; end;
 
-                harvestTrigger:FireServer(rock, pickaxe);
+                for _, mesh in mineableRocks do
+                    if (mesh.Parent and mesh.Transparency ~= 1) then
+                        harvestTrigger:FireServer(mesh, pickaxe);
+                    end;
+                end;
+
                 task.wait(0.5);
             end;
         end;
