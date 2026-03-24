@@ -768,14 +768,21 @@ local function mineAllRocks()
     if (not rocksFolder) then warn('[OreFarm] Rocks folder not found'); return false; end;
 
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait();
+    local HOTBAR_KEYCODES = {
+        [1] = Enum.KeyCode.One, [2] = Enum.KeyCode.Two, [3] = Enum.KeyCode.Three,
+        [4] = Enum.KeyCode.Four, [5] = Enum.KeyCode.Five, [6] = Enum.KeyCode.Six,
+        [7] = Enum.KeyCode.Seven, [8] = Enum.KeyCode.Eight, [9] = Enum.KeyCode.Nine,
+    };
+
     local pickaxe = char:FindFirstChild('Stone Pickaxe');
     if (not pickaxe) then
         local slot = findPickaxeSlot();
         if (slot) then
             local slotNum = tonumber(slot.Name);
-            if (slotNum) then
+            local keyCode = slotNum and HOTBAR_KEYCODES[slotNum];
+            if (keyCode) then
                 warn('[OreFarm] Equipping pickaxe from hotbar slot ' .. slotNum);
-                pressKey(Enum.KeyCode[tostring(slotNum)]);
+                pressKey(keyCode);
                 task.wait(1);
                 char = LocalPlayer.Character;
                 if (char) then pickaxe = char:FindFirstChild('Stone Pickaxe'); end;
