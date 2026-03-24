@@ -654,7 +654,7 @@ local function repairPickaxe()
 
     teleportTo(anvilPart.Position);
     task.wait(1.5);
-    fireproximityprompt(anvilPart);
+    fireproximityprompt(anvilPrompt);
     if (not isOreFarming()) then return; end;
 
     local _, data = findPickaxeSlot();
