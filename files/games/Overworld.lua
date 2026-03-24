@@ -652,6 +652,7 @@ local function repairPickaxe()
 
     teleportTo(anvilPart.Position);
     task.wait(1.5);
+    fireproximityprompt(anvilPart);
     if (not isOreFarming()) then return; end;
 
     local _, data = findPickaxeSlot();
@@ -819,9 +820,15 @@ local function mineAllRocks()
         if (rockMound.Name ~= 'Rock Mound') then continue; end;
 
         local mineableRocks = {};
-        for _, mesh in rockMound:GetDescendants() do
+         for _, mesh in rockMound:GetDescendants() do
             if (mesh:IsA('MeshPart') and (mesh:GetAttribute('Mineable') or mesh.Name == 'Mineable Rock')) then
-                table.insert(mineableRocks, mesh);
+                if (library.flags.onlyMineTin) then
+                    if (mesh:FindFirstChild('Tin')) then
+                        table.insert(mineableRocks, mesh);
+                    end;
+                else
+                    table.insert(mineableRocks, mesh);
+                end;
             end;
         end;
 
@@ -927,6 +934,11 @@ farms:AddToggle({
 farms:AddToggle({
     text = 'Only Pickup Gold',
     tip = 'Only loots Gold from containers, skips everything else',
+});
+
+farms:AddToggle({
+    text = 'Only Mine Tin',
+    tip = 'Only mines Tin rocks, skips everything else',
 });
 
 farms:AddToggle({
