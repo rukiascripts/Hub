@@ -796,139 +796,52 @@ local function mineAllRocks()
     harvestTrigger = harvestTrigger and harvestTrigger:WaitForChild('HarvestTrigger', 10);
     if (not harvestTrigger) then warn('[OreFarm] HarvestTrigger not found'); return false; end;
 
-    -- Collect all mineable rocks across all mounds
-    local allRocks = {};
     for _, rockMound in rocksFolder:GetChildren() do
+        if (not isOreFarming()) then return; end;
         if (rockMound.Name ~= 'Rock Mound') then continue; end;
+
+        local mineableRocks = {};
         for _, mesh in rockMound:GetDescendants() do
             if (mesh:IsA('MeshPart') and (mesh:GetAttribute('Mineable') or mesh.Name == 'Mineable Rock')) then
-                table.insert(allRocks, mesh);
+                table.insert(mineableRocks, mesh);
             end;
         end;
-    end;
 
-    warn('[OreFarm] Total mineable rocks: ' .. #allRocks);
-    if (#allRocks == 0) then return true; end;
+        warn('[OreFarm] Rock Mound has ' .. #mineableRocks .. ' mineable rocks');
+        if (#mineableRocks == 0) then continue; end;
 
-    -- Create visible hitbox welded to character
-    local root = getRoot();
-    if (not root) then return false; end;
-
-    local HITBOX_SIZE = 12;
-    local hitbox = Instance.new('Part');
-    hitbox.Name = 'MineHitbox';
-    hitbox.Size = Vector3.new(HITBOX_SIZE, HITBOX_SIZE, HITBOX_SIZE);
-    hitbox.Anchored = false;
-    hitbox.CanCollide = false;
-    hitbox.Transparency = 0.7;
-    hitbox.Color = Color3.fromRGB(0, 170, 255);
-    hitbox.Material = Enum.Material.ForceField;
-    hitbox.Parent = workspace;
-
-    local weld = Instance.new('WeldConstraint');
-    weld.Part0 = root;
-    weld.Part1 = hitbox;
-    weld.Parent = hitbox;
-    hitbox.CFrame = root.CFrame;
-
-    local minedSet = {};
-
-    -- Group rocks by proximity to reduce teleports
-    local function getRocksInRange(position, range)
-        local nearby = {};
-        for _, rock in allRocks do
-            if (minedSet[rock]) then continue; end;
-            if (not rock.Parent) then
-                minedSet[rock] = true;
-                continue;
-            end;
-            if ((rock.Position - position).Magnitude <= range) then
-                table.insert(nearby, rock);
-            end;
+        local moundPart = rockMound.PrimaryPart or rockMound:FindFirstChildWhichIsA('BasePart');
+        if (moundPart) then
+            teleportTo(moundPart.Position);
+            task.wait(0.5);
         end;
-        return nearby;
-    end;
-
-    local function getNextUnminedRock()
-        for _, rock in allRocks do
-            if (not minedSet[rock] and rock.Parent) then
-                return rock;
-            end;
-        end;
-        return nil;
-    end;
-
-    while (isOreFarming()) do
-        local nextRock = getNextUnminedRock();
-        if (not nextRock) then break; end;
-
-        teleportTo(nextRock.Position);
-        task.wait(0.5);
 
         local mineStart = os.clock();
         while (isOreFarming() and (os.clock() - mineStart) < 30) do
             if (needsRepair()) then
                 repairPickaxe();
                 char = LocalPlayer.Character;
-                if (not char) then
-                    pcall(function() hitbox:Destroy(); end);
-                    return false;
-                end;
+                if (not char) then return; end;
                 pickaxe = char:FindFirstChild('Stone Pickaxe');
-                if (not pickaxe) then
-                    pcall(function() hitbox:Destroy(); end);
-                    return false;
+                if (not pickaxe) then return; end;
+                if (moundPart) then
+                    teleportTo(moundPart.Position);
+                    task.wait(0.5);
                 end;
-
-                -- Re-weld hitbox to new root
-                root = getRoot();
-                if (root) then
-                    pcall(function() weld:Destroy(); end);
-                    weld = Instance.new('WeldConstraint');
-                    weld.Part0 = root;
-                    weld.Part1 = hitbox;
-                    weld.Parent = hitbox;
-                    hitbox.CFrame = root.CFrame;
-                end;
-
-                teleportTo(nextRock.Position);
-                task.wait(0.5);
             end;
 
-            -- Fire harvest for all rocks in hitbox range
-            local nearbyRocks = getRocksInRange(root.Position, HITBOX_SIZE / 2);
             local remaining = false;
-            for _, mesh in nearbyRocks do
+            for _, mesh in mineableRocks do
                 if (mesh.Parent) then
                     harvestTrigger:FireServer(mesh, pickaxe);
                     remaining = true;
                 end;
             end;
 
-            -- Mark destroyed rocks within range as mined
-            for _, mesh in nearbyRocks do
-                if (not mesh.Parent) then
-                    minedSet[mesh] = true;
-                end;
-            end;
-
-            if (not remaining) then
-                -- Mark all rocks in range as mined so we skip this area
-                for _, rock in allRocks do
-                    if (not minedSet[rock] and rock.Parent) then
-                        if ((rock.Position - root.Position).Magnitude <= HITBOX_SIZE / 2) then
-                            minedSet[rock] = true;
-                        end;
-                    end;
-                end;
-                break;
-            end;
-
+            if (not remaining) then break; end;
             task.wait(0.5);
         end;
     end;
-
-    pcall(function() hitbox:Destroy(); end);
 
     return true;
 end;
