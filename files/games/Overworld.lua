@@ -30,8 +30,6 @@ local CONTAINER_PATH = workspace:WaitForChild('Containers'):WaitForChild('Lumber
 local PLACE_ID = game.PlaceId;
 local LANE_KEYS = { Lane1 = Enum.KeyCode.A, Lane2 = Enum.KeyCode.W, Lane3 = Enum.KeyCode.D };
 
-library:Close();
-
 local lootedTimestamps = {};
 
 -- ── Helpers ──
@@ -996,3 +994,8 @@ misc:AddButton({
         end;
     end
 });
+
+
+task.delay(5, function()
+    library:Close();
+end);
