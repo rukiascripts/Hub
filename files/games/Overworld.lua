@@ -824,8 +824,12 @@ local function mineAllRocks()
 
             teleportTo(mesh.Position);
             task.wait(0.5);
-            harvestTrigger:FireServer(mesh, pickaxe);
-            task.wait(3);
+
+            local mineStart = os.clock();
+            while (isOreFarming() and mesh.Parent and (os.clock() - mineStart) < 10) do
+                harvestTrigger:FireServer(mesh, pickaxe);
+                task.wait(0.5);
+            end;
         end;
     end;
 
