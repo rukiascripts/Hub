@@ -178,7 +178,7 @@ local function serverHop()
 
     local num = 0;
     for _, v in site.data do
-        local ID = tostring(v.id);
+        local ID    = tostring(v.id);
         local possible = true;
 
         if (tonumber(v.maxPlayers) > tonumber(v.playing)) then
@@ -208,8 +208,10 @@ end;
 local function panic()
     warn('[AutoFarm] Other player detected! Blocking and rejoining...');
 
-    withFreeMouse(function()
-        BlockUtils:BlockRandomUser();
+    task.spawn(function()
+        withFreeMouse(function()
+            BlockUtils:BlockRandomUser();
+        end);
     end);
 
     task.wait(1);
