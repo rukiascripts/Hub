@@ -74,6 +74,23 @@ local function findChild(parent, ...)
     return current;
 end;
 
+local function dragGui(fromGui, toGui)
+    local inset = GuiService:GetGuiInset();
+    local fromPos = fromGui.AbsolutePosition;
+    local fromSize = fromGui.AbsoluteSize;
+    local toPos = toGui.AbsolutePosition;
+    local toSize = toGui.AbsoluteSize;
+
+    local fx = fromPos.X + fromSize.X / 2;
+    local fy = fromPos.Y + fromSize.Y / 2 + inset.Y;
+    local tx = toPos.X + toSize.X / 2;
+    local ty = toPos.Y + toSize.Y / 2 + inset.Y;
+
+    VirtualInputManager:SendMouseButtonEvent(fx, fy, 0, true, game, 1);
+    task.wait(0.15);
+    VirtualInputManager:SendMouseButtonEvent(tx, ty, 0, false, game, 1);
+end;
+
 -- ── Mouse Unlock ──
 
 local function withFreeMouse(callback)
@@ -318,27 +335,26 @@ local function sellStolenItems()
 
     local shopSlots = findChild(shopFrame, 'Main', 'Content', 'SlotsUI', 'Shop', 'ShopSlots');
     if (shopSlots) then
-        local soldAny = false;
+        local transaction = {};
         for _, child in shopSlots:GetChildren() do
-            if (not isRunning()) then return; end;
             if (not child:IsA('ImageButton')) then continue; end;
 
-            for _, attribute in child:GetAttributes() do
-                if (typeof(attribute) == 'boolean' or attribute == 'Inventory' or attribute == 'Shop') then continue; end;
+            local encoded = child:GetAttribute('ItemEncode');
+            if (not encoded) then continue; end;
 
-                local ok, data = pcall(HttpService.JSONDecode, HttpService, attribute);
-                if (ok and data.Ownership == 'Steal') then
-                    clientEvents:WaitForChild('ShopTransact'):InvokeServer({
-                        ShopId = 'Shady Sam',
-                        Type = 'Sell',
-                        transaction = { { data.Name, data.Quantity, data.UID } }
-                    });
-                    soldAny = true;
-                end;
+            local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
+            if (ok and data.Ownership == 'Steal') then
+                table.insert(transaction, { data.Name, data.Quantity, data.UID });
             end;
         end;
 
-        if (not soldAny) then
+        if (#transaction > 0) then
+            clientEvents:WaitForChild('ShopTransact'):InvokeServer({
+                ShopId = 'Shady Sam',
+                Type = 'Sell',
+                transaction = transaction,
+            });
+        else
             warn('[AutoFarm] No stolen items to sell');
         end;
     end;
@@ -577,6 +593,256 @@ local function stopFarm()
     maid.farm = nil;
 end;
 
+-- ── Ore Farm ──
+
+local function isOreFarming()
+    return library.flags.autoMineOre;
+end;
+
+local function findPickaxeSlot()
+    local hotbarSlots = findChild(PlayerGui, 'ScreenGui', 'Frame', 'Hotbar', 'Slots');
+    if (not hotbarSlots) then return nil, nil; end;
+
+    for _, slot in hotbarSlots:GetChildren() do
+        if (not slot:IsA('ImageButton')) then continue; end;
+        local encoded = slot:GetAttribute('ItemEncode');
+        if (not encoded) then continue; end;
+        local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
+        if (ok and string.find(data.Name, 'Pickaxe')) then
+            return slot, data;
+        end;
+    end;
+    return nil, nil;
+end;
+
+local function needsRepair()
+    local _, data = findPickaxeSlot();
+    if (not data) then return false; end;
+    return data.Durability and data.Durability <= 10;
+end;
+
+local function repairPickaxe()
+    warn('[OreFarm] Repairing pickaxe...');
+
+    local anvils = workspace:WaitForChild('Stations'):WaitForChild('Runtime');
+    local anvilPart = nil;
+    local anvilPrompt = nil;
+    for _, child in anvils:GetChildren() do
+        if (child.Name ~= 'Anvil') then continue; end;
+        local prompt = findProximityPrompt(child);
+        if (prompt) then
+            anvilPart = child:IsA('BasePart') and child or child:FindFirstChildWhichIsA('BasePart');
+            anvilPrompt = prompt;
+            break;
+        end;
+    end;
+
+    if (not anvilPart or not anvilPrompt) then
+        warn('[OreFarm] No anvil found');
+        return;
+    end;
+
+    teleportTo(anvilPart.Position);
+    task.wait(0.5);
+    if (not isOreFarming()) then return; end;
+
+    fireproximityprompt(anvilPrompt);
+    task.wait(1);
+    if (not isOreFarming()) then return; end;
+
+    local anvilUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'MaterialProcess', 'Anvil');
+    if (not anvilUI) then
+        warn('[OreFarm] Anvil UI not found');
+        releasePosition();
+        return;
+    end;
+
+    local pickaxeSlot = findPickaxeSlot();
+    local repairSlot = findChild(anvilUI, 'Frame', 'Slots', 'Slot');
+    if (not pickaxeSlot or not repairSlot) then
+        warn('[OreFarm] Could not find pickaxe slot or repair slot');
+        releasePosition();
+        return;
+    end;
+
+    withFreeMouse(function()
+        dragGui(pickaxeSlot, repairSlot);
+    end);
+    task.wait(0.5);
+    if (not isOreFarming()) then return; end;
+
+    local repairButton = anvilUI:FindFirstChild('RepairButton');
+    if (repairButton) then
+        withFreeMouse(function()
+            clickGui(repairButton, 3);
+        end);
+    end;
+    task.wait(0.5);
+
+    local goldButton = findChild(anvilUI, 'ActionFrame', 'GoldButton');
+    if (goldButton) then
+        withFreeMouse(function()
+            clickGui(goldButton, 3);
+        end);
+    end;
+
+    task.wait(6);
+    releasePosition();
+    warn('[OreFarm] Repair complete');
+end;
+
+local function sellOreItems()
+    warn('[OreFarm] Selling items...');
+
+    local shopPart = findChild(workspace, 'Prox', 'ShopPart');
+    if (not shopPart) then warn('[OreFarm] ShopPart not found'); return; end;
+
+    local shopPrompt = findProximityPrompt(shopPart);
+    local shopPartPos = shopPart:IsA('BasePart') and shopPart or shopPart:FindFirstChildWhichIsA('BasePart');
+    if (not shopPartPos) then shopPartPos = shopPart; end;
+
+    teleportTo(shopPartPos.Position);
+    task.wait(0.5);
+    if (not isOreFarming()) then return; end;
+
+    if (shopPrompt) then
+        fireproximityprompt(shopPrompt);
+    end;
+    task.wait(1.5);
+    if (not isOreFarming()) then return; end;
+
+    local shopFrame = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Shop');
+    if (not shopFrame or not shopFrame.Visible) then
+        warn('[OreFarm] Shop did not open');
+        releasePosition();
+        return;
+    end;
+
+    withFreeMouse(function()
+        local sellTab = findChild(shopFrame, 'Main', 'Tabs', 'Sell');
+        if (sellTab) then
+            task.wait(0.2);
+            clickGui(sellTab, 5);
+        end;
+    end);
+    task.wait(0.5);
+    if (not isOreFarming()) then return; end;
+
+    local shopSlots = findChild(shopFrame, 'Main', 'Content', 'SlotsUI', 'Shop', 'ShopSlots');
+    if (shopSlots) then
+        local transaction = {};
+        for _, child in shopSlots:GetChildren() do
+            if (not child:IsA('ImageButton')) then continue; end;
+
+            local encoded = child:GetAttribute('ItemEncode');
+            if (not encoded) then continue; end;
+
+            local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
+            if (not ok) then continue; end;
+
+            if (not string.find(data.Name, 'Pickaxe')) then
+                table.insert(transaction, { data.Name, data.Quantity, data.UID });
+            end;
+        end;
+
+        if (#transaction > 0) then
+            local clientEvents = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents');
+            if (clientEvents) then
+                clientEvents:WaitForChild('ShopTransact'):InvokeServer({
+                    ShopId = 'Max',
+                    Type = 'Sell',
+                    transaction = transaction,
+                });
+            end;
+        end;
+    end;
+
+    releasePosition();
+    task.wait(1);
+    warn('[OreFarm] Selling complete');
+end;
+
+local function mineAllRocks()
+    local rocksFolder = findChild(workspace, 'Mineable Rocks', 'Green Biome');
+    if (not rocksFolder) then warn('[OreFarm] Rocks folder not found'); return; end;
+
+    local char = LocalPlayer.Character;
+    if (not char) then return; end;
+    local pickaxe = char:FindFirstChild('Stone Pickaxe');
+    if (not pickaxe) then warn('[OreFarm] Pickaxe not found in character'); return; end;
+
+    local harvestTrigger = findChild(ReplicatedStorage, 'RepStore_CORE', 'Events', 'HarvestTrigger');
+    if (not harvestTrigger) then warn('[OreFarm] HarvestTrigger not found'); return; end;
+
+    for _, rockMound in rocksFolder:GetChildren() do
+        if (not isOreFarming()) then return; end;
+        if (rockMound.Name ~= 'Rock Mound') then continue; end;
+
+        local mineableRocks = {};
+        for _, mesh in rockMound:GetDescendants() do
+            if (mesh:IsA('MeshPart') and mesh:GetAttribute('Mineable')) then
+                table.insert(mineableRocks, mesh);
+            end;
+        end;
+
+        if (#mineableRocks == 0) then continue; end;
+
+        for _, mesh in mineableRocks do
+            if (not isOreFarming()) then return; end;
+            if (not mesh.Parent) then continue; end;
+
+            if (needsRepair()) then
+                repairPickaxe();
+                char = LocalPlayer.Character;
+                if (not char) then return; end;
+                pickaxe = char:FindFirstChild('Stone Pickaxe');
+                if (not pickaxe) then return; end;
+            end;
+
+            teleportTo(mesh.Position);
+            task.wait(0.5);
+            harvestTrigger:FireServer(mesh, pickaxe);
+            task.wait(3);
+        end;
+    end;
+end;
+
+local function startOreFarm()
+    if (maid.oreFarm) then return; end;
+
+    if (library.flags.panicOnPlayerJoin) then
+        startPlayerWatch();
+    end;
+
+    startAntiRagdoll();
+
+    maid.oreFarm = task.spawn(function()
+        while (isOreFarming()) do
+            mineAllRocks();
+            if (not isOreFarming()) then break; end;
+
+            sellOreItems();
+            if (not isOreFarming()) then break; end;
+
+            if (needsRepair()) then
+                repairPickaxe();
+            end;
+
+            warn('[OreFarm] All rocks mined, rejoining...');
+            panic();
+            return;
+        end;
+    end);
+end;
+
+local function stopOreFarm()
+    stopPlayerWatch();
+    stopAntiRagdoll();
+    disableNoclip();
+    releasePosition();
+    maid.oreFarm = nil;
+end;
+
 -- ── UI ──
 
 farms:AddToggle({
@@ -594,6 +860,18 @@ farms:AddToggle({
 farms:AddToggle({
     text = 'Only Pickup Gold',
     tip = 'Only loots Gold from containers, skips everything else',
+});
+
+farms:AddToggle({
+    text = 'Auto Mine Ore',
+    tip = 'Mines rocks in Green Biome, auto repairs pickaxe, sells loot, and rejoins when done.',
+    callback = function(state: boolean): ()
+        if (state) then
+            startOreFarm();
+        else
+            stopOreFarm();
+        end;
+    end
 });
 
 farms:AddToggle({
