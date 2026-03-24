@@ -181,24 +181,17 @@ end;
 -- ── Panic ──
 
 local function panic()
-    warn('[AutoFarm] Other player detected! Blocking and server hopping...');
+    warn('[AutoFarm] Other player detected! Blocking and rejoining...');
 
     withFreeMouse(function()
         BlockUtils:BlockRandomUser();
     end);
 
-    -- queueonteleport([[
-    --     loadstring(game:HttpGet('http://rukiascripts.xyz/script-loader.lua'))();
-    -- ]]);
+    queueonteleport([[
+        loadstring(game:HttpGet('http://rukiascripts.xyz/script-loader.lua'))();
+    ]]);
 
     task.wait(1);
-
-    local ok = pcall(serverHop);
-    if (not ok) then
-        warn('[AutoFarm] Server hop failed, using fallback teleport');
-    end;
-
-    task.wait(2);
     TeleportService:Teleport(PLACE_ID);
 end;
 
