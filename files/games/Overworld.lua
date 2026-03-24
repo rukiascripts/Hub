@@ -425,6 +425,27 @@ local function farmItem(model)
     local containerSlots = containerUI and findChild(containerUI, 'Container', 'Slots');
     if (moveItem and containerSlots) then
         local goldOnly = library.flags.onlyPickupGold;
+        local backpackSlots = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Inventory', 'Frame', 'Backpack', 'Slots');
+
+        local function findBackpackSlot(itemName)
+            if (not backpackSlots) then return nil; end;
+            local emptySlot = nil;
+            for _, bpSlot in backpackSlots:GetChildren() do
+                if (not bpSlot:IsA('ImageButton')) then continue; end;
+                if (not bpSlot:GetAttribute('Populated')) then
+                    if (not emptySlot) then emptySlot = tonumber(bpSlot.Name); end;
+                    continue;
+                end;
+                local bpEncoded = bpSlot:GetAttribute('ItemEncode');
+                if (not bpEncoded) then continue; end;
+                local bpOk, bpData = pcall(HttpService.JSONDecode, HttpService, bpEncoded);
+                if (bpOk and bpData.Name == itemName) then
+                    return tonumber(bpSlot.Name);
+                end;
+            end;
+            return emptySlot;
+        end;
+
         for _, slot in containerSlots:GetChildren() do
             if (not slot:IsA('ImageButton') or not slot:GetAttribute('Populated')) then continue; end;
 
@@ -435,7 +456,21 @@ local function farmItem(model)
             if (not ok or data.Ownership ~= 'NPC') then continue; end;
             if (goldOnly and data.Name ~= 'Gold') then continue; end;
 
-            moveItem:FireServer({ FromIndex = tonumber(slot.Name), FromData = 'Container' });
+            local toIndex = findBackpackSlot(data.Name);
+            if (not toIndex) then continue; end;
+
+            moveItem:FireServer({
+                FromIndex = tonumber(slot.Name),
+                FromData = 'Container',
+                ToIndex = toIndex,
+                ToData = 'Backpack',
+                ItemInfo = {
+                    Ownership = data.Ownership,
+                    Quantity = data.Quantity,
+                    Name = data.Name,
+                    UID = data.UID,
+                },
+            });
             task.wait(0.15);
         end;
     else
