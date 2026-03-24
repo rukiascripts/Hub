@@ -446,6 +446,10 @@ local function farmItem(model)
             return emptySlot;
         end;
 
+        local function isGold(itemName)
+            return (string.find(itemName, 'Gold') ~= nil);
+        end;
+
         for _, slot in containerSlots:GetChildren() do
             if (not slot:IsA('ImageButton') or not slot:GetAttribute('Populated')) then continue; end;
 
@@ -456,9 +460,9 @@ local function farmItem(model)
             if (not ok or not data) then continue; end;
 
             if (goldOnly) then
-                if (data.Name ~= 'Gold') then continue; end;
+                if (not isGold(data.Name)) then continue; end;
             else
-                if (data.Name ~= 'Gold' and data.Ownership ~= 'NPC') then continue; end;
+                if (not isGold(data.Name) and data.Ownership ~= 'NPC') then continue; end;
             end;
 
             local fromIndex = tonumber(slot.Name);
