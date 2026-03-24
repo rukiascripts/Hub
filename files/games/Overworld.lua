@@ -651,7 +651,7 @@ local function repairPickaxe()
     end;
 
     teleportTo(anvilPart.Position);
-    task.wait(1);
+    task.wait(1.5);
     if (not isOreFarming()) then return; end;
 
     local _, data = findPickaxeSlot();
@@ -704,7 +704,7 @@ local function repairPickaxe()
     --     end);
     -- end;
 
-    task.wait(1);
+    task.wait(1.5);
     releasePosition();
     warn('[OreFarm] Repair complete');
 end;
