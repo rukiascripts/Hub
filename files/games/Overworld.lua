@@ -86,13 +86,15 @@ local function dragGui(fromGui, toGui)
     local tx = toPos.X + toSize.X / 2;
     local ty = toPos.Y + toSize.Y / 2 + inset.Y;
 
-    -- Hold
+    -- Move mouse to source, hold
+    mousemoveabs(fx, fy);
+    task.wait(0.15);
     VirtualInputManager:SendMouseButtonEvent(fx, fy, 0, true, game, 1);
     task.wait(0.15);
-    -- Move to target
-    VirtualInputManager:SendMouseButtonEvent(tx, ty, 0, true, game, 1);
+    -- Move mouse to target
+    mousemoveabs(tx, ty);
     task.wait(0.15);
-    -- Release
+    -- Release at target
     VirtualInputManager:SendMouseButtonEvent(tx, ty, 0, false, game, 1);
     task.wait(0.15);
 end;
