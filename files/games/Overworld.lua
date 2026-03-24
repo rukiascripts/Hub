@@ -841,7 +841,7 @@ local function mineAllRocks()
                 repairPickaxe();
                 char = LocalPlayer.Character;
                 if (not char) then return; end;
-                pickaxe = char:FindFirstChild('Stone Pickaxe');
+                pickaxe = char:FindFirstChild('Stone Pickaxe') or char:FindFirstChild('Silver Pickaxe') or char:FindFirstChild('Iron Pickaxe');
                 if (not pickaxe) then return; end;
             end;
 
