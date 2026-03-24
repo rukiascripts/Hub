@@ -626,7 +626,7 @@ end;
 local function needsRepair()
     local _, data = findPickaxeSlot();
     if (not data) then return false; end;
-    return data.Durability and data.Durability <= 25;
+    return data.Durability and data.Durability <= 40;
 end;
 
 local function repairPickaxe()
@@ -657,9 +657,7 @@ local function repairPickaxe()
     local _, data = findPickaxeSlot();
     if (not data) then return; end;
 
-
     local requestRepair = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents', 'RequestRepair');
-    
     requestRepair:FireServer(
         data.UID, -- pickaxe id
         '2'-- repair type (1 = normal, 2 = gold)
