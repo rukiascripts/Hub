@@ -219,7 +219,9 @@ local function panic()
         end);
     end);
 
-    task.wait(1.25);
+    local Test = math.random(2, 8);
+
+    task.wait(Test);
 
     local success, err = pcall(function()
         TeleportService:Teleport(PLACE_ID);
@@ -764,6 +766,7 @@ local function sellOreItems()
     if (shopPrompt) then
         fireproximityprompt(shopPrompt);
     end;
+    
     task.wait(1.5);
     if (not isOreFarming()) then return; end;
 
