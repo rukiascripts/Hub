@@ -211,7 +211,7 @@ local function panic()
     if (isTeleporting) then return; end;
     isTeleporting = true;
 
-    warn('[AutoFarm] Other player detected! Blocking and rejoining...');
+    warn('[AutoFarm] Other player detected! Blocking and matchmaking hop...');
 
     task.spawn(function()
         withFreeMouse(function()
@@ -219,24 +219,20 @@ local function panic()
         end);
     end);
 
-    task.wait(1);
+    task.wait(1.25);
 
     local success, err = pcall(function()
         TeleportService:Teleport(PLACE_ID);
     end);
 
     if (not success) then
-        warn('[AutoFarm] Teleport failed: ' .. tostring(err));
+        warn('[AutoFarm] Teleport failed (retrying):', err);
 
-        task.wait(3);
+        task.wait(4);
 
-        local retrySuccess, retryErr = pcall(function()
+        pcall(function()
             TeleportService:Teleport(PLACE_ID);
         end);
-
-        if (not retrySuccess) then
-            warn('[AutoFarm] Retry teleport failed: ' .. tostring(retryErr));
-        end;
     end;
 end;
 
@@ -747,10 +743,10 @@ local function sellOreItems()
     warn('[OreFarm] Selling items...');
 
     local shopPart;
-    for _, proxParts in workspace.Prox do
-        if (proxParts.Name ~= 'ShopPart') then continue; end;
+    for _, proxPart in workspace.Prox:GetChildren() do
+        if (proxPart.Name ~= 'ShopPart') then continue; end;
         if (proxPart:GetAttribute('Id') == 'Max') then
-            shopPart = proxParts;
+            shopPart = proxPart;
             break;
         end;
     end;
