@@ -743,10 +743,10 @@ local function sellOreItems()
     warn('[OreFarm] Selling items...');
 
     local shopPart;
-    for _, proxParts in workspace.Prox do
-        if (proxParts.Name ~= 'ShopPart') then continue; end;
+    for _, proxPart in workspace.Prox do
+        if (proxPart.Name ~= 'ShopPart') then continue; end;
         if (proxPart:GetAttribute('Id') == 'Max') then
-            shopPart = proxParts;
+            shopPart = proxPart;
             break;
         end;
     end;
