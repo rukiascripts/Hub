@@ -219,18 +219,19 @@ local function panic()
         end);
     end);
 
-    local Test = math.random(2, 8);
+    local delayTime = math.random(2, 8);
+    warn('[AutoFarm] Waiting', delayTime, 'seconds before teleport');
 
-    task.wait(Test);
+    task.wait(delayTime);
 
     local success, err = pcall(function()
         TeleportService:Teleport(PLACE_ID);
     end);
 
     if (not success) then
-        warn('[AutoFarm] Teleport failed (retrying):', err);
+        warn('[AutoFarm] Teleport retry after cooldown');
 
-        task.wait(4);
+        task.wait(math.random(4, 10));
 
         pcall(function()
             TeleportService:Teleport(PLACE_ID);
