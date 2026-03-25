@@ -211,6 +211,14 @@ local function panic()
     if (isTeleporting) then return; end;
     isTeleporting = true;
 
+    if (getgenv().stopFarm) then
+        getgenv().stopFarm();
+    end;
+
+    if (getgenv().stopOreFarm) then
+        getgenv().stopOreFarm();
+    end;
+
     warn('[AutoFarm] Other player detected! Blocking and matchmaking hop...');
 
     task.spawn(function()
@@ -633,6 +641,8 @@ local function stopFarm()
     maid.farm = nil;
 end;
 
+getgenv().stopFarm = stopFarm;
+
 -- ── Ore Farm ──
 
 local function isOreFarming()
@@ -957,6 +967,7 @@ local function stopOreFarm()
     releasePosition();
     maid.oreFarm = nil;
 end;
+getgenv().stopOreFarm = stopOreFarm;
 
 -- ── UI ──
 
