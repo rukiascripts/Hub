@@ -226,25 +226,9 @@ local function panic()
             BlockUtils:BlockRandomUser();
         end);
     end);
-
-    local delayTime = math.random(2, 8);
-    warn('[AutoFarm] Waiting', delayTime, 'seconds before teleport');
-
-    task.wait(delayTime);
-
-    local success, err = pcall(function()
-        TeleportService:Teleport(PLACE_ID);
-    end);
-
-    if (not success) then
-        warn('[AutoFarm] Teleport retry after cooldown');
-
-        task.wait(math.random(4, 10));
-
-        pcall(function()
-            TeleportService:Teleport(PLACE_ID);
-        end);
-    end;
+   
+    task.wait(3);
+    TeleportService:Teleport(PLACE_ID, LocalPlayer);
 end;
 
 -- ── Player Watch ──
