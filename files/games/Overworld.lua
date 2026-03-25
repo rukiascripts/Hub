@@ -228,7 +228,17 @@ local function panic()
     end);
    
     task.wait(3);
-    TeleportService:Teleport(PLACE_ID, LocalPlayer);
+
+    local MAX_RETRIES = 5;
+    for i = 1, MAX_RETRIES do
+        local ok, err = pcall(TeleportService.Teleport, TeleportService, PLACE_ID, LocalPlayer);
+        if (ok) then return; end;
+        warn('[AutoFarm] Teleport failed: ' .. tostring(err) .. ' (attempt ' .. i .. '/' .. MAX_RETRIES .. ')');
+        task.wait(5 + (i * 3));
+    end;
+
+    warn('[AutoFarm] All teleport attempts failed, resetting state.');
+    isTeleporting = false;
 end;
 
 -- ── Player Watch ──
