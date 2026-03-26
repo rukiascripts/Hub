@@ -1087,9 +1087,10 @@ local function isGoblinFarming()
     return library.flags.autoFarmGoblinKing;
 end;
 
-local function findCaveDoor()
+local function getAllCaveDoors()
+    local doors = {};
     local entrances = findChild(workspace, 'Dungeon Entrances', 'Cave_Entrances');
-    if (not entrances) then return nil; end;
+    if (not entrances) then return doors; end;
 
     for _, dungeon in entrances:GetChildren() do
         local portal = findChild(dungeon, 'Portal');
@@ -1098,10 +1099,10 @@ local function findCaveDoor()
         local door = dungeon:FindFirstChild('Door');
         local prompt = portal:FindFirstChild('TeleportPrompt');
         if (door and door:IsA('BasePart') and prompt and prompt:IsA('ProximityPrompt')) then
-            return door, prompt;
+            table.insert(doors, { door = door, prompt = prompt, name = dungeon.Name });
         end;
     end;
-    return nil;
+    return doors;
 end;
 
 local function findGoblinKing(bossAssets)
@@ -1184,33 +1185,30 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
     if (not hitPlayer) then warn('[GoblinFarm] HitPlayer remote not found'); return; end;
 
     maid.goblinFarm = task.spawn(function()
-        local dungeonsDone = 0;
+        local allDoors = getAllCaveDoors();
+        if (#allDoors == 0) then
+            warn('[GoblinFarm] No cave doors found');
+            return;
+        end;
 
-        while (isGoblinFarming()) do
-            -- Step 1: Enter a cave from the overworld
+        for doorIndex, doorInfo in allDoors do
+            if (not isGoblinFarming()) then break; end;
+
+            warn('[GoblinFarm] Entering dungeon ' .. doorIndex .. '/' .. #allDoors .. ' (' .. doorInfo.name .. ')');
+
+            -- Step 1: TP to door and enter
+            teleportTo(doorInfo.door.Position);
+            task.wait(0.5);
+            if (not isGoblinFarming()) then break; end;
+
+            local entered = tryFirePromptAndWait(doorInfo.prompt, function()
+                return getCurrentCave() ~= nil;
+            end, 'Cave entrance');
+
             local cave = getCurrentCave();
-            if (not cave) then
-                local door, prompt = findCaveDoor();
-                if (not door or not prompt) then
-                    warn('[GoblinFarm] No cave door found');
-                    task.wait(2);
-                    continue;
-                end;
-
-                teleportTo(door.Position);
-                task.wait(0.5);
-                if (not isGoblinFarming()) then break; end;
-
-                local entered = tryFirePromptAndWait(prompt, function()
-                    return getCurrentCave() ~= nil;
-                end, 'Cave entrance');
-
-                cave = getCurrentCave();
-                if (not entered or not cave) then
-                    warn('[GoblinFarm] Cave failed to load after ' .. PROMPT_ATTEMPTS .. ' attempts, skipping');
-                    dungeonsDone += 1;
-                    continue;
-                end;
+            if (not entered or not cave) then
+                warn('[GoblinFarm] Failed to enter ' .. doorInfo.name .. ', skipping');
+                continue;
             end;
 
             if (not isGoblinFarming()) then break; end;
@@ -1230,7 +1228,7 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
             -- Step 3: Check for Goblin King room
             local room = cave:FindFirstChild('GobKingRoomCaveGen');
             if (not room) then
-                warn('[GoblinFarm] No Goblin King in ' .. cave.Name .. ', moving to next dungeon');
+                warn('[GoblinFarm] No Goblin King in ' .. cave.Name .. ', exiting');
                 local exitPortal = findChild(cave, 'ExitPreset', 'ExitPortal');
                 if (exitPortal) then
                     local exitPart = exitPortal:IsA('BasePart') and exitPortal or exitPortal:FindFirstChildWhichIsA('BasePart');
@@ -1243,8 +1241,6 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
                         end, 'Exit portal');
                     end;
                 end;
-
-                dungeonsDone += 1;
                 continue;
             end;
 
@@ -1252,7 +1248,6 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
             local bossAssets = room:FindFirstChild('BossAssets');
             if (not bossAssets) then
                 warn('[GoblinFarm] BossAssets not found');
-                task.wait(2);
                 continue;
             end;
 
@@ -1303,32 +1298,28 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
                 task.wait(0.5);
             end;
 
-            dungeonsDone += 1;
-
             -- Step 6: Exit to next dungeon
-            local exitPortal = findChild(cave, 'ExitPreset', 'ExitPortal');
-            if (exitPortal) then
-                local exitPart = exitPortal:IsA('BasePart') and exitPortal or exitPortal:FindFirstChildWhichIsA('BasePart');
-                local exitPrompt = findProximityPrompt(exitPortal);
-                if (exitPart and exitPrompt) then
-                    teleportTo(exitPart.Position);
-                    task.wait(0.5);
-                    tryFirePromptAndWait(exitPrompt, function()
-                        return getCurrentCave() ~= cave;
-                    end, 'Exit portal');
+            if (doorIndex < #allDoors) then
+                local exitPortal = findChild(cave, 'ExitPreset', 'ExitPortal');
+                if (exitPortal) then
+                    local exitPart = exitPortal:IsA('BasePart') and exitPortal or exitPortal:FindFirstChildWhichIsA('BasePart');
+                    local exitPrompt = findProximityPrompt(exitPortal);
+                    if (exitPart and exitPrompt) then
+                        teleportTo(exitPart.Position);
+                        task.wait(0.5);
+                        tryFirePromptAndWait(exitPrompt, function()
+                            return getCurrentCave() ~= cave;
+                        end, 'Exit portal');
+                    end;
                 end;
             end;
+        end;
 
-            -- Step 7: Check if all dungeons cleared, rejoin to refresh
-            local entrances = findChild(workspace, 'Dungeon Entrances', 'Cave_Entrances');
-            local totalDungeons = entrances and #entrances:GetChildren() or 0;
-
-            if (dungeonsDone >= totalDungeons) then
-                warn('[GoblinFarm] All ' .. dungeonsDone .. ' dungeons cleared, rejoining to refresh...');
-                task.wait(1);
-                pcall(TeleportService.Teleport, TeleportService, PLACE_ID, LocalPlayer);
-                break;
-            end;
+        -- All dungeons done, rejoin to refresh
+        if (isGoblinFarming()) then
+            warn('[GoblinFarm] All ' .. #allDoors .. ' dungeons cleared, rejoining to refresh...');
+            task.wait(1);
+            pcall(TeleportService.Teleport, TeleportService, PLACE_ID, LocalPlayer);
         end;
     end);
 end;
