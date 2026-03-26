@@ -1096,8 +1096,14 @@ local function toggleKillAura(toggle: boolean): ()
         local now = DateTime.now().UnixTimestampMillis / 1000;
         if ((now - lastAuraHit) < KILL_AURA_COOLDOWN) then return; end;
 
-        local weapon = getEquippedWeapon();
-        if (not weapon) then return; end;
+        local selectedWeapon = library.flags.killAuraWeapon or 'Fist';
+        local weapon;
+        if (selectedWeapon == 'Fist') then
+            weapon = 'Punch';
+        else
+            weapon = getEquippedWeapon();
+            if (not weapon) then return; end;
+        end;
 
         local enemies = getNearbyEnemies(library.flags.killAuraRange or 30);
         for _, enemy in enemies do
@@ -1247,6 +1253,13 @@ combat:AddToggle({
     text = 'Kill Aura',
     tip = 'Attacks all nearby enemies with your equipped weapon',
     callback = toggleKillAura
+});
+
+combat:AddList({
+    text = 'Kill Aura Weapon',
+    flag = 'Kill Aura Weapon',
+    values = {'Mace', 'Sword', 'Club', 'Fist'},
+    value = 'Fist'
 });
 
 combat:AddSlider({
