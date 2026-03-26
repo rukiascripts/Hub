@@ -607,25 +607,27 @@ local function farmItem(model)
     lootedTimestamps[model] = os.clock();
 end;
 
-local function startAntiRagdoll()
+local function toggleAntiRagdoll(toggle: boolean): ()
+    if (not toggle) then
+        maid.antiRagdoll = nil;
+        return;
+    end;
+
     if (maid.antiRagdoll) then return; end;
+    local enableRagdoll = findChild(ReplicatedStorage, 'RepStore_CORE', 'Events', 'EnableRagdoll');
+    if (not enableRagdoll) then return; end;
     maid.antiRagdoll = task.spawn(function()
-        while (isRunning()) do
-            pressKey(Enum.KeyCode.Space);
-            task.wait(7);
+        while (library.flags.antiRagdoll) do
+            enableRagdoll:FireServer(false);
+            task.wait(1.5);
         end;
     end);
-end;
-
-local function stopAntiRagdoll()
-    maid.antiRagdoll = nil;
 end;
 
 local function toggleFarm(toggle: boolean): ()
     if (not toggle) then
         stopAutoLockpick();
         stopPlayerWatch();
-        stopAntiRagdoll();
         disableNoclip();
         releasePosition();
         maid.farm = nil;
@@ -637,8 +639,6 @@ local function toggleFarm(toggle: boolean): ()
     if (library.flags.panicOnPlayerJoin) then
         startPlayerWatch();
     end;
-
-    startAntiRagdoll();
 
     maid.farm = task.spawn(function()
         while (isRunning()) do
@@ -944,7 +944,6 @@ end;
 local function toggleOreFarm(toggle: boolean): ()
     if (not toggle) then
         stopPlayerWatch();
-        stopAntiRagdoll();
         disableNoclip();
         releasePosition();
         maid.oreFarm = nil;
@@ -956,8 +955,6 @@ local function toggleOreFarm(toggle: boolean): ()
     if (library.flags.panicOnPlayerJoin) then
         startPlayerWatch();
     end;
-
-    startAntiRagdoll();
 
     maid.oreFarm = task.spawn(function()
         while (isOreFarming()) do
@@ -985,6 +982,37 @@ local function toggleOreFarm(toggle: boolean): ()
     end);
 end;
 getgenv().stopOreFarm = function() toggleOreFarm(false); end;
+
+-- ── Goblin King Farm ──
+
+local function isGoblinFarming()
+    return library.flags.autoFarmGoblinKing;
+end;
+
+local function toggleGoblinKingFarm(toggle: boolean): ()
+    if (not toggle) then
+        maid.goblinFarm = nil;
+        return;
+    end;
+
+    if (maid.goblinFarm) then return; end;
+
+    if (library.flags.panicOnPlayerJoin) then
+        startPlayerWatch();
+    end;
+
+    maid.goblinFarm = task.spawn(function()
+        while (isGoblinFarming()) do
+            if (needsRepair()) then
+                repairPickaxe();
+                if (not isGoblinFarming()) then break; end;
+            end;
+
+            -- TODO: farm logic here
+            task.wait(1);
+        end;
+    end);
+end;
 
 -- ── Kill Aura ──
 
@@ -1207,6 +1235,12 @@ localCheats:AddToggle({
     callback = startNoclipToggle
 });
 
+localCheats:AddToggle({
+    text = 'Anti Ragdoll',
+    tip = 'Prevents you from getting ragdolled',
+    callback = toggleAntiRagdoll
+});
+
 localCheats:AddBind({ text = 'Go To Ground', callback = goToGround, mode = 'hold', nomouse = true });
 
 combat:AddToggle({
@@ -1248,8 +1282,16 @@ farms:AddToggle({
 
 farms:AddToggle({
     text = 'Only Max\'s Ore',
-    flag = 'onlyMaxsOre',
+    flag = 'only maxs ore',
     tip = 'Only mines RockMounds in Max\'s area, rejoins when both are depleted',
+});
+
+farms:AddDivider('Combat');
+
+farms:AddToggle({
+    text = 'Auto Farm Goblin King',
+    tip = 'Farms the Goblin King, auto repairs weapon',
+    callback = toggleGoblinKingFarm
 });
 
 misc:AddToggle({
@@ -1277,6 +1319,40 @@ misc:AddButton({
                 TeleportService:Teleport(PLACE_ID);
             end;
         end;
+    end
+});
+
+misc:AddButton({
+    text = 'Teleport to Quest Marker',
+    tip = 'Teleports you to the active quest marker',
+    callback = function()
+        local questPart = workspace:FindFirstChild('QuestPart');
+        if (not questPart) then
+            ToastNotif.new('No quest marker found');
+            return;
+        end;
+        local pos = questPart:IsA('BasePart') and questPart.Position or questPart:GetPivot().Position;
+        teleportTo(pos);
+    end
+});
+
+misc:AddButton({
+    text = 'Teleport to Anvil',
+    tip = 'Teleports you to Max\'s anvil',
+    callback = function()
+        local anvils = findChild(workspace, 'Stations', 'Runtime');
+        if (not anvils) then ToastNotif.new('Anvil not found'); return; end;
+
+        for _, child in anvils:GetChildren() do
+            if (child.Name ~= 'Anvil') then continue; end;
+            local part = child:IsA('BasePart') and child or child:FindFirstChildWhichIsA('BasePart');
+            if (part) then
+                teleportTo(part.Position);
+                return;
+            end;
+        end;
+
+        ToastNotif.new('Anvil not found');
     end
 });
 
