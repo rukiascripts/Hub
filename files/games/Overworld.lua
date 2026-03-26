@@ -30,6 +30,11 @@ local CONTAINER_PATH = workspace:WaitForChild('Containers'):WaitForChild('Lumber
 local PLACE_ID = game.PlaceId;
 local LANE_KEYS = { Lane1 = Enum.KeyCode.A, Lane2 = Enum.KeyCode.W, Lane3 = Enum.KeyCode.D };
 
+local MAX_ORE_POSITIONS = {
+	Vector3.new(1349.742431640625, 99.3039321899414, 478.6925354003906),
+	Vector3.new(1331.814453125, 95.43844604492188, 454.12872314453125),
+};
+
 local lootedTimestamps = {};
 
 -- ── Helpers ──
@@ -428,6 +433,14 @@ local function findProximityPrompt(model)
         if (desc:IsA('ProximityPrompt')) then return desc; end;
     end;
     return nil;
+end;
+
+local function isMaxOrePosition(rockMound)
+    local pos = rockMound:GetPivot().Position;
+    for _, target in MAX_ORE_POSITIONS do
+        if ((pos - target).Magnitude < 5) then return true; end;
+    end;
+    return false;
 end;
 
 local function timedOut(startTime, duration)
@@ -863,6 +876,7 @@ local function mineAllRocks()
     for _, rockMound in rocksFolder:GetChildren() do
         if (not isOreFarming()) then return; end;
         if (rockMound.Name ~= 'Rock Mound') then continue; end;
+        if (library.flags.onlyMaxsOre and not isMaxOrePosition(rockMound)) then continue; end;
 
         local mineableRocks = {};
          for _, mesh in rockMound:GetDescendants() do
@@ -911,7 +925,7 @@ local function mineAllRocks()
                     end;
                 end;
 
-                task.wait(0.5);
+                task.wait(0.1);
             end;
         end;
     end;
@@ -999,6 +1013,11 @@ farms:AddToggle({
 farms:AddToggle({
     text = 'Only Mine Tin',
     tip = 'Only mines Tin rocks, skips everything else',
+});
+
+farms:AddToggle({
+    text = "Only Max's Ore",
+    tip = "Only mines RockMounds in Max's area, rejoins when both are depleted",
 });
 
 
