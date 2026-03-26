@@ -609,6 +609,102 @@ local function farmItem(model)
     lootedTimestamps[model] = os.clock();
 end;
 
+-- ── Auto Collect All Loot ──
+
+local function collectAllLoot()
+    local containerUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container');
+    if (not containerUI or not containerUI.Visible) then return; end;
+
+    local moveItem = findChild(ReplicatedStorage, 'RepStore_CORE', 'ClientEvents', 'MoveItem');
+    local containerSlots = findChild(containerUI, 'Container', 'Slots');
+    local backpackSlots = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Inventory', 'Frame', 'Backpack', 'Slots');
+    if (not moveItem or not containerSlots or not backpackSlots) then return; end;
+
+    local function findBackpackSlot(itemName)
+        local emptySlot = nil;
+        for _, bpSlot in backpackSlots:GetChildren() do
+            if (not bpSlot:IsA('ImageButton')) then continue; end;
+            if (not bpSlot:GetAttribute('Populated')) then
+                if (not emptySlot) then emptySlot = tonumber(bpSlot.Name); end;
+                continue;
+            end;
+            local encoded = bpSlot:GetAttribute('ItemEncode');
+            if (not encoded) then continue; end;
+            local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
+            if (ok and data.Name == itemName) then
+                return tonumber(bpSlot.Name);
+            end;
+        end;
+        return emptySlot;
+    end;
+
+    for _, slot in containerSlots:GetChildren() do
+        if (not slot:IsA('ImageButton') or not slot:GetAttribute('Populated')) then continue; end;
+
+        local encoded = slot:GetAttribute('ItemEncode');
+        if (not encoded) then continue; end;
+
+        local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
+        if (not ok or not data) then continue; end;
+
+        local fromIndex = tonumber(slot.Name);
+        if (not fromIndex) then continue; end;
+
+        local toIndex = findBackpackSlot(data.Name);
+        if (not toIndex) then continue; end;
+
+        moveItem:FireServer({
+            FromIndex = fromIndex,
+            FromData = 'Container',
+            ToIndex = toIndex,
+            ToData = 'Backpack',
+            ItemInfo = {
+                Ownership = data.Ownership,
+                Quantity = data.Quantity,
+                Name = data.Name,
+                UID = data.UID,
+            },
+        });
+
+        task.wait(0.15);
+    end;
+end;
+
+local function toggleAutoCollectLoot(toggle: boolean): ()
+    if (not toggle) then
+        maid.autoCollect = nil;
+        return;
+    end;
+
+    if (maid.autoCollect) then return; end;
+
+    local containerUI = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container');
+
+    if (containerUI) then
+        maid.autoCollect = containerUI:GetPropertyChangedSignal('Visible'):Connect(function()
+            if (containerUI.Visible and library.flags.autoCollectAllLoot) then
+                task.wait(0.3);
+                collectAllLoot();
+            end;
+        end);
+    else
+        -- container UI not loaded yet, poll for it
+        maid.autoCollect = RunService.Heartbeat:Connect(function()
+            if (not library.flags.autoCollectAllLoot) then return; end;
+            local ui = findChild(PlayerGui, 'ScreenGui', 'Frame', 'MidFrame', 'Container');
+            if (not ui) then return; end;
+
+            -- found it, switch to property listener
+            maid.autoCollect = ui:GetPropertyChangedSignal('Visible'):Connect(function()
+                if (ui.Visible and library.flags.autoCollectAllLoot) then
+                    task.wait(0.3);
+                    collectAllLoot();
+                end;
+            end);
+        end);
+    end;
+end;
+
 local function toggleAntiRagdoll(toggle: boolean): ()
     if (not toggle) then
         maid.antiRagdoll = nil;
@@ -1137,7 +1233,10 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
             if (king and hum) then
                 local kingRoot = king.PrimaryPart or king:FindFirstChild('HumanoidRootPart');
                 if (kingRoot) then
-                    teleportTo(kingRoot.Position, true);
+                    local yOffset = library.flags.goblinYOffset or -6;
+                    local zOffset = library.flags.goblinZOffset or 0;
+                    local offset = Vector3.new(0, yOffset, zOffset);
+                    teleportTo(kingRoot.Position + offset, true);
                     task.wait(0.3);
                 end;
 
@@ -1173,6 +1272,8 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
                 end;
                 fireproximityprompt(lootPrompt);
                 task.wait(1);
+                collectAllLoot();
+                task.wait(0.5);
             end;
 
             dungeonsDone += 1;
@@ -1470,6 +1571,12 @@ farms:AddToggle({
     tip = 'Only loots Gold from containers, skips everything else',
 });
 
+farms:AddToggle({
+    text = 'Auto Collect All Loot',
+    tip = 'Automatically collects all loot when a bag/container is opened',
+    callback = toggleAutoCollectLoot
+});
+
 farms:AddDivider('Mining');
 
 farms:AddToggle({
@@ -1495,6 +1602,24 @@ farms:AddToggle({
     text = 'Auto Farm Goblin King',
     tip = 'Farms the Goblin King, auto repairs weapon',
     callback = toggleGoblinKingFarm
+});
+
+farms:AddSlider({
+    min = -20,
+    max = 20,
+    default = -6,
+    flag = 'Goblin Y Offset',
+    tip = 'Up/Down offset from Goblin King (negative = below)',
+    textpos = 2
+});
+
+farms:AddSlider({
+    min = -20,
+    max = 20,
+    default = 0,
+    flag = 'Goblin Z Offset',
+    tip = 'Front/Back offset from Goblin King',
+    textpos = 2
 });
 
 misc:AddToggle({
