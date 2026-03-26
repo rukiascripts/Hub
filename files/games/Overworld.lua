@@ -662,7 +662,7 @@ end;
 local function needsRepair()
     local _, data = findPickaxeSlot();
     if (not data) then return false; end;
-    return data.Durability and data.Durability <= 40;
+    return data.Durability and data.Durability <= 25;
 end;
 
 local function repairPickaxe()
