@@ -3,6 +3,7 @@ local Maid = sharedRequire('utils/Maid.lua');
 local Services = sharedRequire('utils/Services.lua');
 local BlockUtils = sharedRequire('utils/BlockUtils.lua');
 local ToastNotif = sharedRequire('classes/ToastNotif.lua');
+local ControlModule = sharedRequire('classes/ControlModule.lua');
 
 local Players, RunService, UserInputService, HttpService, TweenService, VirtualInputManager, TeleportService, ReplicatedStorage, GuiService = Services:Get(
     'Players', 'RunService', 'UserInputService', 'HttpService', 'TweenService',
@@ -23,7 +24,9 @@ local maid = Maid.new();
 
 local column1, column2 = unpack(library.columns);
 
-local farms = column1:AddSection('Farms');
+local localCheats = column1:AddSection('Local Cheats');
+local combat = column1:AddSection('Combat');
+local farms = column2:AddSection('Farms');
 local misc = column2:AddSection('Misc');
 
 local CONTAINER_PATH = workspace:WaitForChild('Containers'):WaitForChild('Lumbertown');
@@ -35,7 +38,16 @@ local MAX_ORE_POSITIONS = {
 	Vector3.new(1331.814453125, 95.43844604492188, 454.12872314453125),
 };
 
+local KILL_AURA_COOLDOWN = 0.3;
+local WEAPON_KEYWORDS = { 'Club', 'Mace', 'Sword' };
+local HOTBAR_KEYCODES = {
+    [1] = Enum.KeyCode.One, [2] = Enum.KeyCode.Two, [3] = Enum.KeyCode.Three,
+    [4] = Enum.KeyCode.Four, [5] = Enum.KeyCode.Five, [6] = Enum.KeyCode.Six,
+    [7] = Enum.KeyCode.Seven, [8] = Enum.KeyCode.Eight, [9] = Enum.KeyCode.Nine,
+};
+
 local lootedTimestamps = {};
+local lastAuraHit = 0;
 
 -- ── Helpers ──
 
@@ -609,7 +621,17 @@ local function stopAntiRagdoll()
     maid.antiRagdoll = nil;
 end;
 
-local function startFarm()
+local function toggleFarm(toggle: boolean): ()
+    if (not toggle) then
+        stopAutoLockpick();
+        stopPlayerWatch();
+        stopAntiRagdoll();
+        disableNoclip();
+        releasePosition();
+        maid.farm = nil;
+        return;
+    end;
+
     if (maid.farm) then return; end;
 
     if (library.flags.panicOnPlayerJoin) then
@@ -639,16 +661,7 @@ local function startFarm()
     end);
 end;
 
-local function stopFarm()
-    stopAutoLockpick();
-    stopPlayerWatch();
-    stopAntiRagdoll();
-    disableNoclip();
-    releasePosition();
-    maid.farm = nil;
-end;
-
-getgenv().stopFarm = stopFarm;
+getgenv().stopFarm = function() toggleFarm(false); end;
 
 -- ── Ore Farm ──
 
@@ -845,11 +858,6 @@ local function mineAllRocks()
     if (not rocksFolder) then warn('[OreFarm] Rocks folder not found'); return false; end;
 
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait();
-    local HOTBAR_KEYCODES = {
-        [1] = Enum.KeyCode.One, [2] = Enum.KeyCode.Two, [3] = Enum.KeyCode.Three,
-        [4] = Enum.KeyCode.Four, [5] = Enum.KeyCode.Five, [6] = Enum.KeyCode.Six,
-        [7] = Enum.KeyCode.Seven, [8] = Enum.KeyCode.Eight, [9] = Enum.KeyCode.Nine,
-    };
 
     local pickaxe = char:FindFirstChild('Stone Pickaxe') or char:FindFirstChild('Silver Pickaxe') or char:FindFirstChild('Iron Pickaxe');
     if (not pickaxe) then
@@ -933,7 +941,16 @@ local function mineAllRocks()
     return true;
 end;
 
-local function startOreFarm()
+local function toggleOreFarm(toggle: boolean): ()
+    if (not toggle) then
+        stopPlayerWatch();
+        stopAntiRagdoll();
+        disableNoclip();
+        releasePosition();
+        maid.oreFarm = nil;
+        return;
+    end;
+
     if (maid.oreFarm) then return; end;
 
     if (library.flags.panicOnPlayerJoin) then
@@ -967,28 +984,248 @@ local function startOreFarm()
         end;
     end);
 end;
+getgenv().stopOreFarm = function() toggleOreFarm(false); end;
 
-local function stopOreFarm()
-    stopPlayerWatch();
-    stopAntiRagdoll();
-    disableNoclip();
-    releasePosition();
-    maid.oreFarm = nil;
+-- ── Kill Aura ──
+
+local function isWeapon(name: string): boolean
+    for _, keyword in WEAPON_KEYWORDS do
+        if (string.find(name, keyword)) then return true; end;
+    end;
+    return false;
 end;
-getgenv().stopOreFarm = stopOreFarm;
+
+local function getEquippedWeapon()
+    local char = LocalPlayer.Character;
+    if (not char) then return nil; end;
+
+    for _, child in char:GetChildren() do
+        if (child:IsA('Tool')) then return child.Name; end;
+    end;
+
+    -- no weapon equipped, try to find one in hotbar and equip it
+    local hotbarSlots = findChild(PlayerGui, 'ScreenGui', 'Frame', 'Hotbar', 'Slots');
+    if (not hotbarSlots) then return nil; end;
+
+    for _, slot in hotbarSlots:GetChildren() do
+        if (not slot:IsA('ImageButton')) then continue; end;
+        local encoded = slot:GetAttribute('ItemEncode');
+        if (not encoded) then continue; end;
+        local ok, data = pcall(HttpService.JSONDecode, HttpService, encoded);
+        if (not ok or not isWeapon(data.Name)) then continue; end;
+
+        local slotNum = tonumber(slot.Name);
+        local keyCode = slotNum and HOTBAR_KEYCODES[slotNum];
+        if (keyCode) then
+            pressKey(keyCode);
+            task.wait(0.3);
+            return data.Name;
+        end;
+    end;
+
+    return nil;
+end;
+
+local function getNearbyEnemies(range: number)
+    local root = getRoot();
+    if (not root) then return {}; end;
+
+    local enemies = {};
+    for _, child in workspace:GetDescendants() do
+        if (not child:IsA('Humanoid') or child.Health <= 0) then continue; end;
+
+        local model = child.Parent;
+        if (not model or not model:IsA('Model')) then continue; end;
+
+        local player = Players:GetPlayerFromCharacter(model);
+        if (player) then continue; end;
+
+        local enemyRoot = model.PrimaryPart or model:FindFirstChild('HumanoidRootPart');
+        if (not enemyRoot) then continue; end;
+
+        local dist = (enemyRoot.Position - root.Position).Magnitude;
+        if (dist <= range) then
+            table.insert(enemies, model);
+        end;
+    end;
+    return enemies;
+end;
+
+local function toggleKillAura(toggle: boolean): ()
+    if (not toggle) then
+        maid.killAura = nil;
+        return;
+    end;
+
+    if (maid.killAura) then return; end;
+
+    local hitPlayer = findChild(ReplicatedStorage, 'RepStore_CORE', 'Events', 'HitPlayer');
+    if (not hitPlayer) then warn('[KillAura] HitPlayer remote not found'); return; end;
+
+    maid.killAura = RunService.Heartbeat:Connect(function()
+        if (not library.flags.killAura) then return; end;
+
+        local now = DateTime.now().UnixTimestampMillis / 1000;
+        if ((now - lastAuraHit) < KILL_AURA_COOLDOWN) then return; end;
+
+        local weapon = getEquippedWeapon();
+        if (not weapon) then return; end;
+
+        local enemies = getNearbyEnemies(library.flags.killAuraRange or 30);
+        for _, enemy in enemies do
+            hitPlayer:FireServer(enemy, weapon);
+        end;
+
+        lastAuraHit = now;
+    end);
+end;
+
+-- ── Local Cheats ──
+
+local function startSpeedHack(toggle: boolean): ()
+    if (not toggle) then
+        maid.speedHack = nil;
+        maid.speedHackBv = nil;
+        return;
+    end;
+
+    maid.speedHack = RunService.Heartbeat:Connect(function()
+        local root = getRoot();
+        local char = LocalPlayer.Character;
+        if (not root or not char) then return; end;
+
+        local humanoid = char:FindFirstChildWhichIsA('Humanoid');
+        if (not humanoid) then return; end;
+
+        if (library.flags.fly) then
+            maid.speedHackBv = nil;
+            return;
+        end;
+
+        maid.speedHackBv = maid.speedHackBv or Instance.new('BodyVelocity');
+        maid.speedHackBv.MaxForce = Vector3.new(100000, 0, 100000);
+        maid.speedHackBv.Parent = root;
+        maid.speedHackBv.Velocity = humanoid.MoveDirection * library.flags.speedHackValue;
+    end);
+end;
+
+local function startFly(toggle: boolean): ()
+    if (not toggle) then
+        maid.flyHack = nil;
+        maid.flyBv = nil;
+        return;
+    end;
+
+    maid.flyBv = Instance.new('BodyVelocity');
+    maid.flyBv.MaxForce = Vector3.new(math.huge, math.huge, math.huge);
+
+    maid.flyHack = RunService.Heartbeat:Connect(function()
+        local root = getRoot();
+        local camera = workspace.CurrentCamera;
+        if (not root or not camera) then return; end;
+
+        maid.flyBv.Parent = root;
+        maid.flyBv.Velocity = camera.CFrame:VectorToWorldSpace(ControlModule:GetMoveVector() * library.flags.flyHackValue);
+    end);
+end;
+
+local function startInfiniteJump(toggle: boolean): ()
+    if (not toggle) then return; end;
+
+    repeat
+        local root = getRoot();
+        if (root and UserInputService:IsKeyDown(Enum.KeyCode.Space)) then
+            root.Velocity = Vector3.new(root.Velocity.X, library.flags.infiniteJumpHeight, root.Velocity.Z);
+        end;
+        task.wait(0.1);
+    until not library.flags.infiniteJump;
+end;
+
+local function startNoclipToggle(toggle: boolean): ()
+    if (not toggle) then
+        disableNoclip();
+        return;
+    end;
+    enableNoclip();
+end;
+
+local function goToGround(): ()
+    local root = getRoot();
+    if (not root) then return; end;
+
+    local params = RaycastParams.new();
+    params.FilterDescendantsInstances = { LocalPlayer.Character };
+    params.FilterType = Enum.RaycastFilterType.Exclude;
+
+    local result = workspace:Raycast(root.Position, Vector3.new(0, -1000, 0), params);
+    if (not result) then return; end;
+
+    root.CFrame *= CFrame.new(0, -(root.Position.Y - result.Position.Y) + 3, 0);
+    root.Velocity *= Vector3.new(1, 0, 1);
+end;
 
 -- ── UI ──
+
+localCheats:AddToggle({
+    text = 'Fly',
+    callback = startFly
+});
+
+localCheats:AddSlider({
+    min = 16,
+    max = 250,
+    flag = 'Fly Hack Value',
+    textpos = 2
+});
+
+localCheats:AddToggle({
+    text = 'Speedhack',
+    callback = startSpeedHack
+});
+
+localCheats:AddSlider({
+    min = 16,
+    max = 250,
+    flag = 'Speed Hack Value',
+    textpos = 2
+});
+
+localCheats:AddToggle({
+    text = 'Infinite Jump',
+    callback = startInfiniteJump
+});
+
+localCheats:AddSlider({
+    min = 50,
+    max = 250,
+    flag = 'Infinite Jump Height',
+    textpos = 2
+});
+
+localCheats:AddToggle({
+    text = 'No Clip',
+    callback = startNoclipToggle
+});
+
+localCheats:AddBind({ text = 'Go To Ground', callback = goToGround, mode = 'hold', nomouse = true });
+
+combat:AddToggle({
+    text = 'Kill Aura',
+    tip = 'Attacks all nearby enemies with your equipped weapon',
+    callback = toggleKillAura
+});
+
+combat:AddSlider({
+    min = 15,
+    max = 100,
+    flag = 'Kill Aura Range',
+    textpos = 2
+});
 
 farms:AddToggle({
     text = 'Auto Farm Lumbertown',
     tip = 'Automatically farms containers in Lumbertown. Lockpicks, loots, and sells stolen items.',
-    callback = function(state: boolean): ()
-        if (state) then
-            startFarm();
-        else
-            stopFarm();
-        end;
-    end
+    callback = toggleFarm
 });
 
 farms:AddToggle({
@@ -996,18 +1233,12 @@ farms:AddToggle({
     tip = 'Only loots Gold from containers, skips everything else',
 });
 
-farms:AddDivider('Mining')
+farms:AddDivider('Mining');
 
 farms:AddToggle({
     text = 'Auto Mine Ore',
     tip = 'Mines rocks in Green Biome, auto repairs pickaxe, sells loot, and rejoins when done.',
-    callback = function(state: boolean): ()
-        if (state) then
-            startOreFarm();
-        else
-            stopOreFarm();
-        end;
-    end
+    callback = toggleOreFarm
 });
 
 farms:AddToggle({
@@ -1016,12 +1247,12 @@ farms:AddToggle({
 });
 
 farms:AddToggle({
-    text = "Only Max's Ore",
-    tip = "Only mines RockMounds in Max's area, rejoins when both are depleted",
+    text = 'Only Max\'s Ore',
+    flag = 'onlyMaxsOre',
+    tip = 'Only mines RockMounds in Max\'s area, rejoins when both are depleted',
 });
 
-
-farms:AddToggle({
+misc:AddToggle({
     text = 'Panic on Player Join',
     tip = 'Blocks a random player and server hops when someone joins',
     callback = function(state: boolean): ()
@@ -1048,7 +1279,6 @@ misc:AddButton({
         end;
     end
 });
-
 
 task.delay(5, function()
     library:Close();
