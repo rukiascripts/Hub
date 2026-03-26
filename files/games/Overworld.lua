@@ -161,12 +161,14 @@ local function releasePosition()
     maid.holdBv = nil;
 end;
 
-local function teleportTo(position)
+local function teleportTo(position, noclip: boolean?)
     local root = getRoot();
     if (not root) then return; end;
-    enableNoclip();
+    if (noclip) then
+        enableNoclip();
+        holdPosition();
+    end;
     root.CFrame = CFrame.new(position);
-    holdPosition();
 end;
 
 -- ── Server Hop ──
@@ -476,7 +478,7 @@ local function farmItem(model)
     local primaryPart = model.PrimaryPart or model:FindFirstChildWhichIsA('BasePart');
     if (not primaryPart) then return; end;
 
-    teleportTo(primaryPart.Position);
+    teleportTo(primaryPart.Position, true);
 
     task.wait(0.5);
     if (not isRunning()) then return; end;
@@ -712,7 +714,7 @@ local function repairPickaxe()
         return;
     end;
 
-    teleportTo(anvilPart.Position);
+    teleportTo(anvilPart.Position, true);
     task.wait(1.5);
     fireproximityprompt(anvilPrompt);
     if (not isOreFarming()) then return; end;
@@ -790,7 +792,7 @@ local function sellOreItems()
     local shopPartPos = shopPart:IsA('BasePart') and shopPart or shopPart:FindFirstChildWhichIsA('BasePart');
     if (not shopPartPos) then shopPartPos = shopPart; end;
 
-    teleportTo(shopPartPos.Position);
+    teleportTo(shopPartPos.Position, true);
     task.wait(0.5);
     if (not isOreFarming()) then return; end;
 
@@ -919,7 +921,7 @@ local function mineAllRocks()
                 if (not pickaxe) then return; end;
             end;
 
-            teleportTo(rock.Position);
+            teleportTo(rock.Position, true);
             task.wait(0.5);
 
             local mineStart = os.clock();
@@ -989,9 +991,59 @@ local function isGoblinFarming()
     return library.flags.autoFarmGoblinKing;
 end;
 
+local function findCaveDoor()
+    local entrances = findChild(workspace, 'Dungeon Entrances', 'Cave_Entrances');
+    if (not entrances) then return nil; end;
+
+    for _, dungeon in entrances:GetChildren() do
+        local portal = findChild(dungeon, 'Portal');
+        if (not portal) then continue; end;
+
+        local door = dungeon:FindFirstChild('Door');
+        local prompt = portal:FindFirstChild('TeleportPrompt');
+        if (door and door:IsA('BasePart') and prompt and prompt:IsA('ProximityPrompt')) then
+            return door, prompt;
+        end;
+    end;
+    return nil;
+end;
+
+local function findGoblinKing(bossAssets)
+    for _, child in bossAssets:GetChildren() do
+        if (child.Name ~= 'Goblin King' or not child:IsA('Model')) then continue; end;
+        local hum = child:FindFirstChildWhichIsA('Humanoid');
+        if (hum and hum.Health > 0) then return child, hum; end;
+    end;
+    return nil;
+end;
+
+local function findGoblinKingLoot(bossAssets)
+    for _, child in bossAssets:GetChildren() do
+        if (child.Name ~= 'Goblin King') then continue; end;
+        local prompt = findProximityPrompt(child);
+        if (prompt) then
+            local hum = child:FindFirstChildWhichIsA('Humanoid');
+            if (not hum or hum.Health <= 0) then return child, prompt; end;
+        end;
+    end;
+    return nil;
+end;
+
+local function getCurrentCave()
+    local dungeonNodes = workspace:FindFirstChild('Dungeon Nodes');
+    if (not dungeonNodes) then return nil; end;
+
+    for _, cave in dungeonNodes:GetChildren() do
+        if (cave:FindFirstChild('ExitPreset')) then return cave; end;
+    end;
+    return nil;
+end;
+
 local function toggleGoblinKingFarm(toggle: boolean): ()
     if (not toggle) then
         maid.goblinFarm = nil;
+        disableNoclip();
+        releasePosition();
         return;
     end;
 
@@ -1001,15 +1053,153 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
         startPlayerWatch();
     end;
 
+    local hitPlayer = findChild(ReplicatedStorage, 'RepStore_CORE', 'Events', 'HitPlayer');
+    if (not hitPlayer) then warn('[GoblinFarm] HitPlayer remote not found'); return; end;
+
     maid.goblinFarm = task.spawn(function()
+        local dungeonsDone = 0;
+
         while (isGoblinFarming()) do
-            if (needsRepair()) then
-                repairPickaxe();
+            -- Step 1: Enter a cave from the overworld
+            local cave = getCurrentCave();
+            if (not cave) then
+                local door, prompt = findCaveDoor();
+                if (not door or not prompt) then
+                    warn('[GoblinFarm] No cave door found');
+                    task.wait(2);
+                    continue;
+                end;
+
+                teleportTo(door.Position);
+                task.wait(0.5);
                 if (not isGoblinFarming()) then break; end;
+
+                fireproximityprompt(prompt);
+
+                local timeout = 0;
+                repeat
+                    task.wait(1);
+                    timeout += 1;
+                    cave = getCurrentCave();
+                until (cave or timeout >= 15 or not isGoblinFarming());
+
+                if (not cave) then
+                    warn('[GoblinFarm] Cave failed to load');
+                    task.wait(2);
+                    continue;
+                end;
             end;
 
-            -- TODO: farm logic here
-            task.wait(1);
+            if (not isGoblinFarming()) then break; end;
+
+            -- Step 2: TP to StartNode
+            local startNode = findChild(cave, 'ExitPreset', 'StartNode');
+            if (startNode) then
+                local startPart = startNode:IsA('BasePart') and startNode or startNode:FindFirstChildWhichIsA('BasePart');
+                if (startPart) then
+                    teleportTo(startPart.Position);
+                    task.wait(0.5);
+                end;
+            end;
+
+            if (not isGoblinFarming()) then break; end;
+
+            -- Step 3: Check for Goblin King room
+            local room = cave:FindFirstChild('GobKingRoomCaveGen');
+            if (not room) then
+                -- no boss here, exit to next dungeon
+                warn('[GoblinFarm] No Goblin King in ' .. cave.Name .. ', moving to next dungeon');
+                local exitPortal = findChild(cave, 'ExitPreset', 'ExitPortal');
+                if (exitPortal) then
+                    local exitPart = exitPortal:IsA('BasePart') and exitPortal or exitPortal:FindFirstChildWhichIsA('BasePart');
+                    local exitPrompt = findProximityPrompt(exitPortal);
+                    if (exitPart and exitPrompt) then
+                        teleportTo(exitPart.Position);
+                        task.wait(0.5);
+                        fireproximityprompt(exitPrompt);
+                        task.wait(3);
+                    end;
+                end;
+
+                dungeonsDone += 1;
+                continue;
+            end;
+
+            -- Step 4: Find and kill the Goblin King
+            local bossAssets = room:FindFirstChild('BossAssets');
+            if (not bossAssets) then
+                warn('[GoblinFarm] BossAssets not found');
+                task.wait(2);
+                continue;
+            end;
+
+            local king, hum = findGoblinKing(bossAssets);
+            if (king and hum) then
+                local kingRoot = king.PrimaryPart or king:FindFirstChild('HumanoidRootPart');
+                if (kingRoot) then
+                    teleportTo(kingRoot.Position, true);
+                    task.wait(0.3);
+                end;
+
+                local selectedWeapon = library.flags.killAuraWeapon or 'Fist';
+                local weapon;
+                if (selectedWeapon == 'Fist') then
+                    weapon = 'Punch';
+                else
+                    weapon = getEquippedWeapon();
+                end;
+
+                while (isGoblinFarming() and hum.Health > 0) do
+                    if (weapon) then
+                        hitPlayer:FireServer(king, weapon);
+                    end;
+                    task.wait(KILL_AURA_COOLDOWN);
+                end;
+
+                disableNoclip();
+                releasePosition();
+
+                if (not isGoblinFarming()) then break; end;
+                task.wait(1);
+            end;
+
+            -- Step 5: Loot the Goblin King
+            local lootModel, lootPrompt = findGoblinKingLoot(bossAssets);
+            if (lootModel and lootPrompt) then
+                local lootPart = lootModel.PrimaryPart or lootModel:FindFirstChildWhichIsA('BasePart');
+                if (lootPart) then
+                    teleportTo(lootPart.Position);
+                    task.wait(0.5);
+                end;
+                fireproximityprompt(lootPrompt);
+                task.wait(1);
+            end;
+
+            dungeonsDone += 1;
+
+            -- Step 6: Exit to next dungeon
+            local exitPortal = findChild(cave, 'ExitPreset', 'ExitPortal');
+            if (exitPortal) then
+                local exitPart = exitPortal:IsA('BasePart') and exitPortal or exitPortal:FindFirstChildWhichIsA('BasePart');
+                local exitPrompt = findProximityPrompt(exitPortal);
+                if (exitPart and exitPrompt) then
+                    teleportTo(exitPart.Position);
+                    task.wait(0.5);
+                    fireproximityprompt(exitPrompt);
+                    task.wait(3);
+                end;
+            end;
+
+            -- Step 7: Check if all dungeons cleared, rejoin to refresh
+            local entrances = findChild(workspace, 'Dungeon Entrances', 'Cave_Entrances');
+            local totalDungeons = entrances and #entrances:GetChildren() or 0;
+
+            if (dungeonsDone >= totalDungeons) then
+                warn('[GoblinFarm] All ' .. dungeonsDone .. ' dungeons cleared, rejoining to refresh...');
+                task.wait(1);
+                pcall(TeleportService.Teleport, TeleportService, PLACE_ID, LocalPlayer);
+                break;
+            end;
         end;
     end);
 end;
