@@ -1292,7 +1292,7 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
                 goblinKingRoot = king.PrimaryPart or king:FindFirstChild('HumanoidRootPart');
                 if (goblinKingRoot) then
                     teleportTo(goblinKingRoot.Position);
-                    task.wait(1);
+                    task.wait(5);
                     updateGoblinPosition();
                     holdPosition();
                     enableNoclip();
