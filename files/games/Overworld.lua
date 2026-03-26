@@ -1135,9 +1135,40 @@ local function getCurrentCave()
     return nil;
 end;
 
+local PROMPT_ATTEMPTS = 3;
+local PROMPT_TIMEOUT = 10;
+
+local function tryFirePromptAndWait(prompt, checkFn, label)
+    for attempt = 1, PROMPT_ATTEMPTS do
+        fireproximityprompt(prompt);
+        local elapsed = 0;
+        local waitPer = PROMPT_TIMEOUT / PROMPT_ATTEMPTS;
+        while (elapsed < waitPer) do
+            task.wait(1);
+            elapsed += 1;
+            if (checkFn()) then return true; end;
+            if (not isGoblinFarming()) then return false; end;
+        end;
+        warn('[GoblinFarm] ' .. label .. ' attempt ' .. attempt .. '/' .. PROMPT_ATTEMPTS .. ' failed');
+    end;
+    return false;
+end;
+
+local goblinKingRoot = nil;
+
+local function updateGoblinPosition()
+    local root = getRoot();
+    if (not root or not goblinKingRoot) then return; end;
+
+    local yOffset = library.flags.goblinYOffset or -6;
+    local zOffset = library.flags.goblinZOffset or 0;
+    root.CFrame = CFrame.new(goblinKingRoot.Position + Vector3.new(0, yOffset, zOffset));
+end;
+
 local function toggleGoblinKingFarm(toggle: boolean): ()
     if (not toggle) then
         maid.goblinFarm = nil;
+        goblinKingRoot = nil;
         disableNoclip();
         releasePosition();
         return;
@@ -1170,18 +1201,14 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
                 task.wait(0.5);
                 if (not isGoblinFarming()) then break; end;
 
-                fireproximityprompt(prompt);
+                local entered = tryFirePromptAndWait(prompt, function()
+                    return getCurrentCave() ~= nil;
+                end, 'Cave entrance');
 
-                local timeout = 0;
-                repeat
-                    task.wait(1);
-                    timeout += 1;
-                    cave = getCurrentCave();
-                until (cave or timeout >= 15 or not isGoblinFarming());
-
-                if (not cave) then
-                    warn('[GoblinFarm] Cave failed to load');
-                    task.wait(2);
+                cave = getCurrentCave();
+                if (not entered or not cave) then
+                    warn('[GoblinFarm] Cave failed to load after ' .. PROMPT_ATTEMPTS .. ' attempts, skipping');
+                    dungeonsDone += 1;
                     continue;
                 end;
             end;
@@ -1203,7 +1230,6 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
             -- Step 3: Check for Goblin King room
             local room = cave:FindFirstChild('GobKingRoomCaveGen');
             if (not room) then
-                -- no boss here, exit to next dungeon
                 warn('[GoblinFarm] No Goblin King in ' .. cave.Name .. ', moving to next dungeon');
                 local exitPortal = findChild(cave, 'ExitPreset', 'ExitPortal');
                 if (exitPortal) then
@@ -1212,8 +1238,9 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
                     if (exitPart and exitPrompt) then
                         teleportTo(exitPart.Position);
                         task.wait(0.5);
-                        fireproximityprompt(exitPrompt);
-                        task.wait(3);
+                        tryFirePromptAndWait(exitPrompt, function()
+                            return getCurrentCave() ~= cave;
+                        end, 'Exit portal');
                     end;
                 end;
 
@@ -1231,12 +1258,11 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
 
             local king, hum = findGoblinKing(bossAssets);
             if (king and hum) then
-                local kingRoot = king.PrimaryPart or king:FindFirstChild('HumanoidRootPart');
-                if (kingRoot) then
-                    local yOffset = library.flags.goblinYOffset or -6;
-                    local zOffset = library.flags.goblinZOffset or 0;
-                    local offset = Vector3.new(0, yOffset, zOffset);
-                    teleportTo(kingRoot.Position + offset, true);
+                goblinKingRoot = king.PrimaryPart or king:FindFirstChild('HumanoidRootPart');
+                if (goblinKingRoot) then
+                    updateGoblinPosition();
+                    holdPosition();
+                    enableNoclip();
                     task.wait(0.3);
                 end;
 
@@ -1255,6 +1281,7 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
                     task.wait(KILL_AURA_COOLDOWN);
                 end;
 
+                goblinKingRoot = nil;
                 disableNoclip();
                 releasePosition();
 
@@ -1286,8 +1313,9 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
                 if (exitPart and exitPrompt) then
                     teleportTo(exitPart.Position);
                     task.wait(0.5);
-                    fireproximityprompt(exitPrompt);
-                    task.wait(3);
+                    tryFirePromptAndWait(exitPrompt, function()
+                        return getCurrentCave() ~= cave;
+                    end, 'Exit portal');
                 end;
             end;
 
@@ -1605,21 +1633,23 @@ farms:AddToggle({
 });
 
 farms:AddSlider({
+    text = 'Boss Up/Down Offset',
     min = -20,
     max = 20,
     default = -6,
     flag = 'Goblin Y Offset',
-    tip = 'Up/Down offset from Goblin King (negative = below)',
-    textpos = 2
+    textpos = 2,
+    callback = updateGoblinPosition
 });
 
 farms:AddSlider({
+    text = 'Boss Front/Back Offset',
     min = -20,
     max = 20,
     default = 0,
     flag = 'Goblin Z Offset',
-    tip = 'Front/Back offset from Goblin King',
-    textpos = 2
+    textpos = 2,
+    callback = updateGoblinPosition
 });
 
 misc:AddToggle({
