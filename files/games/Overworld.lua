@@ -1166,6 +1166,39 @@ local function updateGoblinPosition()
     root.CFrame = CFrame.new(goblinKingRoot.Position + Vector3.new(0, yOffset, zOffset));
 end;
 
+local function triggerGoblinRoom(room: Instance): ()
+    local nodes = {};
+
+    for _, child in ipairs(room:GetChildren()) do
+        if (tonumber(child.Name)) then
+            table.insert(nodes, child);
+        end;
+    end;
+
+    table.sort(nodes, function(a, b)
+        return (tonumber(a.Name) < tonumber(b.Name));
+    end);
+
+    for _, node in ipairs(nodes) do
+        local part = node:IsA('BasePart') and node or node:FindFirstChildWhichIsA('BasePart');
+        if (part) then
+            teleportTo(part.Position, true);
+            task.wait(0.15);
+        end;
+    end;
+
+    local boxTriggers = room:FindFirstChild('BoxTriggers');
+    if (boxTriggers) then
+        for _, trigger in ipairs(boxTriggers:GetChildren()) do
+            local part = trigger:IsA('BasePart') and trigger or trigger:FindFirstChildWhichIsA('BasePart');
+            if (part) then
+                teleportTo(part.Position, true);
+                task.wait(0.15);
+            end;
+        end;
+    end;
+end;
+
 local function toggleGoblinKingFarm(toggle: boolean): ()
     if (not toggle) then
         maid.goblinFarm = nil;
@@ -1250,6 +1283,9 @@ local function toggleGoblinKingFarm(toggle: boolean): ()
                 warn('[GoblinFarm] BossAssets not found');
                 continue;
             end;
+            
+            -- Step 4.5: Trigger Goblin King (so we don't break his AI)
+            triggerGoblinRoom(room);
 
             local king, hum = findGoblinKing(bossAssets);
             if (king and hum) then
