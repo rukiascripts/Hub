@@ -457,8 +457,12 @@ local function executeParry(rawDelay: number): ()
 	blockInput();
 
 	task.wait(library.flags.blockDuration / 1000);
-	unblockInput();
-	
+
+	local holdingBlock: boolean = UserInputService:IsKeyDown(BLOCK_KEY);
+	if (not holdingBlock or library.flags.autoParryForceUnblock) then
+		unblockInput();
+	end;
+
 	isAutoBlocking = false;
 end;
 
@@ -807,7 +811,7 @@ localCheats:AddSlider({
 localCheats:AddSlider({
 	text = 'Lock On Smoothness',
 	value = 1,
-	min = 1,
+	min = 0.1,
 	max = 20,
 	textpos = 2
 });
@@ -884,6 +888,12 @@ autoParrySection:AddSlider({
 	min = 0,
 	max = 100,
 	textpos = 2
+});
+
+autoParrySection:AddToggle({
+	text = 'Auto Parry Force Unblock',
+	tip = 'unblock after parry even if you are holding F',
+	state = true
 });
 
 autoParrySection:AddToggle({
