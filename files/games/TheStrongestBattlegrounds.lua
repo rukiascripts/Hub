@@ -299,8 +299,8 @@ function functions.lockOn(toggle: boolean): ()
 
 		local camPos: Vector3 = (camera :: Camera).CFrame.Position;
 		local goalCF: CFrame = CFrame.new(camPos, hitPos);
-		local smoothness: number = library.flags.lockOnSmoothness or 1;
-		(camera :: Camera).CFrame = (camera :: Camera).CFrame:Lerp(goalCF, 1 / smoothness);
+		local speed: number = library.flags.lockOnSpeed or 100;
+		(camera :: Camera).CFrame = (camera :: Camera).CFrame:Lerp(goalCF, speed / 100);
 	end);
 end;
 
@@ -403,7 +403,21 @@ local M1_ANIM_IDS: {[string]: number} = {
 };
 
 local isAutoBlocking: boolean = false;
+local isManuallyBlocking: boolean = false;
 local autoParryMaid = Maid.new();
+
+maid.manualBlockDown = UserInputService.InputBegan:Connect(function(input: InputObject, gpe: boolean): ()
+	if (gpe) then return end;
+	if (input.KeyCode == BLOCK_KEY) then
+		isManuallyBlocking = true;
+	end;
+end);
+
+maid.manualBlockUp = UserInputService.InputEnded:Connect(function(input: InputObject): ()
+	if (input.KeyCode == BLOCK_KEY) then
+		isManuallyBlocking = false;
+	end;
+end);
 
 local function blockInput(): ()
 	VirtualInputManager:SendKeyEvent(true, BLOCK_KEY, false, game);
@@ -458,8 +472,7 @@ local function executeParry(rawDelay: number): ()
 
 	task.wait(library.flags.blockDuration / 1000);
 
-	local holdingBlock: boolean = UserInputService:IsKeyDown(BLOCK_KEY);
-	if (not holdingBlock or library.flags.autoParryForceUnblock) then
+	if (not isManuallyBlocking or library.flags.autoParryForceUnblock) then
 		unblockInput();
 	end;
 
@@ -809,10 +822,11 @@ localCheats:AddSlider({
 });
 
 localCheats:AddSlider({
-	text = 'Lock On Smoothness',
-	value = 1,
-	min = 0.1,
-	max = 20,
+	text = 'Lock On Speed',
+	tip = '100 = instant snap, lower = smoother tracking',
+	value = 100,
+	min = 5,
+	max = 100,
 	textpos = 2
 });
 
