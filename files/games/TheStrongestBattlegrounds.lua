@@ -402,7 +402,7 @@ local M1_ANIM_IDS: {[string]: number} = {
     
 
 	-- front dash (windup into dash)
-	['7807831448'] = 0; -- windup
+	['10479335397'] = 0; -- windup
 };
 
 local isAutoBlocking: boolean = false;
