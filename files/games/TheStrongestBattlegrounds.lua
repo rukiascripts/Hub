@@ -341,6 +341,11 @@ end;
 
 local BLOCK_KEY: Enum.KeyCode = Enum.KeyCode.F;
 
+local WINDUP_ANIM_IDS: {[string]: boolean} = {
+	['10479335397'] = true; -- windup w/ fist
+	['13380255751'] = true; -- windup w/ sword
+};
+
 -- m1 anim ids collected from anim logger, delay in seconds before blocking
 local M1_ANIM_IDS: {[string]: number} = {
 
@@ -459,7 +464,7 @@ local function isSneaking(): boolean
 	return character:FindFirstChild('SneakAttack') ~= nil;
 end;
 
-local function executeParry(rawDelay: number): ()
+local function executeParry(rawDelay: number, isWindup: boolean?): ()
 	if (isAutoBlocking or isSneaking()) then
 		return;
 	end;
@@ -480,7 +485,12 @@ local function executeParry(rawDelay: number): ()
 	blockInput();
 
 	task.spawn(function(): ()
-		task.wait(library.flags.blockDuration / 1000);
+		local duration: number = library.flags.blockDuration;
+		if (isWindup) then
+			duration *= (library.flags.windupBlockMultiplier / 100);
+		end;
+
+		task.wait(duration / 1000);
 
 		if (not isManuallyBlocking or library.flags.autoParryForceUnblock) then
 			unblockInput();
@@ -529,7 +539,7 @@ local function hookCharacterForParry(character: Model): ()
 		local delay: number? = M1_ANIM_IDS[animId];
 		if (not delay) then return end;
 
-		executeParry(delay :: number);
+		executeParry(delay :: number, WINDUP_ANIM_IDS[animId]);
 	end));
 
 	autoParryMaid:GiveTask(function(): ()
@@ -576,7 +586,7 @@ local function hookStandForParry(stand: Model): ()
 		local delay: number? = M1_ANIM_IDS[animId];
 		if (not delay) then return end;
 
-		executeParry(delay :: number);
+		executeParry(delay :: number, WINDUP_ANIM_IDS[animId]);
 	end));
 
 	autoParryMaid:GiveTask(function(): ()
@@ -903,6 +913,15 @@ autoParrySection:AddSlider({
 	value = 150,
 	min = 50,
 	max = 500,
+	textpos = 2
+});
+
+autoParrySection:AddSlider({
+	text = 'Windup Block Multiplier',
+	tip = 'block duration multiplier for windup anims (100 = normal, 150 = 1.5x longer)',
+	value = 150,
+	min = 50,
+	max = 300,
 	textpos = 2
 });
 
