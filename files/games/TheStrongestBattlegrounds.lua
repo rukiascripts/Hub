@@ -580,7 +580,7 @@ function functions.animLogger(toggle: boolean): ()
 	local liveFolder = workspace:WaitForChild('Live');
 
 	local function onEntityAdded(entity: Instance): ()
-		if (entity == LocalPlayer.Character) then return end;
+		--if (entity == LocalPlayer.Character) then return end;
 
 		local rootPart: Instance? = entity:WaitForChild('HumanoidRootPart', 10);
 		if (not rootPart) then return end;
