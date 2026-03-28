@@ -468,23 +468,25 @@ local function executeParry(rawDelay: number): ()
 	local adjustedDelay: number = calculateParryDelay(rawDelay);
 	if (adjustedDelay > 0) then
 		task.wait(adjustedDelay);
-	end;
 
-	-- re-check before pressing
-	if (isSneaking()) then
-		isAutoBlocking = false;
-		return;
+		-- re-check after waiting
+		if (isSneaking()) then
+			isAutoBlocking = false;
+			return;
+		end;
 	end;
 
 	blockInput();
 
-	task.wait(library.flags.blockDuration / 1000);
+	task.spawn(function(): ()
+		task.wait(library.flags.blockDuration / 1000);
 
-	if (not isManuallyBlocking or library.flags.autoParryForceUnblock) then
-		unblockInput();
-	end;
+		if (not isManuallyBlocking or library.flags.autoParryForceUnblock) then
+			unblockInput();
+		end;
 
-	isAutoBlocking = false;
+		isAutoBlocking = false;
+	end);
 end;
 
 --[[
@@ -526,7 +528,7 @@ local function hookCharacterForParry(character: Model): ()
 		local delay: number? = M1_ANIM_IDS[animId];
 		if (not delay) then return end;
 
-		task.spawn(executeParry, delay :: number);
+		executeParry(delay :: number);
 	end));
 
 	autoParryMaid:GiveTask(function(): ()
@@ -573,7 +575,7 @@ local function hookStandForParry(stand: Model): ()
 		local delay: number? = M1_ANIM_IDS[animId];
 		if (not delay) then return end;
 
-		task.spawn(executeParry, delay :: number);
+		executeParry(delay :: number);
 	end));
 
 	autoParryMaid:GiveTask(function(): ()
