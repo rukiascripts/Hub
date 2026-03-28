@@ -247,9 +247,11 @@ local function FindClosestToMouse(): Player?
 	return closestPlayer;
 end;
 
+local LOCK_ON_BIND_NAME: string = '__lockOn';
+
 function functions.lockOn(toggle: boolean): ()
 	if (not toggle) then
-		maid.lockOn = nil;
+		pcall(RunService.UnbindFromRenderStep, RunService, LOCK_ON_BIND_NAME);
 		lockedTarget = nil;
 		return;
 	end;
@@ -260,22 +262,22 @@ function functions.lockOn(toggle: boolean): ()
 		return;
 	end;
 
-	maid.lockOn = RunService.RenderStepped:Connect(function(): ()
+	RunService:BindToRenderStep(LOCK_ON_BIND_NAME, Enum.RenderPriority.Camera.Value + 1, function(): ()
 		if (not lockedTarget) then
-			maid.lockOn = nil;
+			pcall(RunService.UnbindFromRenderStep, RunService, LOCK_ON_BIND_NAME);
 			return;
 		end;
 
 		local character: Model? = (lockedTarget :: Player).Character;
 		if (not character) then
-			maid.lockOn = nil;
+			pcall(RunService.UnbindFromRenderStep, RunService, LOCK_ON_BIND_NAME);
 			lockedTarget = nil;
 			return;
 		end;
 
 		local humanoid: Humanoid? = (character :: Model):FindFirstChildOfClass('Humanoid');
 		if (not humanoid or (humanoid :: Humanoid).Health <= 0) then
-			maid.lockOn = nil;
+			pcall(RunService.UnbindFromRenderStep, RunService, LOCK_ON_BIND_NAME);
 			lockedTarget = nil;
 			return;
 		end;
@@ -831,12 +833,6 @@ localCheats:AddSlider({
 	min = -100,
 	max = 100,
 	textpos = 2
-});
-
-gameplayAssist:AddToggle({
-	text = 'Anti Blind',
-	tip = 'stops krillin and misaka blind',
-	callback = functions.antiBlind
 });
 
 gameplayAssist:AddToggle({
