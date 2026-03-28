@@ -403,28 +403,33 @@ local M1_ANIM_IDS: {[string]: number} = {
 };
 
 local isAutoBlocking: boolean = false;
+local isVirtualPress: boolean = false;
 local isManuallyBlocking: boolean = false;
 local autoParryMaid = Maid.new();
 
 maid.manualBlockDown = UserInputService.InputBegan:Connect(function(input: InputObject, gpe: boolean): ()
 	if (gpe) then return end;
-	if (input.KeyCode == BLOCK_KEY) then
+	if (input.KeyCode == BLOCK_KEY and not isVirtualPress) then
 		isManuallyBlocking = true;
 	end;
 end);
 
 maid.manualBlockUp = UserInputService.InputEnded:Connect(function(input: InputObject): ()
-	if (input.KeyCode == BLOCK_KEY) then
+	if (input.KeyCode == BLOCK_KEY and not isVirtualPress) then
 		isManuallyBlocking = false;
 	end;
 end);
 
 local function blockInput(): ()
+	isVirtualPress = true;
 	VirtualInputManager:SendKeyEvent(true, BLOCK_KEY, false, game);
+	isVirtualPress = false;
 end;
 
 local function unblockInput(): ()
+	isVirtualPress = true;
 	VirtualInputManager:SendKeyEvent(false, BLOCK_KEY, false, game);
+	isVirtualPress = false;
 end;
 
 --[[
