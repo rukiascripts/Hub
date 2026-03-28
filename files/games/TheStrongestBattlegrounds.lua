@@ -402,7 +402,8 @@ local M1_ANIM_IDS: {[string]: number} = {
     
 
 	-- front dash (windup into dash)
-	['10479335397'] = 0; -- windup
+	['10479335397'] = 0; -- windup w/ fist
+	['13380255751'] = 0; -- windup w/ sword
 };
 
 local isAutoBlocking: boolean = false;
