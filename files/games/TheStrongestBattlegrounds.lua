@@ -295,13 +295,10 @@ function functions.lockOn(toggle: boolean): ()
 			hitPos -= Vector3.new(0, 3, 0);
 		end;
 
-		local screenPos: Vector3, visible: boolean = (camera :: Camera):WorldToViewportPoint(hitPos);
-		if (not visible) then return end;
-
-		local mousePos: Vector2 = UserInputService:GetMouseLocation();
+		local camPos: Vector3 = (camera :: Camera).CFrame.Position;
+		local goalCF: CFrame = CFrame.new(camPos, hitPos);
 		local smoothness: number = library.flags.lockOnSmoothness or 1;
-		local delta: Vector2 = (Vector2.new(screenPos.X, screenPos.Y) - mousePos) / smoothness;
-		mousemoverel(delta.X, delta.Y);
+		(camera :: Camera).CFrame = (camera :: Camera).CFrame:Lerp(goalCF, 1 / smoothness);
 	end);
 end;
 
@@ -345,6 +342,62 @@ local BLOCK_KEY: Enum.KeyCode = Enum.KeyCode.F;
 -- m1 anim ids collected from anim logger, delay in seconds before blocking
 local M1_ANIM_IDS: {[string]: number} = {
 
+    -- saitama m1 1-4
+    ['10469493270'] = 0,
+    ['10469630950'] = 0;
+    ['10469639222'] = 0;
+    ['10469643643'] = 0;
+
+    -- garou m1 1-4
+
+    ['13532562418'] = 0;
+    ['13532600125'] = 0;
+    ['13532604085'] = 0;
+    ['13294471966'] = 0;
+
+    -- genos m1 1-4
+
+    ['13491635433'] = 0;
+    ['13296577783'] = 0;
+    ['13295919399'] = 0;
+    ['13295936866'] = 0;
+
+    -- sonic m1 1-4
+    ['13370310513'] = 0;
+    ['13390230973'] = 0;
+    ['13378751717'] = 0;
+    ['13378708199'] = 0;
+
+    -- metal bat m1 1-4
+    ['14004222985'] = 0;
+    ['13997092940'] = 0;
+    ['14001963401'] = 0;
+    ['14136436157'] = 0;
+
+    -- atomic samurai m1 1-4
+    ['15259161390'] = 0;
+    ['15240216931'] = 0;
+    ['15240176873'] = 0;
+    ['15162694192'] = 0;
+
+    -- tatsumaki m1 1-4
+    ['16515503507'] = 0;
+    ['16515520431'] = 0;
+    ['16515448089'] = 0;
+    ['16552234590'] = 0;
+
+    -- martial artist m1 1-4
+    ['17889458563'] = 0;
+    ['17889461810'] = 0;
+    ['17889471098'] = 0;
+    ['17889290569'] = 0;
+
+    -- downslam & uppercuts
+    ['10470104242'] = 0; -- fist/sword downslam
+    ['10503381238'] = 0; -- fist uppercut
+    
+    ['13379003796'] = 0; -- katana/bat uppercut
+    
 };
 
 local isAutoBlocking: boolean = false;
