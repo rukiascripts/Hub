@@ -295,6 +295,12 @@ function functions.lockOn(toggle: boolean): ()
 			hitPos -= Vector3.new(0, 1.5, 0);
 		elseif (aimPart == 'Leg') then
 			hitPos -= Vector3.new(0, 3, 0);
+		elseif (aimPart == 'Left Arm' or aimPart == 'Right Arm') then
+			local partName: string = aimPart == 'Left Arm' and 'LeftUpperArm' or 'RightUpperArm';
+			local armPart: BasePart? = (character :: Model):FindFirstChild(partName) :: BasePart?;
+			if (armPart) then
+				hitPos = (armPart :: BasePart).Position;
+			end;
 		end;
 
 		local camPos: Vector3 = (camera :: Camera).CFrame.Position;
@@ -526,20 +532,23 @@ local function hookCharacterForParry(character: Model): ()
 		-- lock-on requirement check
 		if (library.flags.autoParryLockOn and (not lockedTarget or lockedTarget ~= player)) then return end;
 
+		-- anim id check (before distance so we know if windup)
+		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or '';
+		local delay: number? = M1_ANIM_IDS[animId];
+		if (not delay) then return end;
+
+		local isWindup: boolean? = WINDUP_ANIM_IDS[animId];
+
 		-- distance check
 		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
 		local theirRoot = character:FindFirstChild('HumanoidRootPart') :: BasePart;
 		if (not myRoot or not theirRoot) then return end;
 
+		local maxRadius: number = isWindup and library.flags.windupRadius or library.flags.radius;
 		local distance: number = ((myRoot :: BasePart).Position - (theirRoot :: BasePart).Position).Magnitude;
-		if (distance > library.flags.radius) then return end;
+		if (distance > maxRadius) then return end;
 
-		-- anim id check
-		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or '';
-		local delay: number? = M1_ANIM_IDS[animId];
-		if (not delay) then return end;
-
-		executeParry(delay :: number, WINDUP_ANIM_IDS[animId]);
+		executeParry(delay :: number, isWindup);
 	end));
 
 	autoParryMaid:GiveTask(function(): ()
@@ -574,19 +583,22 @@ local function hookStandForParry(stand: Model): ()
 		-- lock-on requirement check (match stand name to locked player name)
 		if (library.flags.autoParryLockOn and (not lockedTarget or (lockedTarget :: Player).Name ~= stand.Name)) then return end;
 
-		-- distance check
-		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
-		if (not myRoot) then return end;
-
-		local distance: number = ((myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude;
-		if (distance > library.flags.radius) then return end;
-
-		-- anim id check
+		-- anim id check (before distance so we know if windup)
 		local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or '';
 		local delay: number? = M1_ANIM_IDS[animId];
 		if (not delay) then return end;
 
-		executeParry(delay :: number, WINDUP_ANIM_IDS[animId]);
+		local isWindup: boolean? = WINDUP_ANIM_IDS[animId];
+
+		-- distance check
+		local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
+		if (not myRoot) then return end;
+
+		local maxRadius: number = isWindup and library.flags.windupRadius or library.flags.radius;
+		local distance: number = ((myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude;
+		if (distance > maxRadius) then return end;
+
+		executeParry(delay :: number, isWindup);
 	end));
 
 	autoParryMaid:GiveTask(function(): ()
@@ -825,7 +837,7 @@ localCheats:AddBind({
 
 localCheats:AddList({
 	text = 'Lock On Aim Part',
-	values = {'Head', 'Torso'},
+	values = {'Head', 'Torso', 'Left Arm', 'Right Arm'},
 	value = 'Head'
 });
 
@@ -904,6 +916,15 @@ autoParrySection:AddSlider({
 	value = 15,
 	min = 5,
 	max = 50,
+	textpos = 2
+});
+
+autoParrySection:AddSlider({
+	text = 'Windup Radius',
+	tip = 'max distance to detect windup animations (dash etc)',
+	value = 30,
+	min = 5,
+	max = 100,
 	textpos = 2
 });
 
