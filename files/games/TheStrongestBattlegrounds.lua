@@ -400,6 +400,9 @@ local M1_ANIM_IDS: {[string]: number} = {
     
     ['13379003796'] = 0; -- katana/bat uppercut
     
+
+	-- front dash
+	['14516273501'] = 0;
 };
 
 local isAutoBlocking: boolean = false;
