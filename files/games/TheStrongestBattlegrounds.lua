@@ -296,8 +296,7 @@ function functions.lockOn(toggle: boolean): ()
 		elseif (aimPart == 'Leg') then
 			hitPos -= Vector3.new(0, 3, 0);
 		elseif (aimPart == 'Left Arm' or aimPart == 'Right Arm') then
-			local partName: string = aimPart == 'Left Arm' and 'LeftUpperArm' or 'RightUpperArm';
-			local armPart: BasePart? = (character :: Model):FindFirstChild(partName) :: BasePart?;
+			local armPart: BasePart? = (character :: Model):FindFirstChild(aimPart) :: BasePart?;
 			if (armPart) then
 				hitPos = (armPart :: BasePart).Position;
 			end;
