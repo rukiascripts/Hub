@@ -591,32 +591,11 @@ function functions.animLogger(toggle: boolean): ()
 		hookAnimLogger(entity, rootPart :: Instance, humanoid :: Instance, `<font color='#3498db'>{entity.Name}</font>`);
 	end;
 
-	local function onStandAdded(stand: Instance): ()
-		local humanoid: Instance? = stand:WaitForChild('Humanoid', 10);
-		if (not humanoid) then return end;
-
-		local rootPart: Instance? = stand:FindFirstChild('HumanoidRootPart') or stand:WaitForChild('HumanoidRootPart', 10);
-		if (not rootPart) then return end;
-
-		hookAnimLogger(stand, rootPart :: Instance, humanoid :: Instance, `<font color='#e74c3c'>{stand.Name}</font> <font color='#9b59b6'>[STAND]</font>`);
-	end;
-
-	local standsFolder = workspace:FindFirstChild('Stands');
-
 	animLoggerMaid:GiveTask(liveFolder.ChildAdded:Connect(onEntityAdded));
 
 	for _, entity in liveFolder:GetChildren() do
 		task.spawn(onEntityAdded, entity);
 	end;
-
-	if (standsFolder) then
-		animLoggerMaid:GiveTask(standsFolder.ChildAdded:Connect(onStandAdded));
-
-		for _, stand in standsFolder:GetChildren() do
-			task.spawn(onStandAdded, stand);
-		end;
-	end;
-
 end;
 
 animLoggerWindow.OnClick:Connect(function(actionName: string, context: any): ()
