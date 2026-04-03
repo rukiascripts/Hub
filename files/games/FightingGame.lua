@@ -917,6 +917,115 @@ misccheats:AddSlider({
     textpos = 2
 });
 
+misccheats:AddDivider('Stun Logger');
+
+local stunLoggerWindow = TextLogger.new({
+    title = 'Stun Logger',
+    buttons = {'Copy Name', 'Delete Log', 'Clear All'}
+});
+
+local stunLoggerMaid = Maid.new();
+
+local function hookStunLogger(entity: Instance, label: string): ()
+    local entityMaid = Maid.new();
+
+    entityMaid:GiveTask((entity :: any).Destroying:Connect(function(): ()
+        entityMaid:DoCleaning();
+    end));
+
+    entityMaid:GiveTask(entity.ChildAdded:Connect(function(child: Instance): ()
+        if (not child:IsA('Accessory')) then return end;
+
+        local myRoot: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
+        local entityRoot: BasePart? = entity:FindFirstChild('HumanoidRootPart') :: BasePart;
+        if (myRoot and entityRoot and ((myRoot :: BasePart).Position - (entityRoot :: BasePart).Position).Magnitude > (library.flags.stunLoggerMaxRange or 100)) then
+            return;
+        end;
+
+        local addedAt = tick();
+        local accessoryName = child.Name;
+
+        local removed = false;
+        local removedConn;
+
+        removedConn = child.AncestryChanged:Connect(function(): ()
+            if (removed) then return end;
+            if (child.Parent ~= entity) then
+                removed = true;
+                if (removedConn) then removedConn:Disconnect() end;
+
+                local duration = math.floor((tick() - addedAt) * 1000);
+                stunLoggerWindow:AddText({
+                    text = `<font color='#e67e22'>{accessoryName}</font> on {label} lasted <font color='#2ecc71'>{duration}ms</font>`,
+                    accessoryName = accessoryName,
+                });
+            end;
+        end));
+
+        entityMaid:GiveTask(function(): ()
+            if (removedConn) then removedConn:Disconnect() end;
+        end);
+    end));
+
+    stunLoggerMaid:GiveTask(function(): ()
+        entityMaid:DoCleaning();
+    end);
+end;
+
+function functions.stunLogger(toggle: boolean): ()
+    stunLoggerWindow:SetVisible(toggle);
+
+    if (not toggle) then
+        stunLoggerMaid:DoCleaning();
+        return;
+    end;
+
+    local liveFolder = workspace:WaitForChild('Live');
+
+    local function onEntityAdded(entity: Instance): ()
+        local humanoid: Instance? = entity:WaitForChild('Humanoid', 10);
+        if (not humanoid) then return end;
+
+        hookStunLogger(entity, `<font color='#3498db'>{entity.Name}</font>`);
+    end;
+
+    stunLoggerMaid:GiveTask(liveFolder.ChildAdded:Connect(onEntityAdded));
+
+    for _, entity in liveFolder:GetChildren() do
+        task.spawn(onEntityAdded, entity);
+    end;
+end;
+
+stunLoggerWindow.OnClick:Connect(function(actionName: string, context: any): ()
+    if (actionName == 'Delete Log') then
+        context:Destroy();
+    elseif (actionName == 'Copy Name') then
+        setclipboard(context.accessoryName);
+    elseif (actionName == 'Clear All') then
+        for _, v in stunLoggerWindow.logs do
+            v.label:Destroy();
+        end;
+        table.clear(stunLoggerWindow.logs);
+        table.clear(stunLoggerWindow.allLogs);
+    end;
+end);
+
+misccheats:AddToggle({
+    text = 'Stun Logger',
+    tip = 'logs accessories added to characters and how long they last (ms)',
+    callback = functions.stunLogger
+});
+
+misccheats:AddSlider({
+    text = 'Stun Logger Max Range',
+    tip = 'only log stuns from entities within this distance',
+    value = 100,
+    min = 10,
+    max = 500,
+    flag = 'stunLoggerMaxRange',
+    textpos = 2
+});
+
 
 combatcheats:AddDivider("Combat Settings");
 print("before do")
