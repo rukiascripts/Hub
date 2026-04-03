@@ -819,6 +819,104 @@ misccheats:AddBox({
 });
 end;
 
+misccheats:AddDivider('Animation Logger');
+
+local animLoggerWindow = TextLogger.new({
+    title = 'Animation Logger',
+    buttons = {'Copy Animation Id', 'Add To Ignore List', 'Delete Log', 'Clear All'}
+});
+
+animLoggerWindow.ignoreList = {};
+
+local animLoggerMaid = Maid.new();
+
+local function hookAnimLogger(entity: Instance, rootPart: Instance, humanoid: Instance, label: string): ()
+    local entityMaid = Maid.new();
+
+    entityMaid:GiveTask((entity :: any).Destroying:Connect(function(): ()
+        entityMaid:DoCleaning();
+    end));
+
+    entityMaid:GiveTask((humanoid :: any).AnimationPlayed:Connect(function(animationTrack: AnimationTrack): ()
+        local animId: string = animationTrack.Animation and tostring(animationTrack.Animation.AnimationId):match('%d+') or 'unknown';
+
+        if (animLoggerWindow.ignoreList[animId]) then return end;
+
+        local myRoot: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
+        if (myRoot and ((myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude > (library.flags.animLoggerMaxRange or 100)) then
+            return;
+        end;
+
+        animLoggerWindow:AddText({
+            text = `Animation <font color='#2ecc71'>{animId}</font> played from {label}`,
+            animationId = animId,
+        });
+    end));
+
+    animLoggerMaid:GiveTask(function(): ()
+        entityMaid:DoCleaning();
+    end);
+end;
+
+function functions.animLogger(toggle: boolean): ()
+    animLoggerWindow:SetVisible(toggle);
+
+    if (not toggle) then
+        animLoggerMaid:DoCleaning();
+        return;
+    end;
+
+    local liveFolder = workspace:WaitForChild('Live');
+
+    local function onEntityAdded(entity: Instance): ()
+        local rootPart: Instance? = entity:WaitForChild('HumanoidRootPart', 10);
+        if (not rootPart) then return end;
+
+        local humanoid: Instance? = entity:WaitForChild('Humanoid', 10);
+        if (not humanoid) then return end;
+
+        hookAnimLogger(entity, rootPart :: Instance, humanoid :: Instance, `<font color='#3498db'>{entity.Name}</font>`);
+    end;
+
+    animLoggerMaid:GiveTask(liveFolder.ChildAdded:Connect(onEntityAdded));
+
+    for _, entity in liveFolder:GetChildren() do
+        task.spawn(onEntityAdded, entity);
+    end;
+end;
+
+animLoggerWindow.OnClick:Connect(function(actionName: string, context: any): ()
+    if (actionName == 'Add To Ignore List' and not animLoggerWindow.ignoreList[context.animationId]) then
+        animLoggerWindow.ignoreList[context.animationId] = true;
+    elseif (actionName == 'Delete Log') then
+        context:Destroy();
+    elseif (actionName == 'Copy Animation Id') then
+        setclipboard(context.animationId);
+    elseif (actionName == 'Clear All') then
+        for _, v in animLoggerWindow.logs do
+            v.label:Destroy();
+        end;
+        table.clear(animLoggerWindow.logs);
+        table.clear(animLoggerWindow.allLogs);
+    end;
+end);
+
+misccheats:AddToggle({
+    text = 'Animation Logger',
+    tip = 'opens a gui logger with copy/ignore buttons for finding anim IDs',
+    callback = functions.animLogger
+});
+
+misccheats:AddSlider({
+    text = 'Anim Logger Max Range',
+    tip = 'only log animations from entities within this distance',
+    value = 100,
+    min = 10,
+    max = 500,
+    flag = 'animLoggerMaxRange',
+    textpos = 2
+});
+
 
 combatcheats:AddDivider("Combat Settings");
 print("before do")
