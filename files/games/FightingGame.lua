@@ -934,7 +934,7 @@ local function hookStunLogger(entity: Instance, label: string): ()
     end));
 
     entityMaid:GiveTask(entity.ChildAdded:Connect(function(child: Instance): ()
-        if (not child:IsA('Accessory')) then return end;
+        if (not child:IsA('Accessory') and not child:IsA('Folder')) then return end;
 
         local myRoot: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart;
         local entityRoot: BasePart? = entity:FindFirstChild('HumanoidRootPart') :: BasePart;
