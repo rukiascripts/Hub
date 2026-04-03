@@ -989,11 +989,9 @@ function functions.stunLogger(toggle: boolean): ()
         hookStunLogger(entity, `<font color='#3498db'>{entity.Name}</font>`);
     end;
 
-    stunLoggerMaid:GiveTask(liveFolder.ChildAdded:Connect(onEntityAdded));
+    --stunLoggerMaid:GiveTask(liveFolder.ChildAdded:Connect(onEntityAdded));
 
-    for _, entity in liveFolder:GetChildren() do
-        task.spawn(onEntityAdded, entity);
-    end;
+    onEntityAdded(LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait());
 end;
 
 stunLoggerWindow.OnClick:Connect(function(actionName: string, context: any): ()
