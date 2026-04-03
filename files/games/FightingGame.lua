@@ -960,7 +960,7 @@ local function hookStunLogger(entity: Instance, label: string): ()
                     accessoryName = accessoryName,
                 });
             end;
-        end));
+        end);
 
         entityMaid:GiveTask(function(): ()
             if (removedConn) then removedConn:Disconnect() end;
