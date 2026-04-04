@@ -316,19 +316,34 @@ function functions.fling(toggle: boolean): ()
 			(hrp :: BasePart).CFrame = (targetRoot :: BasePart).CFrame;
 		end;
 
-		-- spike velocity hard in one direction, reset cframe each frame
+		-- spike velocity on every part + high density for max collision force
 		local frameCF: CFrame = (hrp :: BasePart).CFrame;
 		local power: number = library.flags.flingPower;
+		local powerVec: Vector3 = Vector3.new(power, power * 0.5, power);
+		local spinVec: Vector3 = Vector3.new(power, power, power);
+		local heavyPhysics: PhysicalProperties = PhysicalProperties.new(100, 0.3, 0.5);
 
-		for _ = 1, 2 do
-			(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(power, power * 0.5, power);
-			(hrp :: BasePart).AssemblyAngularVelocity = Vector3.new(power, power, power);
+		local parts: {BasePart} = {};
+		for _, part: Instance in (character :: Model):GetDescendants() do
+			if (not part:IsA('BasePart')) then continue end;
+			table.insert(parts, part :: BasePart);
+			part.CustomPhysicalProperties = heavyPhysics;
+			part.CanCollide = true;
+		end;
+
+		for _ = 1, 4 do
+			for _, part: BasePart in parts do
+				(part :: any).Velocity = powerVec;
+				(part :: any).RotVelocity = spinVec;
+			end;
 			RunService.RenderStepped:Wait();
 			(hrp :: BasePart).CFrame = frameCF;
 		end;
 
-		(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(0, wobble, 0);
-		(hrp :: BasePart).AssemblyAngularVelocity = Vector3.zero;
+		for _, part: BasePart in parts do
+			(part :: any).Velocity = Vector3.new(0, wobble, 0);
+			(part :: any).RotVelocity = Vector3.zero;
+		end;
 		wobble = -wobble;
 	end);
 end;
