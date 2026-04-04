@@ -745,24 +745,9 @@ library.OnKeyPress:Connect(function(input: InputObject, gpe: boolean): ()
 		until (closest or input.UserInputState == Enum.UserInputState.End);
 		if (input.UserInputState == Enum.UserInputState.End) then return end;
 
-		local lastGoalPos: Vector3? = nil;
-
 		maid.attachToBack = RunService.Heartbeat:Connect(function(): ()
 			local goalCF: CFrame = (closest :: BasePart).CFrame * CFrame.new(0, library.flags.attachToBackHeight, library.flags.attachToBackSpace);
-
-			if (lastGoalPos and (goalCF.Position - lastGoalPos :: Vector3).Magnitude < 0.5) then return end;
-			lastGoalPos = goalCF.Position;
-
-			local distance: number = (goalCF.Position - (hrp :: BasePart).Position).Magnitude;
-			local tween: Tween = TweenService:Create(hrp, TweenInfo.new(distance / 100, Enum.EasingStyle.Linear), {
-				CFrame = goalCF
-			});
-
-			tween:Play();
-
-			maid.attachToBackTween = function(): ()
-				tween:Cancel();
-			end;
+			(hrp :: BasePart).CFrame = goalCF;
 		end);
 	end;
 end);
@@ -773,7 +758,6 @@ library.OnKeyRelease:Connect(function(input: InputObject): ()
 
 	if (input.KeyCode.Name == key or input.UserInputType.Name == key) then
 		maid.attachToBack = nil;
-		maid.attachToBackTween = nil;
 	end;
 end);
 
