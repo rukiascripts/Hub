@@ -197,6 +197,87 @@ function functions.clickDestroy(toggle: boolean): ()
 	end);
 end;
 
+local FLING_ANGULAR_SPEED: number = 50;
+
+--[[
+	flings nearby players by spinning the character really fast
+	and teleporting into them. physics does the rest lol
+]]
+function functions.fling(toggle: boolean): ()
+	if (not toggle) then
+		maid.fling = nil;
+		maid.flingAngular = nil;
+		maid.flingVelocity = nil;
+		return;
+	end;
+
+	local function getTarget(): BasePart?
+		local myRoot: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
+		if (not myRoot) then return nil end;
+
+		local maxRange: number = library.flags.flingRange;
+		local closest: BasePart? = nil;
+		local closestDist: number = math.huge;
+
+		for _, player: Player in Players:GetPlayers() do
+			if (player == LocalPlayer) then continue end;
+			if (library.flags.flingCheckTeam and Utility:isTeamMate(player)) then continue end;
+
+			local character: Model? = player.Character;
+			if (not character) then continue end;
+
+			local humanoid: Humanoid? = (character :: Model):FindFirstChildOfClass('Humanoid');
+			if (not humanoid or (humanoid :: Humanoid).Health <= 0) then continue end;
+
+			local rootPart: BasePart? = (character :: Model):FindFirstChild('HumanoidRootPart') :: BasePart?;
+			if (not rootPart) then continue end;
+
+			local dist: number = ((myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude;
+			if (dist < maxRange and dist < closestDist) then
+				closest = rootPart;
+				closestDist = dist;
+			end;
+		end;
+
+		return closest;
+	end;
+
+	maid.fling = RunService.Heartbeat:Connect(function(): ()
+		local playerData = Utility:getPlayerData();
+		local rootPart: BasePart? = playerData.primaryPart;
+		if (not rootPart) then return end;
+
+		-- angular velocity to spin the character
+		if (not maid.flingAngular) then
+			maid.flingAngular = Instance.new('BodyAngularVelocity');
+			(maid.flingAngular :: any).MaxTorque = Vector3.new(math.huge, math.huge, math.huge);
+			CollectionService:AddTag(maid.flingAngular, 'good');
+			CollectionService:AddTag(maid.flingAngular, 'DONTDELETE');
+		end;
+
+		(maid.flingAngular :: any).AngularVelocity = Vector3.new(0, FLING_ANGULAR_SPEED, 0);
+		(maid.flingAngular :: any).Parent = rootPart;
+
+		-- high velocity so the collision actually flings
+		if (not maid.flingVelocity) then
+			maid.flingVelocity = Instance.new('BodyVelocity');
+			(maid.flingVelocity :: any).MaxForce = Vector3.new(math.huge, math.huge, math.huge);
+			CollectionService:AddTag(maid.flingVelocity, 'good');
+			CollectionService:AddTag(maid.flingVelocity, 'DONTDELETE');
+		end;
+
+		local target: BasePart? = getTarget();
+		if (target and library.flags.flingTeleport) then
+			(rootPart :: BasePart).CFrame = (target :: BasePart).CFrame;
+		end;
+
+		local speed: number = library.flags.flingPower;
+		local dir: Vector3 = (rootPart :: BasePart).CFrame.LookVector;
+		(maid.flingVelocity :: any).Velocity = dir * speed;
+		(maid.flingVelocity :: any).Parent = rootPart;
+	end);
+end;
+
 local lockedTarget: Player? = nil;
 
 --[[
@@ -849,6 +930,42 @@ localCheats:AddSlider({
 });
 
 localCheats:AddDivider('Combat Tweaks');
+
+localCheats:AddToggle({
+	text = 'Fling',
+	tip = 'spins your character into nearby players to fling them via physics',
+	callback = functions.fling
+});
+
+localCheats:AddToggle({
+	text = 'Fling Teleport',
+	tip = 'teleport to the nearest player while flinging',
+	state = true
+});
+
+localCheats:AddToggle({
+	text = 'Fling Check Team',
+	tip = 'skip teammates when selecting fling target',
+	state = true
+});
+
+localCheats:AddSlider({
+	text = 'Fling Power',
+	tip = 'velocity applied to your character',
+	value = 300,
+	min = 50,
+	max = 1000,
+	textpos = 2
+});
+
+localCheats:AddSlider({
+	text = 'Fling Range',
+	tip = 'max distance to find a target',
+	value = 50,
+	min = 10,
+	max = 500,
+	textpos = 2
+});
 
 localCheats:AddBind({
 	text = 'Attach To Back',
