@@ -319,7 +319,17 @@ function functions.fling(toggle: boolean): ()
 		-- spike velocity on every part + high density for max collision force
 		local frameCF: CFrame = (hrp :: BasePart).CFrame;
 		local power: number = library.flags.flingPower;
-		local powerVec: Vector3 = Vector3.new(power, power * 0.5, power);
+
+		-- fling downward to avoid sky barrier, push them under the map
+		local flingDir: Vector3 = Vector3.new(1, -1, 1).Unit;
+		if (targetRoot) then
+			local rawDir: Vector3 = ((targetRoot :: BasePart).Position - (hrp :: BasePart).Position);
+			if (rawDir.Magnitude > 0.1) then
+				flingDir = (rawDir.Unit + Vector3.new(0, -1, 0)).Unit;
+			end;
+		end;
+
+		local powerVec: Vector3 = flingDir * power;
 		local spinVec: Vector3 = Vector3.new(power, power, power);
 		local heavyPhysics: PhysicalProperties = PhysicalProperties.new(100, 0.3, 0.5);
 
