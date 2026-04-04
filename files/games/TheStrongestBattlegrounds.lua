@@ -316,17 +316,19 @@ function functions.fling(toggle: boolean): ()
 			(hrp :: BasePart).CFrame = (targetRoot :: BasePart).CFrame;
 		end;
 
-		-- spike velocity to fling them, snap back each frame so we dont fly
+		-- spike velocity hard in one direction, reset cframe each frame
 		local frameCF: CFrame = (hrp :: BasePart).CFrame;
 		local power: number = library.flags.flingPower;
 
-		(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(power, power, power);
-		RunService.RenderStepped:Wait();
-		(hrp :: BasePart).CFrame = frameCF;
-		(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(-power, -power, -power);
-		RunService.Stepped:Wait();
-		(hrp :: BasePart).CFrame = frameCF;
+		for _ = 1, 2 do
+			(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(power, power * 0.5, power);
+			(hrp :: BasePart).AssemblyAngularVelocity = Vector3.new(power, power, power);
+			RunService.RenderStepped:Wait();
+			(hrp :: BasePart).CFrame = frameCF;
+		end;
+
 		(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(0, wobble, 0);
+		(hrp :: BasePart).AssemblyAngularVelocity = Vector3.zero;
 		wobble = -wobble;
 	end);
 end;
@@ -1015,9 +1017,9 @@ localCheats:AddToggle({
 localCheats:AddSlider({
 	text = 'Fling Power',
 	tip = 'velocity multiplier, higher = stronger fling',
-	value = 10000,
-	min = 1000,
-	max = 50000,
+	value = 50000,
+	min = 5000,
+	max = 200000,
 	textpos = 2
 });
 
