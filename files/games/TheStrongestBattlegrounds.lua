@@ -222,8 +222,8 @@ function functions.clickDestroy(toggle: boolean): ()
 end;
 
 --[[
-	touch fling - spikes the hrp velocity to insane values each frame
-	so anyone touching you gets launched. tp to target optional
+	touch fling - saves your position, tps to target, spikes velocity
+	to fling them, then returns to original spot when target is lost
 ]]
 function functions.fling(toggle: boolean): ()
 	if (not toggle) then
@@ -231,12 +231,10 @@ function functions.fling(toggle: boolean): ()
 		return;
 	end;
 
-	local function getClosestTarget(): BasePart?
-		local myRoot: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
-		if (not myRoot) then return nil end;
-
+	local function getClosestTarget(origin: Vector3): (BasePart?, Player?)
 		local maxRange: number = library.flags.flingRange;
 		local closest: BasePart? = nil;
+		local closestPlayer: Player? = nil;
 		local closestDist: number = math.huge;
 
 		for _, player: Player in Players:GetPlayers() do
@@ -252,39 +250,82 @@ function functions.fling(toggle: boolean): ()
 			local rootPart: BasePart? = (character :: Model):FindFirstChild('HumanoidRootPart') :: BasePart?;
 			if (not rootPart) then continue end;
 
-			local dist: number = ((myRoot :: BasePart).Position - (rootPart :: BasePart).Position).Magnitude;
+			local dist: number = (origin - (rootPart :: BasePart).Position).Magnitude;
 			if (dist < maxRange and dist < closestDist) then
 				closest = rootPart;
+				closestPlayer = player;
 				closestDist = dist;
 			end;
 		end;
 
-		return closest;
+		return closest, closestPlayer;
 	end;
 
 	local wobble: number = 0.1;
+	local savedCF: CFrame? = nil;
+	local currentTarget: Player? = nil;
 
 	maid.fling = RunService.Heartbeat:Connect(function(): ()
 		local character: Model? = LocalPlayer.Character;
 		local hrp: BasePart? = character and (character :: Model):FindFirstChild('HumanoidRootPart') :: BasePart?;
 		if (not hrp) then return end;
 
-		-- tp to nearest target if enabled
-		local target: BasePart? = getClosestTarget();
-		if (target and library.flags.flingTeleport) then
-			(hrp :: BasePart).CFrame = (target :: BasePart).CFrame;
+		-- check if current target is still valid (alive and has character)
+		local targetLost: boolean = false;
+		if (currentTarget) then
+			local tChar: Model? = (currentTarget :: Player).Character;
+			local tHum: Humanoid? = tChar and (tChar :: Model):FindFirstChildOfClass('Humanoid');
+			if (not tChar or not tHum or (tHum :: Humanoid).Health <= 0) then
+				targetLost = true;
+			end;
 		end;
 
-		-- anchor so we dont fling ourselves, spike velocity to hit others
-		local savedCF: CFrame = (hrp :: BasePart).CFrame;
+		-- target died or despawned, tp back to where we were
+		if (targetLost and savedCF) then
+			(hrp :: BasePart).CFrame = savedCF :: CFrame;
+			(hrp :: BasePart).AssemblyLinearVelocity = Vector3.zero;
+			savedCF = nil;
+			currentTarget = nil;
+			return;
+		end;
+
+		-- use saved origin for range check so we dont drift
+		local searchOrigin: Vector3 = savedCF and (savedCF :: CFrame).Position or (hrp :: BasePart).Position;
+		local targetRoot: BasePart?, targetPlayer: Player? = getClosestTarget(searchOrigin);
+
+		-- no target, just chill at our spot
+		if (not targetRoot) then
+			if (savedCF) then
+				(hrp :: BasePart).CFrame = savedCF :: CFrame;
+				(hrp :: BasePart).AssemblyLinearVelocity = Vector3.zero;
+				savedCF = nil;
+				currentTarget = nil;
+			end;
+			return;
+		end;
+
+		-- save position before first tp
+		if (not savedCF) then
+			savedCF = (hrp :: BasePart).CFrame;
+		end;
+
+		currentTarget = targetPlayer;
+
+		-- tp onto target
+		if (library.flags.flingTeleport) then
+			(hrp :: BasePart).CFrame = (targetRoot :: BasePart).CFrame;
+		end;
+
+		-- spike velocity to fling them, snap back each frame so we dont fly
+		local frameCF: CFrame = (hrp :: BasePart).CFrame;
 		local power: number = library.flags.flingPower;
 
 		(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(power, power, power);
 		RunService.RenderStepped:Wait();
-		(hrp :: BasePart).CFrame = savedCF;
+		(hrp :: BasePart).CFrame = frameCF;
 		(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(-power, -power, -power);
 		RunService.Stepped:Wait();
-		(hrp :: BasePart).CFrame = savedCF;
+		(hrp :: BasePart).CFrame = frameCF;
 		(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(0, wobble, 0);
 		wobble = -wobble;
 	end);
