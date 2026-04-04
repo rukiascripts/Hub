@@ -143,7 +143,7 @@ end;
 
 function functions.goToGround(): ()
 	local params: RaycastParams = RaycastParams.new();
-	params.FilterDescendantsInstances = {(workspace :: any).Mobs};
+	params.FilterDescendantsInstances = {};
 	params.FilterType = Enum.RaycastFilterType.Exclude;
 
 	local hrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
@@ -154,6 +154,30 @@ function functions.goToGround(): ()
 
 	(hrp :: BasePart).CFrame *= CFrame.new(0, -((hrp :: BasePart).Position.Y - (floor :: RaycastResult).Position.Y) + 3, 0);
 	(hrp :: any).Velocity *= Vector3.new(1, 0, 1);
+end;
+
+--[[
+	teleports below the map floor. noclip should be on or you'll
+	just get pushed back up
+]]
+function functions.goUnderground(): ()
+	local hrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
+	if (not hrp or not (hrp :: BasePart).Parent) then return end;
+
+	local params: RaycastParams = RaycastParams.new();
+	params.FilterType = Enum.RaycastFilterType.Exclude;
+	params.FilterDescendantsInstances = {LocalPlayer.Character :: any};
+
+	local floor: RaycastResult? = workspace:Raycast((hrp :: BasePart).Position, Vector3.new(0, -1000, 0), params);
+	local depth: number = library.flags.undergroundDepth;
+
+	if (floor) then
+		(hrp :: BasePart).CFrame = CFrame.new((hrp :: BasePart).Position.X, (floor :: RaycastResult).Position.Y - depth, (hrp :: BasePart).Position.Z);
+	else
+		(hrp :: BasePart).CFrame *= CFrame.new(0, -depth, 0);
+	end;
+
+	(hrp :: any).Velocity = Vector3.zero;
 end;
 
 function functions.noClip(toggle: boolean): ()
@@ -879,6 +903,16 @@ localCheats:AddToggle({
 });
 
 localCheats:AddBind({ text = 'Go To Ground', callback = functions.goToGround, mode = 'hold', nomouse = true });
+
+localCheats:AddBind({ text = 'Go Underground', tip = 'teleports below the map, use with noclip', callback = functions.goUnderground, nomouse = true });
+localCheats:AddSlider({
+	text = 'Underground Depth',
+	tip = 'how far below the floor to teleport',
+	value = 50,
+	min = 10,
+	max = 300,
+	textpos = 2
+});
 
 localCheats:AddBind({
 	text = 'Lock On',
