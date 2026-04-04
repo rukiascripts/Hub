@@ -251,14 +251,17 @@ function functions.fling(toggle: boolean): ()
 			(hrp :: BasePart).CFrame = (target :: BasePart).CFrame;
 		end;
 
-		-- spike velocity to fling anyone we touch
-		local currentVel: Vector3 = (hrp :: BasePart).AssemblyLinearVelocity;
+		-- anchor so we dont fling ourselves, spike velocity to hit others
+		local savedCF: CFrame = (hrp :: BasePart).CFrame;
 		local power: number = library.flags.flingPower;
-		(hrp :: BasePart).AssemblyLinearVelocity = currentVel * power + Vector3.new(0, power, 0);
+
+		(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(power, power, power);
 		RunService.RenderStepped:Wait();
-		(hrp :: BasePart).AssemblyLinearVelocity = currentVel;
+		(hrp :: BasePart).CFrame = savedCF;
+		(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(-power, -power, -power);
 		RunService.Stepped:Wait();
-		(hrp :: BasePart).AssemblyLinearVelocity = currentVel + Vector3.new(0, wobble, 0);
+		(hrp :: BasePart).CFrame = savedCF;
+		(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(0, wobble, 0);
 		wobble = -wobble;
 	end);
 end;
