@@ -1041,10 +1041,10 @@ localCheats:AddToggle({
 
 localCheats:AddSlider({
 	text = 'Fling Power',
-	tip = 'velocity multiplier, higher = stronger fling',
-	value = 50000,
+	tip = 'velocity multiplier, higher = stronger fling. crank it for duels',
+	value = 99999999,
 	min = 5000,
-	max = 200000,
+	max = 99999999,
 	textpos = 2
 });
 
