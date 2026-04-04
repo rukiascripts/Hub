@@ -59,6 +59,8 @@ if (blockedMessage) then
 	return;
 end;
 
+local ATTACH_MAX_RANGE: number = 700;
+
 local LocalPlayer: Player = Players.LocalPlayer;
 local playerMouse = LocalPlayer:GetMouse();
 
