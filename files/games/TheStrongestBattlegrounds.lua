@@ -197,21 +197,17 @@ function functions.clickDestroy(toggle: boolean): ()
 	end);
 end;
 
-local FLING_ANGULAR_SPEED: number = 50;
-
 --[[
-	flings nearby players by spinning the character really fast
-	and teleporting into them. physics does the rest lol
+	touch fling - spikes the hrp velocity to insane values each frame
+	so anyone touching you gets launched. tp to target optional
 ]]
 function functions.fling(toggle: boolean): ()
 	if (not toggle) then
 		maid.fling = nil;
-		maid.flingAngular = nil;
-		maid.flingVelocity = nil;
 		return;
 	end;
 
-	local function getTarget(): BasePart?
+	local function getClosestTarget(): BasePart?
 		local myRoot: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
 		if (not myRoot) then return nil end;
 
@@ -242,39 +238,28 @@ function functions.fling(toggle: boolean): ()
 		return closest;
 	end;
 
+	local wobble: number = 0.1;
+
 	maid.fling = RunService.Heartbeat:Connect(function(): ()
-		local playerData = Utility:getPlayerData();
-		local rootPart: BasePart? = playerData.primaryPart;
-		if (not rootPart) then return end;
+		local character: Model? = LocalPlayer.Character;
+		local hrp: BasePart? = character and (character :: Model):FindFirstChild('HumanoidRootPart') :: BasePart?;
+		if (not hrp) then return end;
 
-		-- angular velocity to spin the character
-		if (not maid.flingAngular) then
-			maid.flingAngular = Instance.new('BodyAngularVelocity');
-			(maid.flingAngular :: any).MaxTorque = Vector3.new(math.huge, math.huge, math.huge);
-			CollectionService:AddTag(maid.flingAngular, 'good');
-			CollectionService:AddTag(maid.flingAngular, 'DONTDELETE');
-		end;
-
-		(maid.flingAngular :: any).AngularVelocity = Vector3.new(0, FLING_ANGULAR_SPEED, 0);
-		(maid.flingAngular :: any).Parent = rootPart;
-
-		-- high velocity so the collision actually flings
-		if (not maid.flingVelocity) then
-			maid.flingVelocity = Instance.new('BodyVelocity');
-			(maid.flingVelocity :: any).MaxForce = Vector3.new(math.huge, math.huge, math.huge);
-			CollectionService:AddTag(maid.flingVelocity, 'good');
-			CollectionService:AddTag(maid.flingVelocity, 'DONTDELETE');
-		end;
-
-		local target: BasePart? = getTarget();
+		-- tp to nearest target if enabled
+		local target: BasePart? = getClosestTarget();
 		if (target and library.flags.flingTeleport) then
-			(rootPart :: BasePart).CFrame = (target :: BasePart).CFrame;
+			(hrp :: BasePart).CFrame = (target :: BasePart).CFrame;
 		end;
 
-		local speed: number = library.flags.flingPower;
-		local dir: Vector3 = (rootPart :: BasePart).CFrame.LookVector;
-		(maid.flingVelocity :: any).Velocity = dir * speed;
-		(maid.flingVelocity :: any).Parent = rootPart;
+		-- spike velocity to fling anyone we touch
+		local currentVel: Vector3 = (hrp :: BasePart).AssemblyLinearVelocity;
+		local power: number = library.flags.flingPower;
+		(hrp :: BasePart).AssemblyLinearVelocity = currentVel * power + Vector3.new(0, power, 0);
+		RunService.RenderStepped:Wait();
+		(hrp :: BasePart).AssemblyLinearVelocity = currentVel;
+		RunService.Stepped:Wait();
+		(hrp :: BasePart).AssemblyLinearVelocity = currentVel + Vector3.new(0, wobble, 0);
+		wobble = -wobble;
 	end);
 end;
 
@@ -951,10 +936,10 @@ localCheats:AddToggle({
 
 localCheats:AddSlider({
 	text = 'Fling Power',
-	tip = 'velocity applied to your character',
-	value = 300,
-	min = 50,
-	max = 1000,
+	tip = 'velocity multiplier, higher = stronger fling',
+	value = 10000,
+	min = 1000,
+	max = 50000,
 	textpos = 2
 });
 
