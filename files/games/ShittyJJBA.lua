@@ -751,7 +751,7 @@ function functions.autoParry(toggle: boolean): ()
 		return;
 	end;
 
-	local liveFolder = workspace:WaitForChild('Live');
+	local liveFolder = workspace:WaitForChild('Alive');
 
 	for _, character in liveFolder:GetChildren() do
 		task.spawn(hookCharacterForParry, character :: any);
@@ -818,7 +818,7 @@ function functions.animLogger(toggle: boolean): ()
 		return;
 	end;
 
-	local liveFolder = workspace:WaitForChild('Live');
+	local liveFolder = workspace:WaitForChild('Alive');
 
 	local function onEntityAdded(entity: Instance): ()
 		--if (entity == LocalPlayer.Character) then return end;
@@ -867,7 +867,7 @@ library.OnKeyPress:Connect(function(input: InputObject, gpe: boolean): ()
 		if (not hrp) then return end;
 
 		repeat
-			for _, entity in (workspace :: any).Live:GetChildren() do
+			for _, entity in (workspace :: any).Alive:GetChildren() do
 				local rootPart: BasePart? = entity:FindFirstChild('HumanoidRootPart') :: BasePart?;
 				if (not rootPart or rootPart == hrp) then continue end;
 
