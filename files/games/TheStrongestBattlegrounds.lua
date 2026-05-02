@@ -316,44 +316,22 @@ function functions.fling(toggle: boolean): ()
 			(hrp :: BasePart).CFrame = (targetRoot :: BasePart).CFrame;
 		end;
 
-		-- spike velocity on every part + high density for max collision force
+		-- simple velocity spike, reset position each frame
 		local frameCF: CFrame = (hrp :: BasePart).CFrame;
 		local power: number = library.flags.flingPower;
+		local vel: Vector3 = library.flags.flingVoidMode
+			and Vector3.new(0, -power, 0)
+			or Vector3.new(power, power * 0.5, power);
 
-		-- fling downward to avoid sky barrier, push them under the map
-		local flingDir: Vector3 = Vector3.new(1, -1, 1).Unit;
-		if (targetRoot) then
-			local rawDir: Vector3 = ((targetRoot :: BasePart).Position - (hrp :: BasePart).Position);
-			if (rawDir.Magnitude > 0.1) then
-				flingDir = (rawDir.Unit + Vector3.new(0, -1, 0)).Unit;
-			end;
-		end;
-
-		local powerVec: Vector3 = flingDir * power;
-		local spinVec: Vector3 = Vector3.new(power, power, power);
-		local heavyPhysics: PhysicalProperties = PhysicalProperties.new(100, 0.3, 0.5);
-
-		local parts: {BasePart} = {};
-		for _, part: Instance in (character :: Model):GetDescendants() do
-			if (not part:IsA('BasePart')) then continue end;
-			table.insert(parts, part :: BasePart);
-			part.CustomPhysicalProperties = heavyPhysics;
-			part.CanCollide = true;
-		end;
-
-		for _ = 1, 4 do
-			for _, part: BasePart in parts do
-				(part :: any).Velocity = powerVec;
-				(part :: any).RotVelocity = spinVec;
-			end;
-			RunService.RenderStepped:Wait();
-			(hrp :: BasePart).CFrame = frameCF;
-		end;
-
-		for _, part: BasePart in parts do
-			(part :: any).Velocity = Vector3.new(0, wobble, 0);
-			(part :: any).RotVelocity = Vector3.zero;
-		end;
+		(hrp :: any).Velocity = vel;
+		RunService.RenderStepped:Wait();
+		(hrp :: BasePart).CFrame = frameCF;
+		(hrp :: any).Velocity = vel * -1;
+		RunService.Stepped:Wait();
+		(hrp :: BasePart).CFrame = frameCF;
+		(hrp :: any).Velocity = library.flags.flingVoidMode
+			and Vector3.new(0, -power, 0)
+			or Vector3.new(0, wobble, 0);
 		wobble = -wobble;
 	end);
 end;
@@ -469,6 +447,103 @@ function functions.lockOn(toggle: boolean): ()
 		local goalCF: CFrame = CFrame.new(camPos, hitPos);
 		local speed: number = library.flags.lockOnSpeed or 100;
 		(camera :: Camera).CFrame = (camera :: Camera).CFrame:Lerp(goalCF, speed / 100);
+	end);
+end;
+
+--[[
+	network ownership void — TSB's grab skills temporarily assign network
+	ownership of the victim's parts to the grabber so grab physics run on
+	your client. during that window, writes to their HRP CFrame replicate.
+	this spams the write every Heartbeat so the moment ownership is granted
+	(on any grab) the victim is immediately sent to void depth.
+]]
+function functions.networkVoid(toggle: boolean): ()
+	if (not toggle) then
+		maid.networkVoid = nil;
+		return;
+	end;
+
+	maid.networkVoid = RunService.Heartbeat:Connect(function(): ()
+		local myHrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
+		if (not myHrp) then return end;
+
+		for _, player: Player in Players:GetPlayers() do
+			if (player == LocalPlayer) then continue end;
+			if (library.flags.networkVoidCheckTeam and Utility:isTeamMate(player)) then continue end;
+
+			local character: Model? = player.Character;
+			if (not character) then continue end;
+
+			local humanoid: Humanoid? = (character :: Model):FindFirstChildOfClass('Humanoid');
+			if (not humanoid or (humanoid :: Humanoid).Health <= 0) then continue end;
+
+			local hrp: BasePart? = (character :: Model):FindFirstChild('HumanoidRootPart') :: BasePart?;
+			if (not hrp) then continue end;
+
+			local dist: number = ((myHrp :: BasePart).Position - (hrp :: BasePart).Position).Magnitude;
+			if (dist > library.flags.networkVoidRange) then continue end;
+
+			-- write only replicates while server has assigned us ownership of their parts
+			pcall(function(): ()
+				(hrp :: BasePart).CFrame = CFrame.new(
+					(hrp :: BasePart).Position.X,
+					library.flags.networkVoidDepth,
+					(hrp :: BasePart).Position.Z
+				);
+				(hrp :: BasePart).AssemblyLinearVelocity = Vector3.new(0, -50000, 0);
+			end);
+		end;
+	end);
+end;
+
+--[[
+	tracks the last known safe Y position. if the character falls below
+	the threshold (e.g. being grab-voided by another exploiter), snaps
+	back to that position and kills velocity instantly.
+]]
+function functions.antiVoid(toggle: boolean): ()
+	if (not toggle) then
+		maid.antiVoid = nil;
+		return;
+	end;
+
+	local lastSafeCF: CFrame? = nil;
+
+	maid.antiVoid = RunService.Heartbeat:Connect(function(): ()
+		local hrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
+		if (not hrp) then return end;
+
+		local threshold: number = library.flags.antiVoidThreshold;
+
+		if ((hrp :: BasePart).Position.Y >= threshold) then
+			lastSafeCF = (hrp :: BasePart).CFrame;
+		elseif (lastSafeCF) then
+			(hrp :: BasePart).CFrame = lastSafeCF :: CFrame;
+			(hrp :: BasePart).AssemblyLinearVelocity = Vector3.zero;
+		end;
+	end);
+end;
+
+--[[
+	caps the character's linear velocity each frame. counters grab-fling
+	exploits that spike velocity to void you while they retain network ownership.
+]]
+function functions.antiFling(toggle: boolean): ()
+	if (not toggle) then
+		maid.antiFling = nil;
+		return;
+	end;
+
+	maid.antiFling = RunService.Heartbeat:Connect(function(): ()
+		local hrp: BasePart? = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('HumanoidRootPart') :: BasePart?;
+		if (not hrp) then return end;
+
+		local cap: number = library.flags.antiFlingCap;
+		local vel: Vector3 = (hrp :: BasePart).AssemblyLinearVelocity;
+
+		if (vel.Magnitude > cap) then
+			(hrp :: BasePart).AssemblyLinearVelocity = vel.Unit * cap;
+		end;
 	end);
 end;
 
@@ -1028,6 +1103,12 @@ localCheats:AddToggle({
 });
 
 localCheats:AddToggle({
+	text = 'Fling Void Mode',
+	tip = 'redirects fling velocity straight down — use with No Clip to drive targets through the floor into the void',
+	state = false
+});
+
+localCheats:AddToggle({
 	text = 'Fling Teleport',
 	tip = 'teleport to the nearest player while flinging',
 	state = true
@@ -1041,10 +1122,10 @@ localCheats:AddToggle({
 
 localCheats:AddSlider({
 	text = 'Fling Power',
-	tip = 'velocity multiplier, higher = stronger fling. crank it for duels',
-	value = 99999999,
-	min = 5000,
-	max = 99999999,
+	tip = 'velocity applied to your character on contact',
+	value = 10000,
+	min = 1000,
+	max = 100000,
 	textpos = 2
 });
 
@@ -1054,6 +1135,74 @@ localCheats:AddSlider({
 	value = 50,
 	min = 10,
 	max = 500,
+	textpos = 2
+});
+
+localCheats:AddDivider('Network');
+
+localCheats:AddToggle({
+	text = 'Network Void',
+	tip = 'spams HRP position writes on nearby players — replicates the moment a grab skill grants you network ownership of their parts',
+	callback = functions.networkVoid
+});
+
+localCheats:AddToggle({
+	text = 'Network Void Check Team',
+	tip = 'skip teammates',
+	state = true
+});
+
+localCheats:AddSlider({
+	text = 'Network Void Range',
+	tip = 'only attempt on players within this distance',
+	flag = 'Network Void Range',
+	value = 20,
+	min = 5,
+	max = 100,
+	textpos = 2
+});
+
+localCheats:AddSlider({
+	text = 'Network Void Depth',
+	tip = 'Y coordinate to send the victim to (more negative = deeper into the void)',
+	flag = 'Network Void Depth',
+	value = -5000,
+	min = -10000,
+	max = -100,
+	textpos = 2
+});
+
+localCheats:AddDivider('Defense');
+
+localCheats:AddToggle({
+	text = 'Anti Void',
+	tip = 'snaps you back to your last safe position if you fall below the void threshold (counters grab-void exploiters)',
+	callback = functions.antiVoid
+});
+
+localCheats:AddSlider({
+	text = 'Anti Void Threshold',
+	tip = 'Y position below which recovery triggers. set just under the map floor',
+	flag = 'Anti Void Threshold',
+	value = -100,
+	min = -500,
+	max = -10,
+	textpos = 2
+});
+
+localCheats:AddToggle({
+	text = 'Anti Fling',
+	tip = 'caps your velocity each frame so grab-fling exploits cannot spike you into the void',
+	callback = functions.antiFling
+});
+
+localCheats:AddSlider({
+	text = 'Anti Fling Cap',
+	tip = 'max studs/s your character can move (lower = safer, but may feel sluggish during knockbacks)',
+	flag = 'Anti Fling Cap',
+	value = 300,
+	min = 50,
+	max = 1000,
 	textpos = 2
 });
 
