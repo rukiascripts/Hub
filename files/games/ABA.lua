@@ -188,17 +188,18 @@ local function WatchCutter(character: Model, cutter: GuiObject, goal: GuiObject,
 		if (lastX and (lastX :: number) <= goalX and cutterX > goalX) then
 			task.wait(math.random() * 0.04);
 
-			local args = {
-				"M1",
-				{
-					air = false,
-					skeyreal = false,
-					skeydown = true,
-					mousehit = CFrame.new(2282.69091796875, 957.7990112304688, 113.0128402709961, 0.1719614416360855, -0.44762375950813293, 0.877531886100769, -0, 0.8908015489578247, 0.45439255237579346, -0.9851036667823792, -0.07813800126314163, 0.15318351984024048),
-					md = vector.zero
-				}
-			}
-			game:GetService("Players").LocalPlayer:WaitForChild("Backpack"):WaitForChild("Input"):FireServer(unpack(args))
+local args = {
+	"M1",
+	{
+		air = false,
+		skeyreal = false,
+		skeydown = true,
+		mousehit = CFrame.new(2281.0791015625, 960.845947265625, 130.47653198242188, 0.4707014262676239, -0.4047183096408844, 0.7839918732643127, -0, 0.8885849118232727, 0.4587121605873108, -0.8822925090789795, -0.2159164696931839, 0.4182582199573517),
+		md = vector.zero
+	}
+}
+game:GetService("Players").LocalPlayer:WaitForChild("Backpack"):WaitForChild("Input"):FireServer(unpack(args))
+
 
 
 			if (connection) then
