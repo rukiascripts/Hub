@@ -5704,6 +5704,7 @@ do -- // Functions
         Utility.listenToChildAdded(workspace.Live, onMobAdded);
         Utility.listenToChildAdded(workspace:FindFirstChild('NPCs') or Instance.new('Folder'), onNpcAdded);
         Utility.listenToChildAdded(workspace.Thrown, onBagAdded);
+end;
 
     local climbBoost = Instance.new('NumberValue');
     climbBoost.Name = 'ClimbBoost';
